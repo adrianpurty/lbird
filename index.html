@@ -5,8 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LeadBid Pro - Buy & Bid on High-Quality Leads</title>
   <script>
-    // Polyfill process for browser environment to prevent ReferenceErrors in modules
-    window.process = { env: { API_KEY: "" } };
+    // Robust polyfill for process.env to prevent ReferenceErrors in production browsers
+    window.process = window.process || {};
+    window.process.env = window.process.env || {};
+    window.process.env.API_KEY = window.process.env.API_KEY || "";
   </script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://js.stripe.com/v3/"></script>

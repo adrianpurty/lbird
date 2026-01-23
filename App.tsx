@@ -23,6 +23,8 @@ import InvoiceLedger from './components/InvoiceLedger.tsx';
 import { Lead, User, PurchaseRequest, Notification, PlatformAnalytics, OAuthConfig, Invoice } from './types.ts';
 import { apiService } from './services/apiService.ts';
 
+const SESSION_KEY = 'lb_session_v1';
+
 const App: React.FC = () => {
   const [authView, setAuthView] = useState<'login' | 'signup' | 'app'>('login');
   const [activeTab, setActiveTab] = useState<'market' | 'profile' | 'create' | 'settings' | 'bids' | 'admin' | 'inbox' | 'auth-config' | 'payment-config' | 'wishlist' | 'ledger'>('market');
@@ -32,7 +34,11 @@ const App: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [analytics, setAnalytics] = useState<PlatformAnalytics | null>(null);
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    return (localStorage.getItem('lb-theme') as 'light' | 'dark') || 'dark';
+    try {
+      return (localStorage.getItem('lb-theme') as 'light' | 'dark') || 'dark';
+    } catch {
+      return 'dark';
+    }
   });
   const [authConfig, setAuthConfig] = useState<OAuthConfig>({
     googleEnabled: false, googleClientId: '', googleClientSecret: '', facebookEnabled: false, facebookAppId: '', facebookAppSecret: ''
@@ -50,7 +56,9 @@ const App: React.FC = () => {
     } else {
       document.body.classList.remove('dark-theme');
     }
-    localStorage.setItem('lb-theme', theme);
+    try {
+      localStorage.setItem('lb-theme', theme);
+    } catch {}
   }, [theme]);
 
   const toggleTheme = () => {
@@ -73,14 +81,20 @@ const App: React.FC = () => {
       if (data.authConfig) setAuthConfig(data.authConfig);
       if (data.gateways) setGateways(data.gateways);
       
-      if (user) {
-        const currentUser = data.users?.find((u: User) => u.id === user.id);
+      const savedUserId = localStorage.getItem(SESSION_KEY);
+      
+      if (savedUserId || user) {
+        const idToFind = savedUserId || user?.id;
+        const currentUser = data.users?.find((u: User) => u.id === idToFind);
+        
         if (currentUser) {
           setUser(prev => {
-            // Functional update to avoid closure staleness while keeping identity stable
             if (JSON.stringify(prev) === JSON.stringify(currentUser)) return prev;
             return currentUser;
           });
+          setAuthView(prev => prev !== 'app' ? 'app' : prev);
+        } else if (savedUserId) {
+          localStorage.removeItem(SESSION_KEY);
         }
       }
     } catch (error) {
@@ -89,13 +103,20 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [user?.id, showToast]); // Only depend on ID to prevent infinite loop
+  }, [user?.id, showToast]);
 
   useEffect(() => { 
-    fetchAppData(); 
+    let isMounted = true;
+    if (isMounted) {
+      fetchAppData(); 
+    }
+    return () => { isMounted = false; };
   }, [fetchAppData]);
 
   const handleLogin = (loggedUser: User) => {
+    try {
+      localStorage.setItem(SESSION_KEY, loggedUser.id);
+    } catch {}
     setUser(loggedUser);
     setAuthView('app');
     setActiveTab('market');
@@ -103,6 +124,9 @@ const App: React.FC = () => {
   };
 
   const handleSignup = async (newUser: User) => {
+    try {
+      localStorage.setItem(SESSION_KEY, newUser.id);
+    } catch {}
     setUser(newUser);
     setAuthView('app');
     setActiveTab('market');
@@ -110,6 +134,9 @@ const App: React.FC = () => {
   };
 
   const handleLogout = () => { 
+    try {
+      localStorage.removeItem(SESSION_KEY);
+    } catch {}
     setUser(null); 
     setAuthView('login'); 
     showToast("Logged out.", "info");
@@ -202,7 +229,10 @@ const App: React.FC = () => {
 
   if (isLoading) return (
     <div className="h-screen flex items-center justify-center bg-[var(--bg-platform)]">
-      <Activity className="text-[var(--text-accent)] animate-spin" size={48} />
+      <div className="flex flex-col items-center gap-4">
+        <Activity className="text-[var(--text-accent)] animate-spin" size={48} />
+        <p className="text-[10px] font-black uppercase tracking-[0.5em] text-neutral-500 animate-pulse">Syncing Node Ledger...</p>
+      </div>
     </div>
   );
 
