@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   TrendingUp, Settings, ShieldAlert, Package, 
   Inbox, CheckCircle, Activity, User as UserIcon, 
@@ -50,6 +50,12 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'info' } | null>(null);
 
+  // Use a ref to store current user to avoid infinite loops in fetchAppData dependencies
+  const userRef = useRef<User | null>(null);
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
   useEffect(() => {
     if (theme === 'dark') {
       document.body.classList.add('dark-theme');
@@ -70,23 +76,57 @@ const App: React.FC = () => {
     setTimeout(() => setToast(null), 4000);
   }, []);
 
+  const updateStateIfChanged = useCallback(<T,>(setter: React.Dispatch<React.SetStateAction<T>>, current: T, next: T) => {
+    if (JSON.stringify(current) !== JSON.stringify(next)) {
+      setter(next);
+    }
+  }, []);
+
   const fetchAppData = useCallback(async () => {
     try {
       const data = await apiService.getData();
-      setLeads(data.leads || []);
-      setPurchaseRequests(data.purchaseRequests || []);
-      setInvoices(data.invoices || []);
-      setNotifications(data.notifications || []);
-      setAnalytics(data.analytics || null);
-      if (data.authConfig) setAuthConfig(data.authConfig);
-      if (data.gateways) setGateways(data.gateways);
+      
+      // Gate all state updates with equality checks to stop re-render storms
+      setLeads(prev => {
+        if (JSON.stringify(prev) === JSON.stringify(data.leads)) return prev;
+        return data.leads || [];
+      });
+      setPurchaseRequests(prev => {
+        if (JSON.stringify(prev) === JSON.stringify(data.purchaseRequests)) return prev;
+        return data.purchaseRequests || [];
+      });
+      setInvoices(prev => {
+        if (JSON.stringify(prev) === JSON.stringify(data.invoices)) return prev;
+        return data.invoices || [];
+      });
+      setNotifications(prev => {
+        if (JSON.stringify(prev) === JSON.stringify(data.notifications)) return prev;
+        return data.notifications || [];
+      });
+      setAnalytics(prev => {
+        if (JSON.stringify(prev) === JSON.stringify(data.analytics)) return prev;
+        return data.analytics || null;
+      });
+      
+      if (data.authConfig) {
+        setAuthConfig(prev => {
+          if (JSON.stringify(prev) === JSON.stringify(data.authConfig)) return prev;
+          return data.authConfig;
+        });
+      }
+      
+      if (data.gateways) {
+        setGateways(prev => {
+          if (JSON.stringify(prev) === JSON.stringify(data.gateways)) return prev;
+          return data.gateways;
+        });
+      }
       
       const savedUserId = localStorage.getItem(SESSION_KEY);
+      const activeId = savedUserId || userRef.current?.id;
       
-      if (savedUserId || user) {
-        const idToFind = savedUserId || user?.id;
-        const currentUser = data.users?.find((u: User) => u.id === idToFind);
-        
+      if (activeId) {
+        const currentUser = data.users?.find((u: User) => u.id === activeId);
         if (currentUser) {
           setUser(prev => {
             if (JSON.stringify(prev) === JSON.stringify(currentUser)) return prev;
@@ -103,14 +143,13 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [user?.id, showToast]);
+  }, [showToast]);
 
+  // Handle periodic data sync
   useEffect(() => { 
-    let isMounted = true;
-    if (isMounted) {
-      fetchAppData(); 
-    }
-    return () => { isMounted = false; };
+    fetchAppData();
+    const interval = setInterval(fetchAppData, 15000); // Sync every 15 seconds
+    return () => clearInterval(interval);
   }, [fetchAppData]);
 
   const handleLogin = (loggedUser: User) => {
@@ -229,9 +268,11 @@ const App: React.FC = () => {
 
   if (isLoading) return (
     <div className="h-screen flex items-center justify-center bg-[var(--bg-platform)]">
-      <div className="flex flex-col items-center gap-4">
+      <div className="flex flex-col items-center gap-6">
         <Activity className="text-[var(--text-accent)] animate-spin" size={48} />
-        <p className="text-[10px] font-black uppercase tracking-[0.5em] text-neutral-500 animate-pulse">Syncing Node Ledger...</p>
+        <div className="text-center">
+          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-neutral-500 animate-pulse">Syncing Node Ledger...</p>
+        </div>
       </div>
     </div>
   );
