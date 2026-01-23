@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Lead, UserRole } from '../types';
-import { apiService } from '../services/apiService';
+import { Lead, UserRole } from '../types.ts';
+import { apiService } from '../services/apiService.ts';
 import { 
   Gavel, Star, Timer, PhoneIncoming, Plane, Zap, Settings2, Monitor, 
   ShieldAlert, Clock, XCircle, Compass, Bed, Car, Palmtree, Smartphone, Ticket, Trash2,

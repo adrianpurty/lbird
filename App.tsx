@@ -1,28 +1,27 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   TrendingUp, Settings, ShieldAlert, Package, 
   Inbox, CheckCircle, Activity, User as UserIcon, 
   BarChart3, Target, Info, XCircle, Heart, FileText
 } from 'lucide-react';
-import Sidebar from './components/Sidebar';
-import Header from './components/Header';
-import LeadGrid from './components/LeadGrid';
-import LeadSubmissionForm from './components/LeadSubmissionForm';
-import WalletSettings from './components/WalletSettings';
-import ProfileSettings from './components/ProfileSettings';
-import DashboardStats from './components/DashboardStats';
-import MobileNav from './components/MobileNav';
-import Login from './components/Login';
-import Signup from './components/Signup';
-import BiddingModal, { BiddingFormData } from './components/BiddingModal';
-import AdminLeadActionsModal from './components/AdminLeadActionsModal';
-import AdminOAuthSettings from './components/AdminOAuthSettings';
-import AdminPaymentSettings, { GatewayAPI } from './components/AdminPaymentSettings';
-import RevenueChart from './components/RevenueChart';
-import InvoiceLedger from './components/InvoiceLedger';
-import { Lead, User, PurchaseRequest, Notification, PlatformAnalytics, OAuthConfig, Invoice } from './types';
-import { apiService } from './services/apiService';
+import Sidebar from './components/Sidebar.tsx';
+import Header from './components/Header.tsx';
+import LeadGrid from './components/LeadGrid.tsx';
+import LeadSubmissionForm from './components/LeadSubmissionForm.tsx';
+import WalletSettings from './components/WalletSettings.tsx';
+import ProfileSettings from './components/ProfileSettings.tsx';
+import DashboardStats from './components/DashboardStats.tsx';
+import MobileNav from './components/MobileNav.tsx';
+import Login from './components/Login.tsx';
+import Signup from './components/Signup.tsx';
+import BiddingModal, { BiddingFormData } from './components/BiddingModal.tsx';
+import AdminLeadActionsModal from './components/AdminLeadActionsModal.tsx';
+import AdminOAuthSettings from './components/AdminOAuthSettings.tsx';
+import AdminPaymentSettings, { GatewayAPI } from './components/AdminPaymentSettings.tsx';
+import RevenueChart from './components/RevenueChart.tsx';
+import InvoiceLedger from './components/InvoiceLedger.tsx';
+import { Lead, User, PurchaseRequest, Notification, PlatformAnalytics, OAuthConfig, Invoice } from './types.ts';
+import { apiService } from './services/apiService.ts';
 
 const App: React.FC = () => {
   const [authView, setAuthView] = useState<'login' | 'signup' | 'app'>('login');
@@ -76,7 +75,13 @@ const App: React.FC = () => {
       
       if (user) {
         const currentUser = data.users?.find((u: User) => u.id === user.id);
-        if (currentUser) setUser(currentUser);
+        if (currentUser) {
+          setUser(prev => {
+            // Functional update to avoid closure staleness while keeping identity stable
+            if (JSON.stringify(prev) === JSON.stringify(currentUser)) return prev;
+            return currentUser;
+          });
+        }
       }
     } catch (error) {
       console.error('Data retrieval error:', error);
@@ -84,7 +89,7 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [user, showToast]);
+  }, [user?.id, showToast]); // Only depend on ID to prevent infinite loop
 
   useEffect(() => { 
     fetchAppData(); 

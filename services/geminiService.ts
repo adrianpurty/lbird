@@ -1,10 +1,10 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-// Fix: Direct API key initialization without fallback as per guidelines
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 export const analyzeLeadQuality = async (businessUrl: string, targetUrl: string) => {
   try {
+    // Initializing inside function for safer call-time environment access
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    
     // Using gemini-3-pro-preview for complex reasoning task (lead analysis and fraud detection)
     const response = await ai.models.generateContent({
       model: "gemini-3-pro-preview",
