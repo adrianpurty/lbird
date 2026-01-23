@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef, useMemo, memo, useDeferredValue } from 'react';
 import { 
   TrendingUp, Settings, ShieldAlert, Package, 
@@ -23,7 +24,7 @@ import InvoiceLedger from './components/InvoiceLedger.tsx';
 import { Lead, User, PurchaseRequest, Notification, PlatformAnalytics, OAuthConfig, Invoice } from './types.ts';
 import { apiService } from './services/apiService.ts';
 
-const SESSION_KEY = 'lb_session_v1';
+const SESSION_KEY = 'lb_session_v2';
 
 interface AppMarketData {
   leads: Lead[];
@@ -47,7 +48,7 @@ const App: React.FC = () => {
   const [authView, setAuthView] = useState<'login' | 'signup' | 'app'>('login');
   const [activeTab, setActiveTab] = useState<'market' | 'profile' | 'create' | 'settings' | 'bids' | 'admin' | 'inbox' | 'auth-config' | 'payment-config' | 'wishlist' | 'ledger'>('market');
   
-  const [marketData, setMarketData] = useState<AppMarketData>(() => Object.freeze({
+  const [marketData, setMarketData] = useState<AppMarketData>({
     leads: [],
     purchaseRequests: [],
     invoices: [],
@@ -56,7 +57,7 @@ const App: React.FC = () => {
     authConfig: { googleEnabled: false, googleClientId: '', googleClientSecret: '', facebookEnabled: false, facebookAppId: '', facebookAppSecret: '' },
     gateways: [],
     lastUpdate: ''
-  }));
+  });
 
   const [user, setUser] = useState<User | null>(null);
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -97,7 +98,7 @@ const App: React.FC = () => {
     try {
       const data = await apiService.getData();
       if (marketData.lastUpdate !== data.metadata?.last_updated) {
-        setMarketData(Object.freeze({
+        setMarketData({
           leads: data.leads || [],
           purchaseRequests: data.purchaseRequests || [],
           invoices: data.invoices || [],
@@ -106,18 +107,23 @@ const App: React.FC = () => {
           authConfig: data.authConfig || marketData.authConfig,
           gateways: data.gateways || marketData.gateways,
           lastUpdate: data.metadata?.last_updated
-        }));
+        });
       }
       const activeId = localStorage.getItem(SESSION_KEY) || userRef.current?.id;
       if (activeId) {
         const currentUser = data.users?.find((u: User) => u.id === activeId);
         if (currentUser && (userRef.current?.balance !== currentUser.balance || userRef.current?.id !== currentUser.id)) {
           setUser(currentUser);
-          setAuthView(prev => prev !== 'app' ? 'app' : prev);
+          if (authView !== 'app') setAuthView('app');
         }
       }
-    } catch (error) { console.warn('Sync Failed'); } finally { isSyncing.current = false; setIsLoading(false); }
-  }, [isTabVisible, marketData.lastUpdate, marketData.authConfig, marketData.gateways]);
+    } catch (error) { 
+      console.warn('Sync Failed'); 
+    } finally { 
+      isSyncing.current = false; 
+      setIsLoading(false); 
+    }
+  }, [isTabVisible, marketData.lastUpdate, marketData.authConfig, marketData.gateways, authView]);
 
   useEffect(() => { 
     fetchAppData();
@@ -148,7 +154,7 @@ const App: React.FC = () => {
     <div className="h-screen flex items-center justify-center bg-[var(--bg-platform)]">
       <div className="flex flex-col items-center gap-4">
         <Activity className="text-[var(--text-accent)] animate-spin" size={32} />
-        <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500 italic">Synchronizing Marketplace...</p>
+        <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500 italic">Provisioning Node...</p>
       </div>
     </div>
   );
@@ -178,14 +184,14 @@ const App: React.FC = () => {
             <div className="space-y-8 animate-in fade-in duration-200">
                <h2 className="text-xl font-black text-[var(--text-main)] italic uppercase flex items-center gap-3"><TrendingUp className="text-[var(--text-accent)]" /> Market Floor</h2>
                <MemoizedDashboardStats leads={marketData.leads} user={user} />
-               <MemoizedLeadGrid leads={marketData.leads} onBid={(id) => setSelectedLeadForBid(marketData.leads.find(l => l.id === id) || null)} onAdminEdit={setSelectedLeadForAdminEdit} onAdminApprove={(id) => apiService.updateLead(id, { status: 'approved' }).then(fetchAppData)} onAdminReject={(id) => apiService.updateLead(id, { status: 'rejected' }).then(fetchAppData)} onDelete={(id) => apiService.deleteLead(id).then(fetchAppData)} onToggleWishlist={(id) => apiService.toggleWishlist(user.id, id).then(fetchAppData)} userRole={user.role} currentUserId={user.id} wishlist={user.wishlist} activeBids={activeBidIds} />
+               <MemoizedLeadGrid leads={marketData.leads} onBid={(id) => setSelectedLeadForBid(marketData.leads.find(l => l.id === id) || null)} onAdminEdit={setSelectedLeadForAdminEdit} onAdminApprove={(id) => apiService.updateLead(id, { status: 'approved' }).then(fetchAppData)} onAdminReject={(id) => apiService.updateLead(id, { status: 'rejected' }).then(fetchAppData)} onDelete={(id) => apiService.deleteLead(id).then(fetchAppData)} onToggleWishlist={(id) => apiService.toggleWishlist(user.id, id).then(fetchAppData)} userRole={user.role} currentUserId={user.id} wishlist={user.wishlist || []} activeBids={activeBidIds} />
             </div>
           )}
 
           {activeTab === 'wishlist' && (
             <div className="space-y-8 animate-in fade-in duration-200">
                <h2 className="text-xl font-black text-[var(--text-main)] italic uppercase flex items-center gap-3"><Heart className="text-red-500" /> Saved Nodes</h2>
-               <MemoizedLeadGrid leads={wishlistLeads} onBid={(id) => setSelectedLeadForBid(marketData.leads.find(l => l.id === id) || null)} onToggleWishlist={(id) => apiService.toggleWishlist(user.id, id).then(fetchAppData)} userRole={user.role} currentUserId={user.id} wishlist={user.wishlist} activeBids={activeBidIds} />
+               <MemoizedLeadGrid leads={wishlistLeads} onBid={(id) => setSelectedLeadForBid(marketData.leads.find(l => l.id === id) || null)} onToggleWishlist={(id) => apiService.toggleWishlist(user.id, id).then(fetchAppData)} userRole={user.role} currentUserId={user.id} wishlist={user.wishlist || []} activeBids={activeBidIds} />
             </div>
           )}
 
@@ -193,11 +199,11 @@ const App: React.FC = () => {
 
           {activeTab === 'admin' && user.role === 'admin' && (
              <div className="max-w-7xl mx-auto space-y-12 animate-in fade-in duration-200">
-                <h2 className="text-xl font-black text-[var(--text-main)] italic uppercase flex items-center gap-3"><ShieldAlert className="text-[var(--text-accent)]" /> Global Operator View</h2>
+                <h2 className="text-xl font-black text-[var(--text-main)] italic uppercase flex items-center gap-3"><ShieldAlert className="text-[var(--text-accent)]" /> Control Room</h2>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   <div className="bg-[var(--bg-card)] p-6 rounded-2xl border border-[var(--border-main)]">
                       <BarChart3 className="text-emerald-500 mb-2" size={20} />
-                      <p className="text-[9px] text-neutral-500 font-black uppercase tracking-widest">Global Throughput</p>
+                      <p className="text-[9px] text-neutral-500 font-black uppercase tracking-widest">Global Volume</p>
                       <p className="text-lg font-black text-[var(--text-main)] italic">${marketData.analytics?.totalVolume.toLocaleString()}</p>
                   </div>
                   {marketData.analytics && <MemoizedRevenueChart history={marketData.analytics.revenueHistory} />}
@@ -209,8 +215,8 @@ const App: React.FC = () => {
              </div>
           )}
 
-          {activeTab === 'auth-config' && user.role === 'admin' && <AdminOAuthSettings config={marketData.authConfig} onConfigChange={(cfg) => apiService.updateAuthConfig(cfg).then(() => { fetchAppData(); showToast("Identity Config Updated"); })} />}
-          {activeTab === 'payment-config' && user.role === 'admin' && <AdminPaymentSettings gateways={marketData.gateways} onGatewaysChange={(gws) => apiService.updateGateways(gws).then(fetchAppData)} onDeploy={() => { fetchAppData(); showToast("Financial Nodes Deployed"); }} />}
+          {activeTab === 'auth-config' && user.role === 'admin' && <AdminOAuthSettings config={marketData.authConfig} onConfigChange={(cfg) => apiService.updateAuthConfig(cfg).then(() => { fetchAppData(); showToast("Identity Node Updated"); })} />}
+          {activeTab === 'payment-config' && user.role === 'admin' && <AdminPaymentSettings gateways={marketData.gateways} onGatewaysChange={(gws) => apiService.updateGateways(gws).then(fetchAppData)} onDeploy={() => { fetchAppData(); showToast("Gateways Deployed"); }} />}
           {activeTab === 'profile' && <ProfileSettings user={user} onUpdate={(u) => apiService.updateLead(user.id, u).then(fetchAppData)} />}
           {activeTab === 'settings' && <WalletSettings stripeConnected={user.stripeConnected} onConnect={() => {}} balance={user.balance} onDeposit={(amt) => apiService.deposit(user.id, amt).then(fetchAppData)} gateways={marketData.gateways} />}
           {activeTab === 'create' && <LeadSubmissionForm onSubmit={(l) => apiService.createLead({...l, ownerId: user.id}).then(() => { fetchAppData(); setActiveTab('market'); })} />}
