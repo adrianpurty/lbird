@@ -81,6 +81,7 @@ export interface User {
   password?: string;
   ipAddress?: string;
   deviceInfo?: string;
+  location?: string;
   wishlist?: string[];
 }
 

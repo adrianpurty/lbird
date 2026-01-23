@@ -1,5 +1,7 @@
 {
   "name": "LeadBid Pro",
   "description": "A high-stakes lead marketplace where businesses bid on verified leads. Features AI-powered lead analysis and Stripe integration for seamless transactions.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [
+    "geolocation"
+  ]
 }

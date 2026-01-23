@@ -97,18 +97,21 @@ const App: React.FC = () => {
     isSyncing.current = true;
     try {
       const data = await apiService.getData();
-      if (marketData.lastUpdate !== data.metadata?.last_updated) {
-        setMarketData({
+      
+      setMarketData(prev => {
+        if (prev.lastUpdate === data.metadata?.last_updated) return prev;
+        return {
           leads: data.leads || [],
           purchaseRequests: data.purchaseRequests || [],
           invoices: data.invoices || [],
           notifications: data.notifications || [],
           analytics: data.analytics || null,
-          authConfig: data.authConfig || marketData.authConfig,
-          gateways: data.gateways || marketData.gateways,
+          authConfig: data.authConfig || prev.authConfig,
+          gateways: data.gateways || prev.gateways,
           lastUpdate: data.metadata?.last_updated
-        });
-      }
+        };
+      });
+
       const activeId = localStorage.getItem(SESSION_KEY) || userRef.current?.id;
       if (activeId) {
         const currentUser = data.users?.find((u: User) => u.id === activeId);
@@ -123,7 +126,7 @@ const App: React.FC = () => {
       isSyncing.current = false; 
       setIsLoading(false); 
     }
-  }, [isTabVisible, marketData.lastUpdate, marketData.authConfig, marketData.gateways, authView]);
+  }, [isTabVisible, authView]);
 
   useEffect(() => { 
     fetchAppData();
