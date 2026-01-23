@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LeadBid Pro - Buy & Bid on High-Quality Leads</title>
   <script>
-    // Robust polyfill for process.env to prevent ReferenceErrors in production browsers
     window.process = window.process || { env: { API_KEY: "" } };
   </script>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -50,12 +49,6 @@
       transform: translateZ(0);
       backface-visibility: hidden;
       will-change: transform, opacity;
-    }
-
-    .lead-card-render {
-      content-visibility: auto;
-      contain: paint;
-      contain-intrinsic-size: 1px 400px;
     }
 
     .scrollbar-hide::-webkit-scrollbar {
