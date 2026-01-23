@@ -45,24 +45,6 @@ const INITIAL_DATA = {
       countryCode: 'US',
       region: 'Global',
       ownerId: 'admin_1'
-    },
-    {
-      id: 'lead_travel_maldives',
-      title: 'Direct Maldives Villa Booking Leads',
-      category: 'Hotel & Resort Bookings',
-      description: 'High-intent honeymooners and luxury travelers looking for overwater villas in the Maldives. Average spend $12k+.',
-      businessUrl: 'https://maldives-luxe.travel',
-      targetLeadUrl: 'https://ads.google.com/maldives-resorts',
-      basePrice: 65,
-      currentBid: 78,
-      bidCount: 15,
-      timeLeft: '12h 10m',
-      qualityScore: 96,
-      sellerRating: 5.0,
-      status: 'approved',
-      countryCode: 'US',
-      region: 'Global',
-      ownerId: 'admin_1'
     }
   ],
   users: [
@@ -73,15 +55,6 @@ const INITIAL_DATA = {
       balance: 1000000,
       stripeConnected: true,
       role: 'admin',
-      wishlist: []
-    },
-    {
-      id: 'user_mock',
-      name: 'Standard Trader',
-      email: 'user@example.com',
-      balance: 5000,
-      stripeConnected: false,
-      role: 'user',
       wishlist: []
     }
   ],
@@ -111,7 +84,17 @@ const INITIAL_DATA = {
     facebookAppId: '', 
     facebookAppSecret: '' 
   },
-  gateways: []
+  gateways: [
+    {
+      id: 'gw_stripe_primary',
+      name: 'Stripe Master Node',
+      provider: 'stripe',
+      publicKey: 'pk_test_sample',
+      secretKey: 'sk_test_sample',
+      fee: '2.5',
+      status: 'active'
+    }
+  ]
 };
 
 class ApiService {
@@ -124,7 +107,6 @@ class ApiService {
       }
       return JSON.parse(data);
     } catch (e) {
-      console.warn('LocalStorage unavailable, using initial data state', e);
       return INITIAL_DATA;
     }
   }
@@ -133,9 +115,7 @@ class ApiService {
     try {
       db.metadata.last_updated = new Date().toISOString();
       localStorage.setItem(DB_KEY, JSON.stringify(db));
-    } catch (e) {
-      console.error('Failed to save to LocalStorage', e);
-    }
+    } catch (e) {}
   }
 
   async getData() {
@@ -147,74 +127,40 @@ class ApiService {
     return (db.categories || []).sort();
   }
 
+  async updateAuthConfig(config: OAuthConfig) {
+    const db = this.getDb();
+    db.authConfig = config;
+    this.saveDb(db);
+    return { status: 'success' };
+  }
+
+  async updateGateways(gateways: any[]) {
+    const db = this.getDb();
+    db.gateways = gateways;
+    this.saveDb(db);
+    return { status: 'success' };
+  }
+
   async placeBid(input: any) {
     const db = this.getDb();
     const { userId, leadId, bidAmount, totalDailyCost, leadsPerDay } = input;
-
     const user = db.users.find((u: any) => u.id === userId);
     const lead = db.leads.find((l: any) => l.id === leadId);
-
     if (!user || !lead) throw new Error('Node not found');
-    if (user.balance < totalDailyCost) throw new Error('Insufficient node credits');
-    if (bidAmount <= lead.currentBid) throw new Error('Bid must exceed floor price');
-
-    const requestId = `req_${Math.random().toString(36).substr(2, 9)}`;
-    const timestamp = new Date().toISOString();
-
     user.balance -= totalDailyCost;
     lead.currentBid = bidAmount;
     lead.bidCount++;
-
-    db.purchaseRequests.push({
-      id: requestId,
-      userId,
-      leadId,
-      bidAmount,
-      leadsPerDay: leadsPerDay || 1,
-      totalDailyCost,
-      timestamp,
-      status: 'approved'
-    });
-
-    db.invoices.push({
-      id: `INV-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
-      purchaseRequestId: requestId,
-      userId,
-      userName: user.name,
-      leadTitle: lead.title,
-      category: lead.category,
-      unitPrice: bidAmount,
-      dailyVolume: leadsPerDay || 1,
-      totalSettlement: totalDailyCost,
-      timestamp,
-      status: 'paid'
-    });
-
-    db.notifications.push({
-      id: `notif_${Math.random().toString(36).substr(2, 9)}`,
-      userId: lead.ownerId || 'admin_1',
-      message: `Order Secured & Invoiced: $${bidAmount}/unit bid on '${lead.title}'`,
-      type: 'buy',
-      timestamp: 'Just now',
-      read: false
-    });
-
+    const requestId = `req_${Math.random().toString(36).substr(2, 9)}`;
+    const timestamp = new Date().toISOString();
+    db.purchaseRequests.push({ id: requestId, userId, leadId, bidAmount, leadsPerDay: leadsPerDay || 1, totalDailyCost, timestamp, status: 'approved' });
+    db.invoices.push({ id: `INV-${Math.random().toString(36).substr(2, 6).toUpperCase()}`, purchaseRequestId: requestId, userId, userName: user.name, leadTitle: lead.title, category: lead.category, unitPrice: bidAmount, dailyVolume: leadsPerDay || 1, totalSettlement: totalDailyCost, timestamp, status: 'paid' });
     this.saveDb(db);
     return { status: 'success' };
   }
 
   async createLead(leadData: any) {
     const db = this.getDb();
-    const newLead = {
-      ...leadData,
-      id: `lead_${Math.random().toString(36).substr(2, 9)}`,
-      status: 'pending',
-      bidCount: 0,
-      currentBid: leadData.basePrice || 50,
-      timeLeft: '24h 0m',
-      sellerRating: 5.0,
-      countryCode: leadData.countryCode || 'US'
-    };
+    const newLead = { ...leadData, id: `lead_${Math.random().toString(36).substr(2, 9)}`, status: 'pending', bidCount: 0, currentBid: leadData.basePrice || 50, timeLeft: '24h 0m', sellerRating: 5.0, countryCode: leadData.countryCode || 'US' };
     db.leads.push(newLead);
     this.saveDb(db);
     return { status: 'success', lead: newLead };
@@ -240,10 +186,7 @@ class ApiService {
   async deposit(userId: string, amount: number) {
     const db = this.getDb();
     const user = db.users.find((u: any) => u.id === userId);
-    if (user) {
-      user.balance += amount;
-      this.saveDb(db);
-    }
+    if (user) { user.balance += amount; this.saveDb(db); }
     return { status: 'success' };
   }
 
