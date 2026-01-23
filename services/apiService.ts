@@ -1,4 +1,3 @@
-
 import { Lead, User, PurchaseRequest, Notification, PlatformAnalytics, OAuthConfig, Invoice } from '../types';
 
 const DB_KEY = 'leadbid_db_v1';
@@ -117,17 +116,26 @@ const INITIAL_DATA = {
 
 class ApiService {
   private getDb() {
-    const data = localStorage.getItem(DB_KEY);
-    if (!data) {
-      localStorage.setItem(DB_KEY, JSON.stringify(INITIAL_DATA));
+    try {
+      const data = localStorage.getItem(DB_KEY);
+      if (!data) {
+        localStorage.setItem(DB_KEY, JSON.stringify(INITIAL_DATA));
+        return INITIAL_DATA;
+      }
+      return JSON.parse(data);
+    } catch (e) {
+      console.warn('LocalStorage unavailable, using initial data state', e);
       return INITIAL_DATA;
     }
-    return JSON.parse(data);
   }
 
   private saveDb(db: any) {
-    db.metadata.last_updated = new Date().toISOString();
-    localStorage.setItem(DB_KEY, JSON.stringify(db));
+    try {
+      db.metadata.last_updated = new Date().toISOString();
+      localStorage.setItem(DB_KEY, JSON.stringify(db));
+    } catch (e) {
+      console.error('Failed to save to LocalStorage', e);
+    }
   }
 
   async getData() {
