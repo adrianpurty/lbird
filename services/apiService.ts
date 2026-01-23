@@ -1,5 +1,4 @@
-
-import { Lead, User, PurchaseRequest, Notification, PlatformAnalytics, OAuthConfig, Invoice } from '../types';
+import { Lead, User, PurchaseRequest, Notification, PlatformAnalytics, OAuthConfig, Invoice } from '../types.ts';
 
 const DB_KEY = 'leadbid_db_v2';
 

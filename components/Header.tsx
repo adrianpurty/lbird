@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Bell, Wallet, UserCircle, X, Info, CheckCircle, AlertTriangle, Sun, Moon } from 'lucide-react';
-import { User, Notification } from '../types';
+import { User, Notification } from '../types.ts';
 
 interface HeaderProps {
   user: User;

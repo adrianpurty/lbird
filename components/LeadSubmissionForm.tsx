@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
-import { Lead, AIInsight } from '../types';
-import { analyzeLeadQuality } from '../services/geminiService';
-import { apiService } from '../services/apiService';
+import { Lead, AIInsight } from '../types.ts';
+import { analyzeLeadQuality } from '../services/geminiService.ts';
+import { apiService } from '../services/apiService.ts';
 import { Sparkles, Loader2, Link as LinkIcon, Globe, DollarSign, Target, ChevronDown, ListFilter } from 'lucide-react';
 
 interface LeadSubmissionFormProps {
