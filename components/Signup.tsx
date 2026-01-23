@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Zap, Mail, User as UserIcon, Lock, Phone, MapPin, Loader2 } from 'lucide-react';
+import { Zap, Mail, User as UserIcon, Lock, Phone, Globe, Loader2, ShieldCheck } from 'lucide-react';
 import { User } from '../types';
 
 interface SignupProps {
@@ -16,105 +16,95 @@ const Signup: React.FC<SignupProps> = ({ onSignup, onSwitchToLogin }) => {
     password: '',
     phone: ''
   });
-  const [isLocating, setIsLocating] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const fetchIpAddress = async (): Promise<string> => {
+    try {
+      const response = await fetch('https://api.ipify.org?format=json');
+      const data = await response.json();
+      return data.ip || '0.0.0.0';
+    } catch (err) {
+      return '127.0.0.1';
+    }
+  };
 
   const getDeviceInfo = () => {
     const ua = navigator.userAgent;
     let device = "Desktop";
     if (/Mobi|Android/i.test(ua)) device = "Mobile";
-    if (/Tablet|iPad/i.test(ua)) device = "Tablet";
-    return `${device} | ${navigator.platform} | ${navigator.language}`;
+    return `${device} | ${navigator.platform}`;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLocating(true);
+    setIsSyncing(true);
 
-    let location = 'Unknown';
-    try {
-      if ("geolocation" in navigator) {
-        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
-        });
-        location = `${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`;
-      }
-    } catch (err) {
-      console.warn("Location access denied or unavailable.");
-    }
+    const ip = await fetchIpAddress();
+    const deviceInfo = getDeviceInfo();
 
     onSignup({
       id: Math.random().toString(36).substr(2, 9),
       name: formData.name,
       email: formData.email,
       phone: formData.phone,
-      location: location,
+      ipAddress: ip,
       balance: 0,
       stripeConnected: false,
       role: 'user',
-      deviceInfo: getDeviceInfo()
+      deviceInfo: deviceInfo
     });
-    setIsLocating(false);
+    setIsSyncing(false);
   };
 
   const handleSocialSignup = async (provider: 'google' | 'facebook') => {
-    setIsLocating(true);
-    let location = 'Unknown';
-    try {
-      if ("geolocation" in navigator) {
-        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
-        });
-        location = `${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`;
-      }
-    } catch (err) {}
+    setIsSyncing(true);
+    const ip = await fetchIpAddress();
 
     onSignup({
       id: `social_${Math.random().toString(36).substr(2, 9)}`,
       name: `${provider.charAt(0).toUpperCase() + provider.slice(1)} Explorer`,
       email: `${provider}@social.net`,
       phone: '+1 555-000-0000',
-      location: location,
+      ipAddress: ip,
       balance: 100,
       stripeConnected: false,
       role: 'user',
       deviceInfo: getDeviceInfo()
     });
-    setIsLocating(false);
+    setIsSyncing(false);
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a] p-4">
-      <div className="w-full max-w-md bg-[#121212] rounded-3xl border border-neutral-900 shadow-2xl overflow-hidden p-10">
+    <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a] p-4 font-sans relative">
+      <div className="w-full max-w-md bg-[#121212] rounded-[3rem] border border-neutral-900 shadow-2xl overflow-hidden p-10 animate-in fade-in zoom-in-95 duration-500">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-14 h-14 bg-[#facc15] rounded-2xl flex items-center justify-center mb-4">
+          <div className="w-14 h-14 bg-[#facc15] rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-yellow-400/20">
             <Zap className="text-black fill-current w-8 h-8" />
           </div>
-          <h1 className="text-2xl font-black text-white tracking-tighter uppercase">Join LeadBid</h1>
-          <p className="text-neutral-500 text-sm mt-1 text-center px-4">Create your account to start bidding on verified leads.</p>
+          <h1 className="text-2xl font-black text-white tracking-tighter uppercase italic">Node Initialization</h1>
+          <p className="text-neutral-500 text-[10px] mt-1 text-center font-black uppercase tracking-widest opacity-60">Provision your marketplace identity</p>
         </div>
 
         <div className="grid grid-cols-2 gap-4 mb-8">
           <button 
             onClick={() => handleSocialSignup('google')}
-            disabled={isLocating}
-            className="bg-black text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 border border-neutral-800 hover:bg-neutral-900 transition-all text-xs disabled:opacity-50 shadow-lg"
+            disabled={isSyncing}
+            className="bg-black text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 border border-neutral-800 hover:bg-neutral-900 transition-all text-[10px] uppercase tracking-widest disabled:opacity-50 group"
           >
-            {isLocating ? <Loader2 className="animate-spin" size={14} /> : <img src="https://www.google.com/favicon.ico" alt="Google" className="w-4 h-4" />}
-            Google
+            <Globe size={14} className="group-hover:text-[#facc15]" /> Google
           </button>
           <button 
             onClick={() => handleSocialSignup('facebook')}
-            disabled={isLocating}
-            className="bg-black text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 border border-neutral-800 hover:bg-neutral-900 transition-all text-xs disabled:opacity-50 shadow-lg"
+            disabled={isSyncing}
+            className="bg-black text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 border border-neutral-800 hover:bg-neutral-900 transition-all text-[10px] uppercase tracking-widest disabled:opacity-50 group"
           >
-            {isLocating ? <Loader2 className="animate-spin" size={14} /> : <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>}
-            Facebook
+            <ShieldCheck size={14} className="group-hover:text-[#facc15]" /> Facebook
           </button>
         </div>
 
         <div className="relative flex items-center gap-4 mb-8">
           <div className="flex-1 h-[1px] bg-neutral-800"></div>
-          <span className="text-[9px] font-black text-neutral-600 uppercase tracking-widest">or manual signup</span>
+          <span className="text-[9px] font-black text-neutral-600 uppercase tracking-widest">or manual provision</span>
           <div className="flex-1 h-[1px] bg-neutral-800"></div>
         </div>
 
@@ -123,7 +113,7 @@ const Signup: React.FC<SignupProps> = ({ onSignup, onSwitchToLogin }) => {
             <label className="text-[10px] font-black text-neutral-600 uppercase tracking-widest px-1">Full Name</label>
             <input 
               required
-              className="w-full bg-black border border-neutral-800 rounded-xl px-4 py-3 text-white outline-none focus:border-[#facc15] transition-all"
+              className="w-full bg-black border border-neutral-800 rounded-xl px-4 py-3 text-white outline-none focus:border-[#facc15] transition-all font-bold"
               placeholder="John Doe"
               value={formData.name}
               onChange={e => setFormData({...formData, name: e.target.value})}
@@ -136,7 +126,7 @@ const Signup: React.FC<SignupProps> = ({ onSignup, onSwitchToLogin }) => {
               <input 
                 required
                 type="email"
-                className="w-full bg-black border border-neutral-800 rounded-xl px-4 py-3 text-white outline-none focus:border-[#facc15] transition-all"
+                className="w-full bg-black border border-neutral-800 rounded-xl px-4 py-3 text-white outline-none focus:border-[#facc15] transition-all font-bold"
                 placeholder="john@example.com"
                 value={formData.email}
                 onChange={e => setFormData({...formData, email: e.target.value})}
@@ -149,7 +139,7 @@ const Signup: React.FC<SignupProps> = ({ onSignup, onSwitchToLogin }) => {
                 <input 
                   required
                   type="tel"
-                  className="w-full bg-black border border-neutral-800 rounded-xl pl-9 pr-4 py-3 text-white outline-none focus:border-[#facc15] transition-all"
+                  className="w-full bg-black border border-neutral-800 rounded-xl pl-9 pr-4 py-3 text-white outline-none focus:border-[#facc15] transition-all font-bold"
                   placeholder="+1 234 567"
                   value={formData.phone}
                   onChange={e => setFormData({...formData, phone: e.target.value})}
@@ -163,7 +153,7 @@ const Signup: React.FC<SignupProps> = ({ onSignup, onSwitchToLogin }) => {
               <label className="text-[10px] font-black text-neutral-600 uppercase tracking-widest px-1">Username</label>
               <input 
                 required
-                className="w-full bg-black border border-neutral-800 rounded-xl px-4 py-3 text-white outline-none focus:border-[#facc15] transition-all"
+                className="w-full bg-black border border-neutral-800 rounded-xl px-4 py-3 text-white outline-none focus:border-[#facc15] transition-all font-bold"
                 placeholder="johndoe"
                 value={formData.username}
                 onChange={e => setFormData({...formData, username: e.target.value})}
@@ -174,7 +164,7 @@ const Signup: React.FC<SignupProps> = ({ onSignup, onSwitchToLogin }) => {
               <input 
                 required
                 type="password"
-                className="w-full bg-black border border-neutral-800 rounded-xl px-4 py-3 text-white outline-none focus:border-[#facc15] transition-all"
+                className="w-full bg-black border border-neutral-800 rounded-xl px-4 py-3 text-white outline-none focus:border-[#facc15] transition-all font-bold"
                 placeholder="••••"
                 value={formData.password}
                 onChange={e => setFormData({...formData, password: e.target.value})}
@@ -184,19 +174,19 @@ const Signup: React.FC<SignupProps> = ({ onSignup, onSwitchToLogin }) => {
 
           <button 
             type="submit"
-            disabled={isLocating}
-            className="w-full bg-[#facc15] text-black py-4 rounded-xl font-black text-lg hover:bg-[#eab308] transition-all mt-4 flex items-center justify-center gap-2"
+            disabled={isSyncing}
+            className="w-full bg-[#facc15] text-black py-4 rounded-xl font-black text-sm hover:bg-[#eab308] transition-all mt-4 flex items-center justify-center gap-2 shadow-xl border-b-4 border-yellow-600 active:scale-95 disabled:opacity-50"
           >
-            {isLocating ? <Loader2 className="animate-spin" size={20} /> : 'CREATE ACCOUNT'}
+            {isSyncing ? <Loader2 className="animate-spin" size={20} /> : 'INITIALIZE NODE'}
           </button>
         </form>
 
         <div className="mt-8 text-center">
           <button 
             onClick={onSwitchToLogin}
-            className="text-neutral-500 text-sm hover:text-[#facc15] transition-colors"
+            className="text-neutral-500 text-[10px] font-black uppercase tracking-widest hover:text-[#facc15] transition-colors"
           >
-            Already have an account? <span className="font-bold underline">Login</span>
+            Already Provisioned? <span className="font-bold underline">Login</span>
           </button>
         </div>
       </div>

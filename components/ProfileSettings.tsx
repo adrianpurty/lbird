@@ -1,6 +1,6 @@
 
 import React, { useState, useRef } from 'react';
-import { ShieldCheck, Mail, User as UserIcon, Lock, Camera, Save, RefreshCw, FileText } from 'lucide-react';
+import { ShieldCheck, Mail, User as UserIcon, Lock, Camera, Save, RefreshCw, FileText, Globe } from 'lucide-react';
 import { User } from '../types';
 
 interface ProfileSettingsProps {
@@ -37,32 +37,21 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onUpdate }) => 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (formData.newPassword && formData.newPassword !== formData.confirmPassword) {
       alert("ERROR: Passwords do not match.");
       return;
     }
-
     setIsSaving(true);
-    
     const updates: Partial<User> = {
       name: formData.name,
       email: formData.email,
       bio: formData.bio,
       profileImage: formData.profileImage
     };
-    
-    if (formData.newPassword) {
-      updates.password = formData.newPassword;
-    }
-
-    // Pass updates to parent which handles backend persistence
+    if (formData.newPassword) updates.password = formData.newPassword;
     onUpdate(updates);
-    
-    // Simulate short delay for UI feedback
     setTimeout(() => {
       setIsSaving(false);
-      alert("IDENTITY SYNCHRONIZED: Your credentials have been committed to the secure ledger.");
       setFormData(prev => ({ ...prev, newPassword: '', confirmPassword: '' }));
     }, 800);
   };
@@ -80,7 +69,6 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onUpdate }) => 
 
       <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
-          {/* Identity Section */}
           <div className="bg-[#121212] p-8 rounded-[2.5rem] border border-neutral-900 shadow-2xl space-y-6">
             <h3 className="text-xs font-black text-neutral-600 uppercase tracking-[0.3em] flex items-center gap-2">
               <ShieldCheck size={14} className="text-[#facc15]" /> General Information
@@ -127,7 +115,6 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onUpdate }) => 
             </div>
           </div>
 
-          {/* Security Section */}
           <div className="bg-[#121212] p-8 rounded-[2.5rem] border border-neutral-900 shadow-2xl space-y-6">
             <h3 className="text-xs font-black text-neutral-600 uppercase tracking-[0.3em] flex items-center gap-2">
               <Lock size={14} className="text-red-500" /> Security Protocol
@@ -156,9 +143,6 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onUpdate }) => 
                 />
               </div>
             </div>
-            <p className="text-[9px] text-neutral-600 font-black uppercase tracking-widest italic">
-              Leave password fields empty if you do not wish to change your current credentials.
-            </p>
           </div>
         </div>
 
@@ -178,13 +162,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onUpdate }) => 
               <div className="absolute bottom-0 right-0 bg-[#facc15] text-black p-2 rounded-full shadow-lg group-hover:scale-110 transition-transform">
                 <Camera size={16} />
               </div>
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                className="hidden" 
-                accept="image/*" 
-                onChange={handleImageUpload}
-              />
+              <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
             </div>
             <div>
               <h4 className="text-white font-black text-lg">{formData.name || 'Trader Identity'}</h4>
@@ -202,19 +180,19 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onUpdate }) => 
             </div>
           </div>
 
-          <div className="bg-blue-500/5 border border-blue-500/10 p-6 rounded-3xl space-y-3">
-            <h4 className="text-white font-bold text-xs uppercase tracking-widest">Account Status</h4>
+          <div className="bg-blue-500/5 border border-blue-500/10 p-6 rounded-3xl space-y-4">
+            <h4 className="text-white font-bold text-xs uppercase tracking-widest">Network Signature</h4>
             <div className="flex justify-between items-center">
-              <span className="text-neutral-500 text-[10px] font-black uppercase">Verified</span>
-              <span className="text-emerald-500 font-bold text-[10px]">YES</span>
+              <span className="text-neutral-500 text-[10px] font-black uppercase flex items-center gap-1.5"><Globe size={10} /> Node IP</span>
+              <span className="text-emerald-500 font-black text-[10px] font-mono">{user.ipAddress || '0.0.0.0'}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-neutral-500 text-[10px] font-black uppercase">Escrow Enabled</span>
-              <span className="text-emerald-500 font-bold text-[10px]">ACTIVE</span>
+              <span className="text-neutral-500 text-[10px] font-black uppercase flex items-center gap-1.5"><ShieldCheck size={10} /> Handshake</span>
+              <span className="text-emerald-500 font-bold text-[10px]">SECURE</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-neutral-500 text-[10px] font-black uppercase">2FA Gateway</span>
-              <span className="text-[#facc15] font-bold text-[10px]">CONFIGURED</span>
+              <span className="text-neutral-500 text-[10px] font-black uppercase flex items-center gap-1.5"><Lock size={10} /> 2FA</span>
+              <span className="text-[#facc15] font-bold text-[10px]">ACTIVE</span>
             </div>
           </div>
         </div>

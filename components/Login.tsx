@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Zap, ShieldCheck, Lock, User as UserIcon, Loader2, Cpu } from 'lucide-react';
+import { Zap, ShieldCheck, Lock, User as UserIcon, Loader2, Cpu, Globe } from 'lucide-react';
 import { User } from '../types';
 
 interface LoginProps {
@@ -15,22 +15,22 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup }) => {
   const [error, setError] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
 
-  const requestLocation = async (): Promise<string> => {
-    return new Promise((resolve) => {
-      if (!("geolocation" in navigator)) return resolve("Geo Not Supported");
-      const timeout = setTimeout(() => resolve("Geo Timeout"), 4000);
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          clearTimeout(timeout);
-          resolve(`${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`);
-        },
-        () => {
-          clearTimeout(timeout);
-          resolve("Geo Denied");
-        },
-        { timeout: 3500 }
-      );
-    });
+  const fetchIpAddress = async (): Promise<string> => {
+    try {
+      const response = await fetch('https://api.ipify.org?format=json');
+      const data = await response.json();
+      return data.ip || '0.0.0.0';
+    } catch (err) {
+      console.warn("IP tracking blocked by network protocol.");
+      return 'Restricted Node';
+    }
+  };
+
+  const getDeviceInfo = () => {
+    const ua = navigator.userAgent;
+    let device = "Desktop";
+    if (/Mobi|Android/i.test(ua)) device = "Mobile";
+    return `${device} | ${navigator.platform}`;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -38,9 +38,9 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup }) => {
     setIsSyncing(true);
     setError('');
     
-    const location = await requestLocation();
+    const ip = await fetchIpAddress();
+    const deviceInfo = getDeviceInfo();
 
-    // Check credentials based on requested administration login
     if (username === 'admin' && password === '1234') {
       onLogin({
         id: 'admin_1',
@@ -49,7 +49,8 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup }) => {
         balance: 1000000,
         stripeConnected: true,
         role: 'admin',
-        location: location
+        ipAddress: ip,
+        deviceInfo: deviceInfo
       });
     } else if (username === 'user' && password === 'user') {
        onLogin({
@@ -59,7 +60,8 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup }) => {
         balance: 5000,
         stripeConnected: false,
         role: 'user',
-        location: location
+        ipAddress: ip,
+        deviceInfo: deviceInfo
       });
     } else {
       setError('Access Denied: Invalid Terminal Credentials');
@@ -69,7 +71,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup }) => {
 
   const handleSocialLogin = async (provider: 'google' | 'facebook') => {
     setIsSyncing(true);
-    const location = await requestLocation();
+    const ip = await fetchIpAddress();
     onLogin({
       id: `social_${Math.random().toString(36).substr(2, 9)}`,
       name: `${provider.charAt(0).toUpperCase() + provider.slice(1)} Trader`,
@@ -77,20 +79,20 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup }) => {
       balance: 1000,
       stripeConnected: false,
       role: 'user',
-      location: location
+      ipAddress: ip,
+      deviceInfo: getDeviceInfo()
     });
     setIsSyncing(false);
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#050810] p-4 font-sans relative overflow-hidden">
-      {/* Decorative Background Elements */}
       <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#facc15] rounded-full blur-[120px]" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500 rounded-full blur-[120px]" />
       </div>
 
-      <div className="w-full max-w-md bg-[#0a0a0a] rounded-[3rem] border border-neutral-900 shadow-[0_0_100px_rgba(0,0,0,1)] overflow-hidden relative z-10">
+      <div className="w-full max-w-md bg-[#0a0a0a] rounded-[3rem] border border-neutral-900 shadow-[0_0_100px_rgba(0,0,0,1)] overflow-hidden relative z-10 animate-in fade-in zoom-in-95 duration-500">
         <div className="p-10 pb-6 text-center">
           <div className="inline-flex p-4 bg-[#facc15]/10 rounded-3xl border border-[#facc15]/20 mb-6 group hover:scale-110 transition-transform duration-500">
             <Zap className="text-[#facc15] fill-[#facc15] w-10 h-10 group-hover:animate-pulse" />
@@ -102,7 +104,6 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup }) => {
         </div>
 
         <div className="px-10">
-          {/* Mode Selector */}
           <div className="flex bg-black border border-neutral-800 rounded-2xl p-1.5 mb-8">
             <button 
               onClick={() => { setActiveMode('trader'); setError(''); }}
@@ -177,25 +178,25 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup }) => {
                 <div className="flex-1 h-[1px] bg-neutral-900" />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 pb-8">
                 <button 
                   onClick={() => handleSocialLogin('google')}
-                  className="bg-neutral-900 text-neutral-400 py-3 rounded-xl font-bold flex items-center justify-center gap-2 border border-neutral-800 hover:text-white hover:bg-neutral-800 transition-all text-[10px] uppercase tracking-widest"
+                  className="bg-neutral-900 text-neutral-400 py-3 rounded-xl font-bold flex items-center justify-center gap-2 border border-neutral-800 hover:text-white hover:bg-neutral-800 transition-all text-[10px] uppercase tracking-widest group"
                 >
-                  <img src="https://www.google.com/favicon.ico" alt="" className="w-3 h-3 grayscale group-hover:grayscale-0" /> Google
+                  <Globe size={12} className="group-hover:text-[#facc15]" /> Google
                 </button>
                 <button 
                   onClick={() => handleSocialLogin('facebook')}
-                  className="bg-neutral-900 text-neutral-400 py-3 rounded-xl font-bold flex items-center justify-center gap-2 border border-neutral-800 hover:text-white hover:bg-neutral-800 transition-all text-[10px] uppercase tracking-widest"
+                  className="bg-neutral-900 text-neutral-400 py-3 rounded-xl font-bold flex items-center justify-center gap-2 border border-neutral-800 hover:text-white hover:bg-neutral-800 transition-all text-[10px] uppercase tracking-widest group"
                 >
-                  Facebook
+                  <ShieldCheck size={12} className="group-hover:text-[#facc15]" /> Facebook
                 </button>
               </div>
             </div>
           )}
         </div>
 
-        <div className="p-10 pt-8 text-center bg-neutral-900/20 mt-6">
+        <div className="p-10 pt-8 text-center bg-neutral-900/20">
           <button 
             onClick={onSwitchToSignup}
             className="text-neutral-600 text-[10px] font-black uppercase hover:text-[#facc15] transition-colors flex items-center justify-center gap-2 mx-auto"

@@ -79,7 +79,7 @@ export interface User {
   profileImage?: string;
   phone?: string;
   password?: string;
-  location?: string;
+  ipAddress?: string;
   deviceInfo?: string;
   wishlist?: string[];
 }
