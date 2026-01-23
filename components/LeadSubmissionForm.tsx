@@ -17,7 +17,7 @@ const LeadSubmissionForm: React.FC<LeadSubmissionFormProps> = ({ onSubmit }) => 
     targetLeadUrl: '',
     basePrice: 50
   });
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<Record<string, string[]>>({});
   const [aiInsight, setAiInsight] = useState<AIInsight | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
@@ -26,10 +26,10 @@ const LeadSubmissionForm: React.FC<LeadSubmissionFormProps> = ({ onSubmit }) => 
     const fetchCategories = async () => {
       try {
         const cats = await apiService.getCategories();
-        setCategories(cats);
+        setCategories(cats as any);
       } catch (error) {
         console.error("Failed to fetch categories:", error);
-        setCategories([]);
+        setCategories({});
       } finally {
         setIsLoadingCategories(false);
       }
@@ -94,10 +94,15 @@ const LeadSubmissionForm: React.FC<LeadSubmissionFormProps> = ({ onSubmit }) => 
                 onChange={e => setFormData({...formData, category: e.target.value})}
               >
                 <option value="" disabled className="text-neutral-800">Select Industry Niche</option>
-                {categories.map((cat) => (
-                  <option key={cat} value={cat} className="bg-[#0a0a0a] text-white py-2">
-                    {cat}
-                  </option>
+                {Object.entries(categories).map(([group, items]) => (
+                  <optgroup key={group} label={group} className="bg-[#0a0a0a] text-[#facc15] font-black uppercase text-[10px] tracking-widest italic py-4">
+                    {/* Fixed: Cast items to string[] to resolve "Property map does not exist on type unknown" error */}
+                    {(items as string[]).map(cat => (
+                      <option key={cat} value={cat} className="bg-black text-white py-2 normal-case font-bold italic not-italic text-sm">
+                        {cat}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
               <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none group-hover:text-[#facc15] transition-colors">

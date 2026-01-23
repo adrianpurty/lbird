@@ -1,6 +1,5 @@
-
 import React, { useState, useMemo } from 'react';
-import { X, Globe, Target, Phone, Zap, ChevronRight, Calculator, AlertTriangle, Wallet } from 'lucide-react';
+import { X, Globe, Target, Phone, Zap, ChevronRight, Calculator, AlertTriangle, Wallet, Info } from 'lucide-react';
 import { Lead } from '../types';
 
 interface BiddingModalProps {
@@ -20,17 +19,26 @@ export interface BiddingFormData {
   totalDailyCost: number;
 }
 
+// Inline component for help tooltips in the modal
+const HelpTip = ({ text }: { text: string }) => (
+  <div className="group relative inline-block ml-1 align-middle">
+    <Info size={12} className="text-neutral-500 hover:text-[#facc15] cursor-help transition-colors" />
+    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-3 bg-black border border-white/10 rounded-xl text-[10px] text-white font-medium leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[110] shadow-2xl backdrop-blur-md">
+      {text}
+    </div>
+  </div>
+);
+
 const BiddingModal: React.FC<BiddingModalProps> = ({ lead, userBalance, onClose, onSubmit, onRefill }) => {
   const minBid = lead.currentBid + 1;
   const [formData, setFormData] = useState<Omit<BiddingFormData, 'totalDailyCost'>>({
     buyerBusinessUrl: '',
     buyerTargetLeadUrl: '',
     buyerTollFree: '',
-    leadsPerDay: 50, // Default starting volume
+    leadsPerDay: 50,
     bidAmount: minBid
   });
 
-  // Calculate total cost dynamically based on reactive form state
   const totalDailyCost = useMemo(() => {
     return formData.bidAmount * formData.leadsPerDay;
   }, [formData.bidAmount, formData.leadsPerDay]);
@@ -52,7 +60,6 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, userBalance, onClose,
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md overflow-hidden">
       <div className="w-full max-w-xl max-h-[90vh] bg-[#0d111a] border border-[#facc15]/20 rounded-[2rem] shadow-2xl flex flex-col animate-in zoom-in-95 duration-200">
         
-        {/* Fixed Header */}
         <div className="flex justify-between items-center p-6 sm:p-8 border-b border-white/5 bg-black/20 shrink-0">
           <div>
             <h2 className="text-lg sm:text-xl font-black text-white uppercase tracking-tighter">Initialize Lead Purchase</h2>
@@ -63,7 +70,6 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, userBalance, onClose,
           </button>
         </div>
 
-        {/* Scrollable Form Body */}
         <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-6 overflow-y-auto scrollbar-hide">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
             <div className="flex-1 bg-[#1a202c] p-4 sm:p-5 rounded-2xl border border-white/5 flex justify-between items-center">
@@ -126,11 +132,11 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, userBalance, onClose,
             </div>
           </div>
 
-          {/* Volume Slider Section */}
           <div className="space-y-4 pt-2 bg-black/40 p-4 sm:p-6 rounded-3xl border border-neutral-900">
             <div className="flex justify-between items-end mb-2">
-              <label className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] flex items-center gap-2">
+              <label className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] flex items-center gap-1">
                 <Zap size={14} className="text-[#facc15]" /> Daily Volume Protocol
+                <HelpTip text="Target number of leads you wish to acquire per 24h cycle. Adjusting this impacts your daily settlement total." />
               </label>
               <div className="text-right">
                 <span className="text-xl sm:text-2xl font-black text-white italic">{formData.leadsPerDay}</span>
@@ -152,8 +158,9 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, userBalance, onClose,
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1">
+            <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1 flex items-center gap-1">
               Unit Bid Amount ($)
+              <HelpTip text="The maximum price you are willing to pay for a single verified lead. Higher bids increase your priority in the distribution waterfall." />
             </label>
             <div className="relative">
               <input 
@@ -189,7 +196,6 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, userBalance, onClose,
              )}
           </div>
 
-          {/* Sticky-style footer inside scroll area for visual focus */}
           <button 
             type="submit"
             disabled={isBidTooLow}

@@ -3,9 +3,10 @@ import { Lead, UserRole } from '../types.ts';
 import { 
   Timer, Zap, Settings2, Heart, ChevronLeft, ChevronRight, 
   BriefcaseBusiness, PlaneTakeoff, Ship, Hotel, Building2, 
-  Coins, ListFilter, Stethoscope, Shield
+  Coins, ListFilter, Stethoscope, Shield, Info
 } from 'lucide-react';
 
+// Define the missing LeadGridProps interface to fix line 129 error
 interface LeadGridProps {
   leads: Lead[];
   onBid: (id: string) => void;
@@ -14,13 +15,38 @@ interface LeadGridProps {
   onAdminReject?: (id: string) => void;
   onDelete?: (id: string) => void;
   onToggleWishlist?: (id: string) => void;
-  userRole?: UserRole;
-  currentUserId?: string;
+  userRole: UserRole;
+  currentUserId: string;
   activeBids?: string[];
   wishlist?: string[];
 }
 
-// Rigidly memoized LeadCard to prevent any CPU cycles on background data syncs if status hasn't changed
+// Fixed: Made children optional to resolve "children missing" errors on lines 100 and 131
+interface TooltipProps {
+  children?: React.ReactNode;
+  text: string;
+  position?: 'top' | 'bottom' | 'left' | 'right';
+}
+
+// Informative Tooltip Component for reusable UI guidance
+const Tooltip = ({ children, text, position = 'top' }: TooltipProps) => {
+  const posClasses = {
+    top: 'bottom-full left-1/2 -translate-x-1/2 mb-2',
+    bottom: 'top-full left-1/2 -translate-x-1/2 mt-2',
+    left: 'right-full top-1/2 -translate-y-1/2 mr-2',
+    right: 'left-full top-1/2 -translate-y-1/2 ml-2'
+  };
+
+  return (
+    <div className="relative group/tooltip inline-block w-full">
+      {children}
+      <div className={`absolute ${posClasses[position]} z-[100] scale-0 group-hover/tooltip:scale-100 transition-all duration-200 origin-center bg-black/90 text-white text-[10px] font-black uppercase tracking-widest px-3 py-2 rounded-lg border border-white/10 shadow-2xl w-48 pointer-events-none text-center leading-relaxed backdrop-blur-md`}>
+        {text}
+      </div>
+    </div>
+  );
+};
+
 const MemoizedLeadCard = memo(({ 
   lead, 
   isUserEngaged, 
@@ -70,9 +96,12 @@ const MemoizedLeadCard = memo(({
             </div>
             <h3 className="text-[var(--text-main)] font-bold text-sm line-clamp-1">{lead.title}</h3>
           </div>
-          <div className="text-[10px] font-black text-[var(--text-accent)] bg-[var(--text-accent)]/10 px-1.5 py-0.5 rounded">
-            {lead.qualityScore}
-          </div>
+          {/* Fixed: Tooltip correctly wraps its children to resolve line 77 error */}
+          <Tooltip text="AI Integrity Score (0-100). Higher scores indicate superior traffic quality and higher conversion probability.">
+            <div className="text-[10px] font-black text-[var(--text-accent)] bg-[var(--text-accent)]/10 px-1.5 py-0.5 rounded cursor-help border border-[var(--text-accent)]/20">
+              {lead.qualityScore}
+            </div>
+          </Tooltip>
         </div>
 
         <p className="text-neutral-500 text-[10px] line-clamp-2 mb-4 flex-1 italic leading-relaxed">
@@ -98,17 +127,20 @@ const MemoizedLeadCard = memo(({
         )}
 
         <div className="flex items-center justify-between gap-3 pt-3 border-t border-[var(--border-main)]/50">
-          <button
-            onClick={() => onBid(lead.id)}
-            disabled={isPending || isOwner}
-            className={`flex-1 py-2 rounded-lg font-black text-[9px] uppercase tracking-widest transition-all ${
-              isOwner ? 'bg-blue-600/10 text-blue-500 border border-blue-600/20' : 
-              isPending ? 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400' : 
-              'bg-[var(--text-accent)] text-black hover:brightness-110 active:scale-95'
-            }`}
-          >
-            {isOwner ? 'OWNER' : isPending ? 'PENDING' : 'SECURE'}
-          </button>
+          {/* Fixed: Tooltip correctly wraps its children to resolve line 107 error */}
+          <Tooltip text={isOwner ? "You are the provider of this node" : "Secure your position in the lead flow by placing a bid."}>
+            <button
+              onClick={() => onBid(lead.id)}
+              disabled={isPending || isOwner}
+              className={`w-full py-2 rounded-lg font-black text-[9px] uppercase tracking-widest transition-all ${
+                isOwner ? 'bg-blue-600/10 text-blue-500 border border-blue-600/20' : 
+                isPending ? 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400' : 
+                'bg-[var(--text-accent)] text-black hover:brightness-110 active:scale-95'
+              }`}
+            >
+              {isOwner ? 'OWNER' : isPending ? 'PENDING' : 'SECURE'}
+            </button>
+          </Tooltip>
           {isAdmin && (
             <button onClick={() => onAdminEdit?.(lead)} className="p-2 text-neutral-500 hover:text-[var(--text-accent)] transition-colors"><Settings2 size={14} /></button>
           )}
@@ -124,9 +156,8 @@ const LeadGrid: React.FC<LeadGridProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   
-  // Performance Fix: Defer filtering work so the UI remains fluid even with high CPU pressure
   const deferredCategory = useDeferredValue(selectedCategory);
-  const ITEMS_PER_PAGE = 8; // Small batches for low memory usage
+  const ITEMS_PER_PAGE = 8;
 
   const categories = useMemo(() => Array.from(new Set(leads.map(l => l.category))).sort(), [leads]);
   
