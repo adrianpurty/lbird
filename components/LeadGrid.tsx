@@ -1,4 +1,4 @@
-import React, { useState, useMemo, memo, useDeferredValue, useEffect } from 'react';
+import React, { useState, useMemo, memo, useDeferredValue, useEffect, useRef } from 'react';
 import { Lead, UserRole } from '../types.ts';
 import { 
   Timer, Zap, Settings2, Heart, ChevronLeft, ChevronRight, 
@@ -29,7 +29,7 @@ interface TooltipProps {
 const Tooltip = ({ children, text, position = 'top' }: TooltipProps) => {
   const posClasses = {
     top: 'bottom-full left-1/2 -translate-x-1/2 mb-2',
-    bottom: 'top-full left-1/2 -translate-x-1/2 mt-2',
+    bottom: 'top-full left-1/2 -translate-y-1/2 mt-2',
     left: 'right-full top-1/2 -translate-y-1/2 mr-2',
     right: 'left-full top-1/2 -translate-y-1/2 ml-2'
   };
@@ -56,6 +56,22 @@ const MemoizedLeadCard = memo(({
   onAdminReject, 
   onToggleWishlist 
 }: any) => {
+  const [successTrigger, setSuccessTrigger] = useState(false);
+  const prevStatus = useRef(lead.status);
+  const prevEngaged = useRef(isUserEngaged);
+
+  useEffect(() => {
+    // Trigger success animation if status changes to approved or bid successful
+    if ((prevStatus.current !== 'approved' && lead.status === 'approved') || 
+        (prevEngaged.current === false && isUserEngaged === true)) {
+      setSuccessTrigger(true);
+      const timer = setTimeout(() => setSuccessTrigger(false), 1000);
+      return () => clearTimeout(timer);
+    }
+    prevStatus.current = lead.status;
+    prevEngaged.current = isUserEngaged;
+  }, [lead.status, isUserEngaged]);
+
   const getIcon = (category: string) => {
     const cat = category.toLowerCase();
     if (cat.includes('flight')) return <PlaneTakeoff size={16} className="text-sky-400" />;
@@ -73,6 +89,8 @@ const MemoizedLeadCard = memo(({
 
   return (
     <div className={`bg-[var(--bg-card)] rounded-xl border transition-all flex flex-col relative overflow-hidden animate-card-pop lead-card-render ${
+      successTrigger ? 'animate-success z-30' : ''
+    } ${
       isUserEngaged ? 'border-[var(--text-accent)]/60 animate-bid-glow' : 'border-[var(--border-main)]'
     } hover:border-[var(--text-accent)]/40 hover:-translate-y-0.5 shadow-sm`}>
       <div className="absolute top-3 right-3 z-20 flex gap-2">

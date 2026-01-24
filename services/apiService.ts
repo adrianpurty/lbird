@@ -43,7 +43,7 @@ export const NICHE_PROTOCOLS = {
   ]
 };
 
-// Use explicit relative path for production PHP server routing
+// Use explicit relative path to ensure the browser finds the script at the project root
 const API_ENDPOINT = './api.php';
 
 class ApiService {
@@ -58,11 +58,13 @@ class ApiService {
     try {
       const response = await fetch(url, options);
       if (!response.ok) {
+        // Log detailed error for 404/500/etc.
+        console.error(`API Connectivity Failure [${action}]: Status ${response.status} (${response.statusText})`);
         throw new Error(`Node Error: ${response.status} ${response.statusText}`);
       }
       return response.json();
     } catch (err) {
-      console.error(`Request Failed [${action}]:`, err);
+      console.error(`Request Exception [${action}]:`, err);
       throw err;
     }
   }

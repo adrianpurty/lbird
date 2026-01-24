@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo, memo, useDefe
 import { 
   TrendingUp, Settings, ShieldAlert, Package, 
   Inbox, CheckCircle, Activity, User as UserIcon, 
-  BarChart3, Target, Info, XCircle, Heart, FileText
+  BarChart3, Target, Info, XCircle, Heart, FileText, Database, Server
 } from 'lucide-react';
 import Sidebar from './components/Sidebar.tsx';
 import Header from './components/Header.tsx';
@@ -23,7 +23,7 @@ import InvoiceLedger from './components/InvoiceLedger.tsx';
 import { Lead, User, PurchaseRequest, Notification, PlatformAnalytics, OAuthConfig, Invoice } from './types.ts';
 import { apiService } from './services/apiService.ts';
 
-const SESSION_KEY = 'lb_session_v2';
+const SESSION_KEY = 'lb_session_v3';
 
 interface AppMarketData {
   leads: Lead[];
@@ -34,15 +34,12 @@ interface AppMarketData {
   authConfig: OAuthConfig;
   gateways: GatewayAPI[];
   lastUpdate?: string;
+  db_size?: number;
 }
 
 const MemoizedSidebar = memo(Sidebar);
 const MemoizedHeader = memo(Header);
 const MemoizedLeadGrid = memo(LeadGrid);
-const MemoizedDashboardStats = memo(DashboardStats);
-const MemoizedRevenueChart = memo(RevenueChart);
-const MemoizedInvoiceLedger = memo(InvoiceLedger);
-
 const App: React.FC = () => {
   const [authView, setAuthView] = useState<'login' | 'signup' | 'app'>('login');
   const [activeTab, setActiveTab] = useState<'market' | 'profile' | 'create' | 'settings' | 'bids' | 'admin' | 'inbox' | 'auth-config' | 'payment-config' | 'wishlist' | 'ledger'>('market');
@@ -66,6 +63,7 @@ const App: React.FC = () => {
   const [selectedLeadForBid, setSelectedLeadForBid] = useState<Lead | null>(null);
   const [selectedLeadForAdminEdit, setSelectedLeadForAdminEdit] = useState<Lead | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'info' } | null>(null);
 
   const isSyncing = useRef(false);
@@ -107,7 +105,8 @@ const App: React.FC = () => {
           analytics: data.analytics || null,
           authConfig: data.authConfig || prev.authConfig,
           gateways: data.gateways || prev.gateways,
-          lastUpdate: data.metadata?.last_updated
+          lastUpdate: data.metadata?.last_updated,
+          db_size: data.metadata?.db_size
         };
       });
 
@@ -163,8 +162,8 @@ const App: React.FC = () => {
   if (isLoading) return (
     <div className="h-screen flex items-center justify-center bg-[var(--bg-platform)]">
       <div className="flex flex-col items-center gap-4">
-        <Activity className="text-[var(--text-accent)] animate-spin" size={32} />
-        <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500 italic">Provisioning Node...</p>
+        <Server className="text-[var(--text-accent)] animate-pulse" size={32} />
+        <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500 italic">Syncing AI Database Node...</p>
       </div>
     </div>
   );
@@ -175,6 +174,15 @@ const App: React.FC = () => {
 
   return (
     <div className="flex flex-col lg:flex-row h-screen bg-[var(--bg-platform)] text-[var(--text-main)] overflow-hidden theme-transition optimize-gpu contain-strict">
+      {isSubmitting && (
+        <div className="fixed inset-0 z-[300] bg-black/50 backdrop-blur-sm flex items-center justify-center animate-in fade-in duration-300">
+           <div className="flex flex-col items-center gap-4">
+              <Database className="text-[#facc15] animate-bounce" size={48} />
+              <p className="text-white font-black text-xs uppercase tracking-[0.3em]">Committing to Ledger...</p>
+           </div>
+        </div>
+      )}
+
       {toast && (
         <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[200] px-5 py-3 rounded-xl shadow-xl border bg-[var(--bg-surface)] border-[var(--border-main)] flex items-center gap-3 animate-in slide-in-from-top-4">
           <CheckCircle className="text-[var(--text-accent)]" size={16} />
@@ -201,8 +209,14 @@ const App: React.FC = () => {
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10 space-y-8 pb-32 lg:pb-10 scroll-smooth contain-layout">
           {activeTab === 'market' && (
             <div className="space-y-8 animate-in fade-in duration-200">
-               <h2 className="text-xl font-black text-[var(--text-main)] italic uppercase flex items-center gap-3"><TrendingUp className="text-[var(--text-accent)]" /> Market Floor</h2>
-               <MemoizedDashboardStats leads={marketData.leads} user={user} />
+               <div className="flex justify-between items-center">
+                  <h2 className="text-xl font-black text-[var(--text-main)] italic uppercase flex items-center gap-3"><TrendingUp className="text-[var(--text-accent)]" /> Market Floor</h2>
+                  <div className="hidden sm:flex items-center gap-2 px-4 py-1.5 bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-full shadow-sm">
+                    <Database size={10} className="text-neutral-500" />
+                    <span className="text-[8px] font-black text-neutral-500 uppercase tracking-widest">{marketData.db_size ? `${(marketData.db_size / 1024).toFixed(1)}KB` : 'SYNCING'}</span>
+                  </div>
+               </div>
+               <DashboardStats leads={marketData.leads} user={user} />
                <MemoizedLeadGrid leads={marketData.leads} onBid={(id) => setSelectedLeadForBid(marketData.leads.find(l => l.id === id) || null)} onAdminEdit={setSelectedLeadForAdminEdit} onAdminApprove={(id) => apiService.updateLead(id, { status: 'approved' }).then(fetchAppData)} onAdminReject={(id) => apiService.updateLead(id, { status: 'rejected' }).then(fetchAppData)} onDelete={(id) => apiService.deleteLead(id).then(fetchAppData)} onToggleWishlist={(id) => apiService.toggleWishlist(user.id, id).then(fetchAppData)} userRole={user.role} currentUserId={user.id} wishlist={user.wishlist || []} activeBids={activeBidIds} />
             </div>
           )}
@@ -214,7 +228,7 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {activeTab === 'ledger' && <MemoizedInvoiceLedger invoices={userInvoices} />}
+          {activeTab === 'ledger' && <InvoiceLedger invoices={userInvoices} />}
 
           {activeTab === 'admin' && user.role === 'admin' && (
              <div className="max-w-7xl mx-auto space-y-12 animate-in fade-in duration-200">
@@ -225,7 +239,7 @@ const App: React.FC = () => {
                       <p className="text-[9px] text-neutral-500 font-black uppercase tracking-widest">Global Volume</p>
                       <p className="text-lg font-black text-[var(--text-main)] italic">${marketData.analytics?.totalVolume.toLocaleString()}</p>
                   </div>
-                  {marketData.analytics && <MemoizedRevenueChart history={marketData.analytics.revenueHistory} />}
+                  {marketData.analytics && <RevenueChart history={marketData.analytics.revenueHistory} />}
                 </div>
                 <div className="space-y-6">
                    <h3 className="text-sm font-black text-neutral-500 uppercase tracking-widest italic border-b border-[var(--border-main)] pb-2">Full Inventory Oversight</h3>
@@ -238,14 +252,14 @@ const App: React.FC = () => {
           {activeTab === 'payment-config' && user.role === 'admin' && <AdminPaymentSettings gateways={marketData.gateways} onGatewaysChange={(gws) => apiService.updateGateways(gws).then(fetchAppData)} onDeploy={() => { fetchAppData(); showToast("Gateways Deployed"); }} />}
           {activeTab === 'profile' && <ProfileSettings user={user} onUpdate={(u) => apiService.updateUser(user.id, u).then(fetchAppData)} />}
           {activeTab === 'settings' && <WalletSettings stripeConnected={user.stripeConnected} onConnect={() => {}} balance={user.balance} onDeposit={(amt) => apiService.deposit(user.id, amt).then(fetchAppData)} gateways={marketData.gateways} />}
-          {activeTab === 'create' && <LeadSubmissionForm onSubmit={(l) => apiService.createLead({...l, ownerId: user.id}).then(() => { fetchAppData(); setActiveTab('market'); })} />}
+          {activeTab === 'create' && <LeadSubmissionForm onSubmit={(l) => { setIsSubmitting(true); apiService.createLead({...l, ownerId: user.id}).then(() => { fetchAppData(); setActiveTab('market'); showToast("Lead Provisioned Successfully"); setIsSubmitting(false); }); }} />}
         </main>
         <div className="lg:hidden">
           <MobileNav activeTab={activeTab} onTabChange={setActiveTab} role={user.role} />
         </div>
       </div>
 
-      {selectedLeadForBid && <BiddingModal lead={selectedLeadForBid} user={user} onClose={() => setSelectedLeadForBid(null)} onSubmit={(d) => apiService.placeBid({ userId: user.id, leadId: selectedLeadForBid.id, ...d }).then(() => { fetchAppData(); setSelectedLeadForBid(null); })} onRefill={handleRefillFromModal} />}
+      {selectedLeadForBid && <BiddingModal lead={selectedLeadForBid} user={user} onClose={() => setSelectedLeadForBid(null)} onSubmit={(d) => { setIsSubmitting(true); apiService.placeBid({ userId: user.id, leadId: selectedLeadForBid.id, ...d }).then(() => { fetchAppData(); setSelectedLeadForBid(null); setIsSubmitting(false); showToast("Bid Committed to Ledger"); }); }} onRefill={handleRefillFromModal} />}
       {selectedLeadForAdminEdit && <AdminLeadActionsModal lead={selectedLeadForAdminEdit} onClose={() => setSelectedLeadForAdminEdit(null)} onSave={(u) => apiService.updateLead(u.id!, u).then(fetchAppData)} onDelete={(id) => apiService.deleteLead(id).then(fetchAppData)} />}
     </div>
   );

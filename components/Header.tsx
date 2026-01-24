@@ -1,6 +1,5 @@
-
 import React, { useState, useRef, useEffect } from 'react';
-import { Bell, Wallet, UserCircle, X, Info, CheckCircle, AlertTriangle, Sun, Moon, LogOut, User as UserIcon, ChevronDown } from 'lucide-react';
+import { Bell, Wallet, UserCircle, X, Info, CheckCircle, AlertTriangle, Sun, Moon, LogOut, User as UserIcon, ChevronDown, Activity } from 'lucide-react';
 import { User, Notification } from '../types.ts';
 
 interface HeaderProps {
@@ -26,12 +25,20 @@ const Header: React.FC<HeaderProps> = ({
 }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [pulseColor, setPulseColor] = useState('text-emerald-500');
   const unreadCount = notifications.filter(n => !n.read).length;
   
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const notificationMenuRef = useRef<HTMLDivElement>(null);
 
-  // Close menus when clicking outside
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPulseColor('text-emerald-400');
+      setTimeout(() => setPulseColor('text-emerald-600'), 150);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
@@ -52,8 +59,11 @@ const Header: React.FC<HeaderProps> = ({
            <span className="text-black font-black text-xs">LB</span>
         </div>
         <div className="hidden md:flex flex-col">
-          <span className="text-neutral-600 text-[10px] font-black uppercase tracking-widest">Platform Status</span>
-          <span className="text-emerald-500 font-mono text-xs tracking-widest">GATEWAY_ACTIVE</span>
+          <span className="text-neutral-600 text-[10px] font-black uppercase tracking-widest">AI Data Node</span>
+          <div className="flex items-center gap-2">
+            <Activity size={10} className={`${pulseColor} transition-colors duration-500`} />
+            <span className="text-emerald-500 font-mono text-xs tracking-widest">SYNC_STABLE</span>
+          </div>
         </div>
       </div>
 
