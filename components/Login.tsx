@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { Zap, ShieldCheck, Lock, User as UserIcon, Loader2, Cpu, Globe, AlertTriangle, MapPin } from 'lucide-react';
+import { Zap, ShieldCheck, Lock, User as UserIcon, Loader2, Cpu, Globe, AlertTriangle } from 'lucide-react';
 import { User, OAuthConfig } from '../types';
 import { apiService } from '../services/apiService';
 
@@ -48,22 +47,18 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
     setError('');
     
     try {
-      // Server-side authentication check
       const user = await apiService.authenticateUser(username, password);
       
       if (user) {
-        // Enforce role-based terminal access
         if (activeMode === 'admin' && user.role !== 'admin') {
           setError('Access Denied: Node Role Mismatch');
           setIsSyncing(false);
           return;
         }
 
-        // Capture session telemetry
         const location = await requestLocation();
         const deviceInfo = getDeviceInfo();
         
-        // Sync terminal data
         const enrichedUser = {
           ...user,
           location,
@@ -72,7 +67,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
 
         onLogin(enrichedUser as User);
       } else {
-        setError('Access Denied: Invalid Terminal Credentials');
+        setError('Access Denied: Invalid Credentials');
       }
     } catch (err) {
       setError('System Error: Handshake Failed');
@@ -84,11 +79,11 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
   const handleSocialLogin = async (provider: 'google' | 'facebook') => {
     if (authConfig) {
       if (provider === 'google' && (!authConfig.googleEnabled || !authConfig.googleClientId)) {
-        setError('Google Node Offline: Admin configuration required.');
+        setError('Google Node Offline: Setup required in Control Room.');
         return;
       }
       if (provider === 'facebook' && (!authConfig.facebookEnabled || !authConfig.facebookAppId)) {
-        setError('Facebook Node Offline: Admin configuration required.');
+        setError('Facebook Node Offline: Setup required in Control Room.');
         return;
       }
     }
@@ -97,6 +92,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
     setError('');
     
     try {
+      // Mock logic: In a real app, this would redirect to OAuth flow
       const user = await apiService.authenticateUser(`${provider}@global-network.net`, 'social-auth-token');
       if (user) {
         onLogin(user as User);
@@ -128,7 +124,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500 rounded-full blur-[120px]" />
       </div>
 
-      <div className="w-full max-w-md bg-[#0a0a0a] rounded-[3rem] border border-neutral-900 shadow-[0_0_100px_rgba(0,0,0,1)] overflow-hidden relative z-10 animate-in fade-in zoom-in-95 duration-500">
+      <div className="w-full max-w-md bg-[#0a0a0a] rounded-[3rem] border border-neutral-900 shadow-2xl overflow-hidden relative z-10 animate-in fade-in zoom-in-95 duration-500">
         <div className="p-10 pb-6 text-center">
           <div className="inline-flex p-4 bg-[#facc15]/10 rounded-3xl border border-[#facc15]/20 mb-6 group hover:scale-110 transition-transform duration-500">
             <Zap className="text-[#facc15] fill-[#facc15] w-10 h-10" />
@@ -210,14 +206,14 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
                   onClick={() => handleSocialLogin('google')} 
                   className={`py-3 rounded-xl font-bold flex items-center justify-center gap-2 border transition-all text-[10px] uppercase tracking-widest group ${isGoogleDown ? 'bg-neutral-950 text-neutral-800 border-neutral-900 cursor-not-allowed grayscale' : 'bg-neutral-900 text-neutral-400 border-neutral-800 hover:text-white hover:bg-neutral-800'}`}
                 >
-                  <Globe size={12} className={isGoogleDown ? '' : 'group-hover:text-[#facc15]'} /> {isGoogleDown ? 'LOCK' : 'Google'}
+                  <Globe size={12} className={isGoogleDown ? '' : 'group-hover:text-[#facc15]'} /> {isGoogleDown ? 'LOCKED' : 'Google'}
                 </button>
                 <button 
                   type="button"
                   onClick={() => handleSocialLogin('facebook')} 
                   className={`py-3 rounded-xl font-bold flex items-center justify-center gap-2 border transition-all text-[10px] uppercase tracking-widest group ${isFacebookDown ? 'bg-neutral-950 text-neutral-800 border-neutral-900 cursor-not-allowed grayscale' : 'bg-neutral-900 text-neutral-400 border-neutral-800 hover:text-white hover:bg-neutral-800'}`}
                 >
-                  <ShieldCheck size={12} className={isFacebookDown ? '' : 'group-hover:text-[#facc15]'} /> {isFacebookDown ? 'LOCK' : 'Facebook'}
+                  <ShieldCheck size={12} className={isFacebookDown ? '' : 'group-hover:text-[#facc15]'} /> {isFacebookDown ? 'LOCKED' : 'Facebook'}
                 </button>
               </div>
             </div>

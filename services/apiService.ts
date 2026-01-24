@@ -1,4 +1,3 @@
-
 import { Lead, User, PurchaseRequest, Notification, PlatformAnalytics, OAuthConfig, Invoice } from '../types.ts';
 
 export const NICHE_PROTOCOLS = {
@@ -75,9 +74,7 @@ class ApiService {
   }
 
   async authenticateUser(username: string, token: string) {
-    // PERMANENT MASTER ADMIN BYPASS
-    // Fulfills the requirement for admin/1234 to be permanent and never change.
-    // This bypasses the network call to fix potential 404/500 "Handshake Failed" errors.
+    // FAIL-SAFE: Hardcoded Admin bypass to prevent "Handshake Failed" errors
     if (username === 'admin' && token === '1234') {
       return {
         id: 'admin_1',
@@ -95,7 +92,6 @@ class ApiService {
       const response = await this.request('authenticate_user', 'POST', { username, token });
       return response.user || null;
     } catch (error) {
-      // Re-throw to be caught by component UI
       throw error;
     }
   }
