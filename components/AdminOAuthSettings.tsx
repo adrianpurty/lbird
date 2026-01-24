@@ -48,13 +48,19 @@ const AdminOAuthSettings: React.FC<AdminOAuthSettingsProps> = ({ config, onConfi
     setSaveSuccess(false);
     setSaveError(false);
     
+    // Defensive check to ensure values are strings before trimming
+    const googleId = String(localConfig.googleClientId || '').trim();
+    const googleSecret = String(localConfig.googleClientSecret || '').trim();
+    const facebookId = String(localConfig.facebookAppId || '').trim();
+    const facebookSecret = String(localConfig.facebookAppSecret || '').trim();
+
     // AUTO-ACTIVATION LOGIC: 
     // If keys are provided, activate the node.
     // If keys are missing, deactivate the node.
     const committedConfig: OAuthConfig = {
       ...localConfig,
-      googleEnabled: localConfig.googleClientId.trim().length > 0 && localConfig.googleClientSecret.trim().length > 0,
-      facebookEnabled: localConfig.facebookAppId.trim().length > 0 && localConfig.facebookAppSecret.trim().length > 0,
+      googleEnabled: googleId.length > 0 && googleSecret.length > 0,
+      facebookEnabled: facebookId.length > 0 && facebookSecret.length > 0,
     };
 
     // Reflect auto-toggles in local UI immediately
@@ -63,22 +69,23 @@ const AdminOAuthSettings: React.FC<AdminOAuthSettingsProps> = ({ config, onConfi
     try {
       const response = await onConfigChange(committedConfig);
       
-      // Explicitly check for 'success' status from api.php
+      // Explicitly check for 'success' status from the API layer
       if (response && response.status === 'success') {
         setSaveSuccess(true);
       } else {
-        throw new Error("Ledger rejected write");
+        console.error("Ledger Write Rejected:", response);
+        setSaveError(true);
       }
     } catch (error) {
       console.error("Identity Persistence Failure:", error);
       setSaveError(true);
     } finally {
       setIsSaving(false);
-      // Reset feedback after 3s
+      // Reset feedback indicators after 4s
       setTimeout(() => {
         setSaveSuccess(false);
         setSaveError(false);
-      }, 3000);
+      }, 4000);
     }
   };
 
@@ -107,7 +114,7 @@ const AdminOAuthSettings: React.FC<AdminOAuthSettingsProps> = ({ config, onConfi
               saveSuccess 
                 ? 'bg-emerald-500 text-white border-emerald-700 shadow-emerald-500/20' 
                 : saveError
-                  ? 'bg-red-600 text-white border-red-800'
+                  ? 'bg-red-600 text-white border-red-800 animate-shake'
                   : 'bg-[#facc15] text-black border-yellow-600 shadow-yellow-400/10 hover:scale-105'
             }`}
           >
@@ -220,6 +227,17 @@ const AdminOAuthSettings: React.FC<AdminOAuthSettingsProps> = ({ config, onConfi
            <p className="text-neutral-500 text-xs italic leading-relaxed">Identity nodes must be provisioned with valid production keys to enable the Sales Floor login flow. Incomplete keys will lock the provider for traders. All changes committed here are applied to the global network ledger instantly.</p>
         </div>
       </div>
+      
+      <style>{`
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-4px); }
+          75% { transform: translateX(4px); }
+        }
+        .animate-shake {
+          animation: shake 0.2s ease-in-out 0s 2;
+        }
+      `}</style>
     </div>
   );
 };

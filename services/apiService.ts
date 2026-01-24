@@ -43,8 +43,8 @@ export const NICHE_PROTOCOLS = {
   ]
 };
 
-// Use relative path for compatibility with different hosting environments
-const API_ENDPOINT = 'api.php';
+// Use explicit relative path for production PHP server routing
+const API_ENDPOINT = './api.php';
 
 class ApiService {
   private async request(action: string, method: 'GET' | 'POST' = 'GET', body?: any) {

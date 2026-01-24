@@ -1,5 +1,6 @@
 <?php
 error_reporting(0);
+ini_set('display_errors', 0);
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
@@ -7,7 +8,7 @@ header('Access-Control-Allow-Headers: Content-Type');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Pragma: no-cache');
 
-$db_file = 'database.json';
+$db_file = dirname(__FILE__) . '/database.json';
 
 function init_db($file) {
     $default_data = [
@@ -57,7 +58,7 @@ function init_db($file) {
     ];
 
     if (!file_exists($file)) {
-        file_put_contents($file, json_encode($default_data, JSON_PRETTY_PRINT));
+        file_put_contents($file, json_encode($default_data, JSON_PRETTY_PRINT), LOCK_EX);
         return $default_data;
     }
 
@@ -74,7 +75,7 @@ function get_db() {
 function save_db($data) {
     global $db_file;
     $data['metadata']['last_updated'] = date('Y-m-d H:i:s');
-    file_put_contents($db_file, json_encode($data, JSON_PRETTY_PRINT), LOCK_EX);
+    return file_put_contents($db_file, json_encode($data, JSON_PRETTY_PRINT), LOCK_EX);
 }
 
 $input = json_decode(file_get_contents('php://input'), true);
@@ -145,8 +146,12 @@ switch ($action) {
                 'facebookAppId' => (string)($input['facebookAppId'] ?? ''),
                 'facebookAppSecret' => (string)($input['facebookAppSecret'] ?? '')
             ];
-            save_db($db);
-            echo json_encode(['status' => 'success', 'timestamp' => date('Y-m-d H:i:s')]);
+            $saved = save_db($db);
+            if ($saved !== false) {
+                echo json_encode(['status' => 'success', 'timestamp' => date('Y-m-d H:i:s')]);
+            } else {
+                echo json_encode(['status' => 'error', 'message' => 'File Write Failure']);
+            }
         } else {
             echo json_encode(['status' => 'error', 'message' => 'Payload Empty']);
         }
@@ -298,4 +303,3 @@ switch ($action) {
         echo json_encode(['error' => 'Action unrecognized.']);
         exit;
 }
-?>
