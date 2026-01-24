@@ -1,4 +1,4 @@
-import React, { useState, useMemo, memo, useDeferredValue } from 'react';
+import React, { useState, useMemo, memo, useDeferredValue, useEffect } from 'react';
 import { Lead, UserRole } from '../types.ts';
 import { 
   Timer, Zap, Settings2, Heart, ChevronLeft, ChevronRight, 
@@ -6,7 +6,6 @@ import {
   Coins, ListFilter, Stethoscope, Shield, Info
 } from 'lucide-react';
 
-// Define the missing LeadGridProps interface to fix line 129 error
 interface LeadGridProps {
   leads: Lead[];
   onBid: (id: string) => void;
@@ -21,14 +20,12 @@ interface LeadGridProps {
   wishlist?: string[];
 }
 
-// Fixed: Made children optional to resolve "children missing" errors on lines 100 and 131
 interface TooltipProps {
   children?: React.ReactNode;
   text: string;
   position?: 'top' | 'bottom' | 'left' | 'right';
 }
 
-// Informative Tooltip Component for reusable UI guidance
 const Tooltip = ({ children, text, position = 'top' }: TooltipProps) => {
   const posClasses = {
     top: 'bottom-full left-1/2 -translate-x-1/2 mb-2',
@@ -96,7 +93,6 @@ const MemoizedLeadCard = memo(({
             </div>
             <h3 className="text-[var(--text-main)] font-bold text-sm line-clamp-1">{lead.title}</h3>
           </div>
-          {/* Fixed: Tooltip correctly wraps its children to resolve line 77 error */}
           <Tooltip text="AI Integrity Score (0-100). Higher scores indicate superior traffic quality and higher conversion probability.">
             <div className="text-[10px] font-black text-[var(--text-accent)] bg-[var(--text-accent)]/10 px-1.5 py-0.5 rounded cursor-help border border-[var(--text-accent)]/20">
               {lead.qualityScore}
@@ -127,7 +123,6 @@ const MemoizedLeadCard = memo(({
         )}
 
         <div className="flex items-center justify-between gap-3 pt-3 border-t border-[var(--border-main)]/50">
-          {/* Fixed: Tooltip correctly wraps its children to resolve line 107 error */}
           <Tooltip text={isOwner ? "You are the provider of this node" : "Secure your position in the lead flow by placing a bid."}>
             <button
               onClick={() => onBid(lead.id)}
@@ -157,7 +152,8 @@ const LeadGrid: React.FC<LeadGridProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   
   const deferredCategory = useDeferredValue(selectedCategory);
-  const ITEMS_PER_PAGE = 8;
+  // Enhanced: Handling 20 leads per page as requested
+  const ITEMS_PER_PAGE = 20;
 
   const categories = useMemo(() => Array.from(new Set(leads.map(l => l.category))).sort(), [leads]);
   
@@ -169,6 +165,45 @@ const LeadGrid: React.FC<LeadGridProps> = ({
 
   const totalPages = Math.ceil(filteredLeads.length / ITEMS_PER_PAGE);
   const currentLeads = filteredLeads.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+  // Auto-scroll to top when page changes for better UX
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentPage]);
+
+  const handlePageChange = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
+  const renderPageNumbers = () => {
+    const pages = [];
+    const maxVisible = 5;
+    let start = Math.max(1, currentPage - 2);
+    let end = Math.min(totalPages, start + maxVisible - 1);
+    
+    if (end - start < maxVisible - 1) {
+      start = Math.max(1, end - maxVisible + 1);
+    }
+
+    for (let i = start; i <= end; i++) {
+      pages.push(
+        <button
+          key={i}
+          onClick={() => handlePageChange(i)}
+          className={`w-8 h-8 rounded-lg text-[10px] font-black transition-all flex items-center justify-center border ${
+            currentPage === i 
+              ? 'bg-[var(--text-accent)] text-black border-[var(--text-accent)] shadow-lg shadow-yellow-400/10' 
+              : 'bg-transparent text-neutral-500 border-neutral-800 hover:text-white hover:border-neutral-600'
+          }`}
+        >
+          {i}
+        </button>
+      );
+    }
+    return pages;
+  };
 
   return (
     <div className="space-y-6 will-change-transform">
@@ -184,33 +219,62 @@ const LeadGrid: React.FC<LeadGridProps> = ({
             {categories.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
-        <div className="text-[9px] font-black text-neutral-500 uppercase tracking-widest">{filteredLeads.length} Available</div>
+        <div className="text-[9px] font-black text-neutral-500 uppercase tracking-widest">{filteredLeads.length} Available Nodes</div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
-        {currentLeads.map((lead) => (
-          <MemoizedLeadCard 
-            key={lead.id}
-            lead={lead}
-            isUserEngaged={activeBids.includes(lead.id)}
-            isInWishlist={wishlist.includes(lead.id)}
-            isOwner={lead.ownerId === currentUserId}
-            userRole={userRole}
-            onBid={onBid}
-            onAdminEdit={onAdminEdit}
-            onAdminApprove={onAdminApprove}
-            onAdminReject={onAdminReject}
-            onDelete={onDelete}
-            onToggleWishlist={onToggleWishlist}
-          />
-        ))}
+        {currentLeads.length > 0 ? (
+          currentLeads.map((lead) => (
+            <MemoizedLeadCard 
+              key={lead.id}
+              lead={lead}
+              isUserEngaged={activeBids.includes(lead.id)}
+              isInWishlist={wishlist.includes(lead.id)}
+              isOwner={lead.ownerId === currentUserId}
+              userRole={userRole}
+              onBid={onBid}
+              onAdminEdit={onAdminEdit}
+              onAdminApprove={onAdminApprove}
+              onAdminReject={onAdminReject}
+              onDelete={onDelete}
+              onToggleWishlist={onToggleWishlist}
+            />
+          ))
+        ) : (
+          <div className="col-span-full py-20 text-center bg-[var(--bg-card)] border border-[var(--border-main)] rounded-2xl border-dashed">
+            <Zap className="mx-auto text-neutral-700 mb-4" size={32} />
+            <p className="text-[10px] font-black uppercase text-neutral-600 tracking-[0.2em]">Zero Leads Detected in current spectrum</p>
+          </div>
+        )}
       </div>
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-4 pt-4">
-          <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="p-2 disabled:opacity-30 transition-opacity"><ChevronLeft size={20} /></button>
-          <span className="text-[10px] font-black uppercase text-neutral-600 tracking-[0.2em]">Page {currentPage} / {totalPages}</span>
-          <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="p-2 disabled:opacity-30 transition-opacity"><ChevronRight size={20} /></button>
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-8 border-t border-[var(--border-main)]/30">
+          <div className="text-[9px] font-black uppercase text-neutral-600 tracking-widest">
+            Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1} - {Math.min(currentPage * ITEMS_PER_PAGE, filteredLeads.length)} of {filteredLeads.length}
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <button 
+              disabled={currentPage === 1} 
+              onClick={() => handlePageChange(currentPage - 1)} 
+              className="p-2 bg-neutral-100 dark:bg-black/40 border border-neutral-200 dark:border-neutral-800 rounded-lg disabled:opacity-30 transition-all hover:bg-neutral-200 dark:hover:bg-neutral-800"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            
+            <div className="flex items-center gap-1.5 px-2">
+              {renderPageNumbers()}
+            </div>
+            
+            <button 
+              disabled={currentPage === totalPages} 
+              onClick={() => handlePageChange(currentPage + 1)} 
+              className="p-2 bg-neutral-100 dark:bg-black/40 border border-neutral-200 dark:border-neutral-800 rounded-lg disabled:opacity-30 transition-all hover:bg-neutral-200 dark:hover:bg-neutral-800"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
         </div>
       )}
     </div>

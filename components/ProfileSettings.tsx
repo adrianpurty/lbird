@@ -1,6 +1,9 @@
+
 import React, { useState, useRef, useEffect } from 'react';
-import { ShieldCheck, Mail, User as UserIcon, Lock, Camera, Save, RefreshCw, FileText, Globe, MonitorSmartphone } from 'lucide-react';
+// Added Target to the lucide-react imports to fix the "Cannot find name 'Target'" error on line 178.
+import { ShieldCheck, Mail, User as UserIcon, Lock, Camera, Save, RefreshCw, FileText, Globe, MonitorSmartphone, Briefcase, MessageSquare, Target } from 'lucide-react';
 import { User } from '../types';
+import { NICHE_PROTOCOLS } from '../services/apiService';
 
 interface ProfileSettingsProps {
   user: User;
@@ -14,7 +17,10 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onUpdate }) => 
     bio: user.bio || '',
     profileImage: user.profileImage || '',
     newPassword: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    companyWebsite: user.companyWebsite || '',
+    industryFocus: user.industryFocus || '',
+    preferredContact: user.preferredContact || 'email'
   });
   const [isSaving, setIsSaving] = useState(false);
   const [telemetry, setTelemetry] = useState({
@@ -24,7 +30,6 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onUpdate }) => 
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch fresh identity telemetry on load without blocking UI thread
   useEffect(() => {
     const fetchIdentity = async () => {
       let currentIp = user.ipAddress;
@@ -54,7 +59,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onUpdate }) => 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 1024 * 1024 * 1.5) { // 1.5MB Limit for low RAM safety
+      if (file.size > 1024 * 1024 * 1.5) {
         alert("PAYLOAD REJECTED: Image exceeds 1.5MB efficiency threshold.");
         return;
       }
@@ -77,7 +82,10 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onUpdate }) => 
       name: formData.name,
       email: formData.email,
       bio: formData.bio,
-      profileImage: formData.profileImage
+      profileImage: formData.profileImage,
+      companyWebsite: formData.companyWebsite,
+      industryFocus: formData.industryFocus,
+      preferredContact: formData.preferredContact as any
     };
     if (formData.newPassword) updates.password = formData.newPassword;
     onUpdate(updates);
@@ -142,6 +150,64 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onUpdate }) => 
                   value={formData.bio}
                   onChange={e => setFormData({...formData, bio: e.target.value})}
                 />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-[var(--bg-card)] p-8 rounded-[2.5rem] border border-[var(--border-main)] shadow-2xl space-y-6">
+            <h3 className="text-xs font-black text-neutral-600 uppercase tracking-[0.3em] flex items-center gap-2">
+              <Briefcase size={14} className="text-[var(--text-accent)]" /> Business Intelligence
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1">Company Website</label>
+                <div className="relative">
+                  <Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700" size={16} />
+                  <input 
+                    type="url"
+                    placeholder="https://company.com"
+                    className="w-full bg-black/5 dark:bg-black border border-[var(--border-main)] rounded-xl pl-12 pr-4 py-3 text-[var(--text-main)] focus:border-[var(--text-accent)] outline-none transition-all"
+                    value={formData.companyWebsite}
+                    onChange={e => setFormData({...formData, companyWebsite: e.target.value})}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1">Industry Focus</label>
+                <div className="relative">
+                  <Target className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700" size={16} />
+                  <select 
+                    className="w-full bg-black/5 dark:bg-black border border-[var(--border-main)] rounded-xl pl-12 pr-4 py-3.5 text-[var(--text-main)] focus:border-[var(--text-accent)] outline-none transition-all appearance-none"
+                    value={formData.industryFocus}
+                    onChange={e => setFormData({...formData, industryFocus: e.target.value})}
+                  >
+                    <option value="">General Marketplace</option>
+                    {Object.values(NICHE_PROTOCOLS).flat().sort().map(niche => (
+                      <option key={niche} value={niche}>{niche}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1">Preferred Contact Method</label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {['email', 'phone', 'whatsapp', 'telegram'].map((method) => (
+                  <button
+                    key={method}
+                    type="button"
+                    onClick={() => setFormData({...formData, preferredContact: method})}
+                    className={`py-3 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all ${
+                      formData.preferredContact === method 
+                        ? 'bg-[var(--text-accent)] text-black border-[var(--text-accent)]' 
+                        : 'bg-black/5 dark:bg-black text-neutral-500 border-[var(--border-main)] hover:border-[var(--text-accent)]/40'
+                    }`}
+                  >
+                    {method}
+                  </button>
+                ))}
               </div>
             </div>
           </div>

@@ -17,7 +17,8 @@ import {
   Hash,
   Globe,
   Zap,
-  ArrowRight
+  ArrowRight,
+  Scan
 } from 'lucide-react';
 import { GatewayAPI } from './AdminPaymentSettings';
 
@@ -125,6 +126,30 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ stripeConnected, onConn
     if (!selectedGateway) return null;
 
     switch (selectedGateway.provider) {
+      case 'binance':
+        return (
+          <div className="space-y-6 animate-in fade-in zoom-in-95">
+            <div className="flex flex-col items-center text-center space-y-4 py-4">
+               <div className="w-16 h-16 bg-[#F3BA2F]/10 rounded-2xl flex items-center justify-center border border-[#F3BA2F]/30 mb-2">
+                  <Scan size={32} className="text-[#F3BA2F]" />
+               </div>
+               <div className="p-4 bg-white rounded-2xl shadow-2xl border-4 border-[#F3BA2F]">
+                  <QrCode size={160} className="text-black" />
+               </div>
+               <div className="space-y-2">
+                  <p className="text-xs text-neutral-500 font-black uppercase tracking-widest">Binance Pay Protocol</p>
+                  <div className="bg-black/50 border border-neutral-800 rounded-xl px-6 py-3 flex items-center gap-3">
+                    <span className="text-[10px] text-neutral-600 font-black uppercase">Recipient ID:</span>
+                    <span className="text-[#F3BA2F] font-mono text-sm font-bold">{selectedGateway.publicKey}</span>
+                  </div>
+               </div>
+            </div>
+            <div className="bg-[#F3BA2F]/10 border border-[#F3BA2F]/20 p-5 rounded-2xl text-[11px] text-[#F3BA2F] flex items-start gap-3 italic">
+              <ShieldAlert size={16} className="shrink-0" />
+              <span>Ensure you are sending USDT or BUSD via Binance Pay to prevent cross-chain asset loss.</span>
+            </div>
+          </div>
+        );
       case 'crypto':
         return (
           <div className="space-y-6 animate-in fade-in zoom-in-95">
@@ -239,7 +264,7 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ stripeConnected, onConn
           <div className="bg-[#121212] p-10 rounded-[3rem] border border-neutral-900 shadow-2xl space-y-10">
             <div className="flex justify-between items-center">
               <h3 className="text-3xl font-black text-white uppercase tracking-tighter italic flex items-center gap-3">
-                <Plus className="text-[#facc15]" /> {showCheckout ? 'Stripe Checkout Protocol' : 'Deposit Interface'}
+                <Plus className="text-[#facc15]" /> {showCheckout ? `${selectedGateway?.name || 'Stripe'} Checkout Protocol` : 'Deposit Interface'}
               </h3>
               {showCheckout && !isProcessing && (
                 <button onClick={() => setShowCheckout(false)} className="text-[10px] font-black text-neutral-500 hover:text-white uppercase tracking-widest">Cancel</button>
@@ -272,6 +297,7 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ stripeConnected, onConn
                       >
                         {gw.provider === 'stripe' && <CreditCard size={24} />}
                         {gw.provider === 'crypto' && <Bitcoin size={24} />}
+                        {gw.provider === 'binance' && <Scan size={24} />}
                         {gw.provider === 'upi' && <Smartphone size={24} />}
                         {gw.provider === 'paypal' && <Globe size={24} />}
                         <span className="text-[9px] font-black uppercase text-center">{gw.name}</span>
@@ -305,7 +331,7 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ stripeConnected, onConn
                     onClick={handleVerifyPayment}
                     className="w-full bg-[#facc15] text-black py-8 rounded-[2rem] font-black text-2xl hover:bg-yellow-500 transition-all flex items-center justify-center gap-3"
                   >
-                    AUTHORIZE STRIPE TRANSFER <Zap size={28} />
+                    AUTHORIZE {selectedGateway?.name.toUpperCase() || 'TRANSFER'} <Zap size={28} />
                   </button>
                 )}
               </div>
@@ -316,10 +342,10 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ stripeConnected, onConn
         <div className="space-y-6">
            <div className="bg-[#121212] p-8 rounded-[2.5rem] border border-neutral-900 space-y-6">
               <h4 className="text-white font-black text-xs uppercase tracking-widest flex items-center gap-2">
-                 <ShieldCheck className="text-emerald-500" size={16} /> Stripe Secure Ledger
+                 <ShieldCheck className="text-emerald-500" size={16} /> Secure Ledger Node
               </h4>
               <p className="text-neutral-500 text-xs leading-relaxed italic">
-                "Payments are processed through Stripe's secure infrastructure. We do not store full credit card details on our identity nodes."
+                "Payments are processed through secure global infrastructure. We do not store full identity keys or sensitive banking tokens on our identity nodes."
               </p>
               <div className="pt-4 border-t border-neutral-800 flex justify-between">
                 <span className="text-[9px] text-neutral-600 font-black uppercase">Active Nodes</span>

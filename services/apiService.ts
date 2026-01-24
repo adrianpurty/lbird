@@ -149,6 +149,16 @@ class ApiService {
     return { status: 'success' };
   }
 
+  async updateUser(id: string, updates: Partial<User>) {
+    const db = this.getDb();
+    const index = db.users.findIndex((u: any) => u.id === id);
+    if (index !== -1) {
+      db.users[index] = { ...db.users[index], ...updates };
+      this.saveDb(db);
+    }
+    return { status: 'success' };
+  }
+
   async placeBid(input: any) {
     const db = this.getDb();
     const { userId, leadId, bidAmount, totalDailyCost, leadsPerDay, buyerBusinessUrl, buyerTargetLeadUrl } = input;

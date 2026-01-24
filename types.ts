@@ -83,6 +83,9 @@ export interface User {
   deviceInfo?: string;
   location?: string;
   wishlist?: string[];
+  companyWebsite?: string;
+  industryFocus?: string;
+  preferredContact?: 'email' | 'phone' | 'whatsapp' | 'telegram';
 }
 
 export interface OAuthConfig {

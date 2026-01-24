@@ -16,13 +16,14 @@ import {
   RefreshCw,
   Globe,
   ToggleLeft,
-  ToggleRight
+  ToggleRight,
+  Scan
 } from 'lucide-react';
 
 export interface GatewayAPI {
   id: string;
   name: string;
-  provider: 'stripe' | 'crypto' | 'upi' | 'paypal' | 'custom';
+  provider: 'stripe' | 'crypto' | 'upi' | 'paypal' | 'binance' | 'custom';
   publicKey: string;
   secretKey: string;
   fee: string;
@@ -54,6 +55,8 @@ const AdminPaymentSettings: React.FC<AdminPaymentSettingsProps> = ({ gateways, o
         return { public: 'Stripe Publishable Key', secret: 'Stripe Secret Key' };
       case 'crypto':
         return { public: 'Crypto Wallet Address', secret: 'Node API Token' };
+      case 'binance':
+        return { public: 'Binance Pay ID / API Key', secret: 'Binance Secret Key' };
       case 'upi':
         return { public: 'UPI Merchant ID / VPA', secret: 'Merchant Secret Key' };
       case 'paypal':
@@ -104,7 +107,7 @@ const AdminPaymentSettings: React.FC<AdminPaymentSettingsProps> = ({ gateways, o
           <h2 className="text-3xl font-black text-white uppercase tracking-tighter italic flex items-center gap-3">
             <Settings className="text-[#facc15]" /> Financial Nodes
           </h2>
-          <p className="text-neutral-500 text-sm font-medium mt-1">Configure API keys for Stripe, Crypto, and UPI payment infrastructure.</p>
+          <p className="text-neutral-500 text-sm font-medium mt-1">Configure API keys for Stripe, Binance, Crypto, and UPI payment infrastructure.</p>
         </div>
         <div className="flex gap-4 w-full md:w-auto">
           <button 
@@ -159,6 +162,7 @@ const AdminPaymentSettings: React.FC<AdminPaymentSettingsProps> = ({ gateways, o
                     <div className={`w-16 h-16 rounded-3xl flex items-center justify-center transition-all ${api.status === 'active' ? 'bg-black border border-neutral-800 text-[#facc15]' : 'bg-neutral-900 text-neutral-700'}`}>
                       {api.provider === 'stripe' && <CreditCard size={28} />}
                       {api.provider === 'crypto' && <Bitcoin size={28} />}
+                      {api.provider === 'binance' && <Scan size={28} />}
                       {api.provider === 'upi' && <Smartphone size={28} />}
                       {api.provider === 'paypal' && <Globe size={28} />}
                     </div>
@@ -255,6 +259,7 @@ const AdminPaymentSettings: React.FC<AdminPaymentSettingsProps> = ({ gateways, o
                     onChange={e => setNewGateway({...newGateway, provider: e.target.value as any})}
                   >
                     <option value="stripe">Stripe Payments</option>
+                    <option value="binance">Binance Pay</option>
                     <option value="crypto">Crypto Wallet Node</option>
                     <option value="upi">UPI Unified Node</option>
                     <option value="paypal">PayPal Business</option>
@@ -281,7 +286,7 @@ const AdminPaymentSettings: React.FC<AdminPaymentSettingsProps> = ({ gateways, o
                   <input 
                     required
                     className="w-full bg-black border border-neutral-800 rounded-2xl px-6 py-4 text-white font-mono text-xs focus:border-[#facc15]"
-                    placeholder={newGateway.provider === 'stripe' ? 'pk_live_...' : newGateway.provider === 'crypto' ? '0x...' : 'ID_...'}
+                    placeholder={newGateway.provider === 'stripe' ? 'pk_live_...' : newGateway.provider === 'binance' ? 'Binance Pay ID' : '0x...'}
                     value={newGateway.publicKey}
                     onChange={e => setNewGateway({...newGateway, publicKey: e.target.value})}
                   />

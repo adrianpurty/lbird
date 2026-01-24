@@ -58,8 +58,11 @@ const LeadSubmissionForm: React.FC<LeadSubmissionFormProps> = ({ onSubmit }) => 
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="bg-[#121212] p-6 sm:p-10 rounded-[2rem] sm:rounded-[3rem] border border-neutral-900 shadow-2xl space-y-8 relative overflow-hidden">
+    <form 
+      onSubmit={handleSubmit} 
+      className="max-w-4xl mx-auto space-y-8 pb-32 animate-in fade-in slide-in-from-bottom-4 duration-500"
+    >
+      <div className="bg-[#121212] p-6 sm:p-8 rounded-[2rem] sm:rounded-[3rem] border border-neutral-900 shadow-2xl space-y-8 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-[#facc15]/5 rounded-full blur-3xl -mr-16 -mt-16" />
         
         <div className="flex items-center gap-4 border-b border-neutral-800 pb-6 mb-2">
@@ -72,7 +75,7 @@ const LeadSubmissionForm: React.FC<LeadSubmissionFormProps> = ({ onSubmit }) => 
            </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
             <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1">Campaign Node Name</label>
             <input 
@@ -96,7 +99,6 @@ const LeadSubmissionForm: React.FC<LeadSubmissionFormProps> = ({ onSubmit }) => 
                 <option value="" disabled className="text-neutral-800">Select Industry Niche</option>
                 {Object.entries(categories).map(([group, items]) => (
                   <optgroup key={group} label={group} className="bg-[#0a0a0a] text-[#facc15] font-black uppercase text-[10px] tracking-widest italic py-4">
-                    {/* Fixed: Cast items to string[] to resolve "Property map does not exist on type unknown" error */}
                     {(items as string[]).map(cat => (
                       <option key={cat} value={cat} className="bg-black text-white py-2 normal-case font-bold italic not-italic text-sm">
                         {cat}
@@ -124,7 +126,7 @@ const LeadSubmissionForm: React.FC<LeadSubmissionFormProps> = ({ onSubmit }) => 
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
             <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1 flex items-center gap-2">
               <Globe size={14} className="text-[#facc15]" /> Identity HQ (Business URL)
@@ -153,7 +155,7 @@ const LeadSubmissionForm: React.FC<LeadSubmissionFormProps> = ({ onSubmit }) => 
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-8 items-start">
+        <div className="flex flex-col md:flex-row gap-6 items-start">
            <div className="w-full md:w-1/3 space-y-2">
             <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1 flex items-center gap-2">
               <DollarSign size={14} className="text-[#facc15]" /> Global Floor Price ($)
@@ -213,12 +215,14 @@ const LeadSubmissionForm: React.FC<LeadSubmissionFormProps> = ({ onSubmit }) => 
         </div>
       )}
 
-      <button 
-        type="submit"
-        className="w-full bg-[#facc15] text-black py-8 rounded-[2rem] sm:rounded-[3rem] font-black text-xl sm:text-2xl hover:bg-[#eab308] transition-all transform hover:-translate-y-1 shadow-2xl shadow-yellow-400/10 border-b-[8px] border-[#ca8a04] active:scale-[0.98] flex items-center justify-center gap-4"
-      >
-        BROADCAST TO SALES FLOOR <ChevronDown size={32} className="-rotate-90" />
-      </button>
+      <div className="flex justify-center">
+        <button 
+          type="submit"
+          className="w-full bg-[#facc15] text-black py-6 rounded-[2rem] sm:rounded-[3rem] font-black text-xl sm:text-2xl hover:bg-[#eab308] transition-all transform hover:-translate-y-1 shadow-2xl shadow-yellow-400/10 border-b-[8px] border-[#ca8a04] active:scale-[0.98] flex items-center justify-center gap-4"
+        >
+          BROADCAST TO SALES FLOOR <ChevronDown size={32} className="-rotate-90" />
+        </button>
+      </div>
     </form>
   );
 };
