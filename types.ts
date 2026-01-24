@@ -86,6 +86,8 @@ export interface User {
   companyWebsite?: string;
   industryFocus?: string;
   preferredContact?: 'email' | 'phone' | 'whatsapp' | 'telegram';
+  defaultBusinessUrl?: string;
+  defaultTargetUrl?: string;
 }
 
 export interface OAuthConfig {

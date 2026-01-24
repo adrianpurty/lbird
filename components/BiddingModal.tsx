@@ -1,10 +1,11 @@
-import React, { useState, useMemo } from 'react';
+
+import React, { useState, useMemo, useEffect } from 'react';
 import { X, Globe, Target, Phone, Zap, ChevronRight, Calculator, AlertTriangle, Wallet, Info } from 'lucide-react';
-import { Lead } from '../types';
+import { Lead, User } from '../types';
 
 interface BiddingModalProps {
   lead: Lead;
-  userBalance: number;
+  user: User;
   onClose: () => void;
   onSubmit: (data: BiddingFormData) => void;
   onRefill: () => void;
@@ -29,12 +30,12 @@ const HelpTip = ({ text }: { text: string }) => (
   </div>
 );
 
-const BiddingModal: React.FC<BiddingModalProps> = ({ lead, userBalance, onClose, onSubmit, onRefill }) => {
+const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, onClose, onSubmit, onRefill }) => {
   const minBid = lead.currentBid + 1;
   const [formData, setFormData] = useState<Omit<BiddingFormData, 'totalDailyCost'>>({
-    buyerBusinessUrl: '',
-    buyerTargetLeadUrl: '',
-    buyerTollFree: '',
+    buyerBusinessUrl: user.defaultBusinessUrl || '',
+    buyerTargetLeadUrl: user.defaultTargetUrl || '',
+    buyerTollFree: user.phone || '',
     leadsPerDay: 50,
     bidAmount: minBid
   });
@@ -44,7 +45,7 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, userBalance, onClose,
   }, [formData.bidAmount, formData.leadsPerDay]);
 
   const isBidTooLow = formData.bidAmount <= lead.currentBid;
-  const hasInsufficientFunds = totalDailyCost > userBalance;
+  const hasInsufficientFunds = totalDailyCost > user.balance;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,7 +82,7 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, userBalance, onClose,
             <div className="flex-1 bg-[#facc15]/5 p-4 sm:p-5 rounded-2xl border border-[#facc15]/20 flex justify-between items-center">
               <div>
                 <span className="text-[#facc15] text-[10px] font-black uppercase tracking-widest block leading-none mb-1">Your Credits</span>
-                <span className="text-white text-lg font-black italic">${userBalance.toLocaleString()}</span>
+                <span className="text-white text-lg font-black italic">${user.balance.toLocaleString()}</span>
               </div>
               <Wallet size={18} className="text-[#facc15] opacity-50" />
             </div>

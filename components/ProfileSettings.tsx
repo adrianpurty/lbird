@@ -1,5 +1,6 @@
+
 import React, { useState, useRef, useEffect } from 'react';
-import { ShieldCheck, Mail, User as UserIcon, Lock, Camera, Save, RefreshCw, FileText, Globe, MonitorSmartphone, Briefcase, MessageSquare, Target, Phone } from 'lucide-react';
+import { ShieldCheck, Mail, User as UserIcon, Lock, Camera, Save, RefreshCw, FileText, Globe, MonitorSmartphone, Briefcase, MessageSquare, Target, Phone, Link as LinkIcon } from 'lucide-react';
 import { User } from '../types';
 import { NICHE_PROTOCOLS } from '../services/apiService';
 
@@ -19,7 +20,9 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onUpdate }) => 
     confirmPassword: '',
     companyWebsite: user.companyWebsite || '',
     industryFocus: user.industryFocus || '',
-    preferredContact: user.preferredContact || 'email'
+    preferredContact: user.preferredContact || 'email',
+    defaultBusinessUrl: user.defaultBusinessUrl || '',
+    defaultTargetUrl: user.defaultTargetUrl || ''
   });
   const [isSaving, setIsSaving] = useState(false);
   const [telemetry, setTelemetry] = useState({
@@ -85,7 +88,9 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onUpdate }) => 
       profileImage: formData.profileImage,
       companyWebsite: formData.companyWebsite,
       industryFocus: formData.industryFocus,
-      preferredContact: formData.preferredContact as any
+      preferredContact: formData.preferredContact as any,
+      defaultBusinessUrl: formData.defaultBusinessUrl,
+      defaultTargetUrl: formData.defaultTargetUrl
     };
     if (formData.newPassword) updates.password = formData.newPassword;
     onUpdate(updates);
@@ -169,7 +174,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onUpdate }) => 
 
           <div className="bg-[var(--bg-card)] p-8 rounded-[2.5rem] border border-[var(--border-main)] shadow-2xl space-y-6">
             <h3 className="text-xs font-black text-neutral-600 uppercase tracking-[0.3em] flex items-center gap-2">
-              <Briefcase size={14} className="text-[var(--text-accent)]" /> Business Intelligence
+              <Briefcase size={14} className="text-[var(--text-accent)]" /> Business Intelligence & Defaults
             </h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -200,6 +205,35 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onUpdate }) => 
                       <option key={niche} value={niche}>{niche}</option>
                     ))}
                   </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1">Default Business URL</label>
+                <div className="relative">
+                  <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700" size={16} />
+                  <input 
+                    type="url"
+                    placeholder="https://your-hq.com"
+                    className="w-full bg-black/5 dark:bg-black border border-[var(--border-main)] rounded-xl pl-12 pr-4 py-3 text-[var(--text-main)] focus:border-[var(--text-accent)] outline-none transition-all"
+                    value={formData.defaultBusinessUrl}
+                    onChange={e => setFormData({...formData, defaultBusinessUrl: e.target.value})}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1">Default Target URL</label>
+                <div className="relative">
+                  <Target className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700" size={16} />
+                  <input 
+                    type="url"
+                    placeholder="https://crm.yoursite.com/ingest"
+                    className="w-full bg-black/5 dark:bg-black border border-[var(--border-main)] rounded-xl pl-12 pr-4 py-3 text-[var(--text-main)] focus:border-[var(--text-accent)] outline-none transition-all"
+                    value={formData.defaultTargetUrl}
+                    onChange={e => setFormData({...formData, defaultTargetUrl: e.target.value})}
+                  />
                 </div>
               </div>
             </div>

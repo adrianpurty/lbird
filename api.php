@@ -10,7 +10,7 @@ $db_file = 'database.json';
 function init_db($file) {
     $default_data = [
         'metadata' => [
-            'version' => '2.0.0',
+            'version' => '2.0.1',
             'last_updated' => date('Y-m-d H:i:s')
         ],
         'leads' => [
@@ -90,7 +90,34 @@ function init_db($file) {
 
 function get_db() {
     global $db_file;
-    return init_db($db_file);
+    $db = init_db($db_file);
+    
+    // PERMANENT ADMIN ENFORCEMENT
+    // This block ensures that the master admin account always exists even if the DB is corrupted or edited.
+    $admin_found = false;
+    foreach ($db['users'] as $u) {
+        if ($u['username'] === 'admin') {
+            $admin_found = true;
+            break;
+        }
+    }
+    
+    if (!$admin_found) {
+        $db['users'][] = [
+            'id' => 'admin_1',
+            'name' => 'System Administrator',
+            'username' => 'admin',
+            'password' => '1234',
+            'email' => 'admin@leadbid.pro',
+            'balance' => 1000000,
+            'stripeConnected' => true,
+            'role' => 'admin',
+            'wishlist' => []
+        ];
+        save_db($db);
+    }
+    
+    return $db;
 }
 
 function save_db($data) {
@@ -112,13 +139,21 @@ switch ($action) {
         if ($input) {
             $username = $input['username'] ?? '';
             $email = $input['email'] ?? '';
-            // Simple uniqueness check
+            
+            // Protect 'admin' username from being taken
+            if (strtolower($username) === 'admin') {
+                echo json_encode(['status' => 'error', 'message' => 'Restricted username: Master Node identity protected.']);
+                exit;
+            }
+
+            // Uniqueness check for existing users
             foreach ($db['users'] as $u) {
                 if ($u['username'] === $username || $u['email'] === $email) {
                     echo json_encode(['status' => 'error', 'message' => 'Identity already provisioned in the ledger.']);
                     exit;
                 }
             }
+            
             $newUser = array_merge([
                 'id' => bin2hex(random_bytes(4)),
                 'balance' => 100,
@@ -126,6 +161,7 @@ switch ($action) {
                 'role' => 'user',
                 'wishlist' => []
             ], $input);
+            
             $db['users'][] = $newUser;
             save_db($db);
             echo json_encode(['status' => 'success', 'user' => $newUser]);
@@ -151,6 +187,8 @@ switch ($action) {
         if ($input && isset($input['id'])) {
             foreach ($db['users'] as &$u) {
                 if ($u['id'] === $input['id']) {
+                    // Prevent changing admin's core credentials through this endpoint if desired
+                    // For now, allow general updates like bio/profile image
                     $u = array_merge($u, $input);
                     break;
                 }

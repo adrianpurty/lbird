@@ -116,7 +116,6 @@ const App: React.FC = () => {
       if (activeId) {
         const currentUser = data.users?.find((u: User) => u.id === activeId);
         if (currentUser) {
-          // Perform a more comprehensive comparison to ensure all profile changes (email, image, phone, etc.) are synchronized
           const hasChanged = JSON.stringify(userRef.current) !== JSON.stringify(currentUser);
           if (hasChanged) {
             setUser(currentUser);
@@ -247,7 +246,7 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      {selectedLeadForBid && <BiddingModal lead={selectedLeadForBid} userBalance={user.balance} onClose={() => setSelectedLeadForBid(null)} onSubmit={(d) => apiService.placeBid({ userId: user.id, leadId: selectedLeadForBid.id, ...d }).then(() => { fetchAppData(); setSelectedLeadForBid(null); })} onRefill={handleRefillFromModal} />}
+      {selectedLeadForBid && <BiddingModal lead={selectedLeadForBid} user={user} onClose={() => setSelectedLeadForBid(null)} onSubmit={(d) => apiService.placeBid({ userId: user.id, leadId: selectedLeadForBid.id, ...d }).then(() => { fetchAppData(); setSelectedLeadForBid(null); })} onRefill={handleRefillFromModal} />}
       {selectedLeadForAdminEdit && <AdminLeadActionsModal lead={selectedLeadForAdminEdit} onClose={() => setSelectedLeadForAdminEdit(null)} onSave={(u) => apiService.updateLead(u.id!, u).then(fetchAppData)} onDelete={(id) => apiService.deleteLead(id).then(fetchAppData)} />}
     </div>
   );
