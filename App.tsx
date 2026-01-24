@@ -3,7 +3,7 @@ import {
   TrendingUp, Settings, ShieldAlert, Package, 
   Inbox, CheckCircle, Activity, User as UserIcon, 
   BarChart3, Target, Info, XCircle, Heart, FileText, Database, Server,
-  Loader2, Gavel
+  Loader2, Gavel, Loader
 } from 'lucide-react';
 import Sidebar from './components/Sidebar.tsx';
 import Header from './components/Header.tsx';
@@ -18,10 +18,12 @@ import Signup from './components/Signup.tsx';
 import BiddingModal, { BiddingFormData } from './components/BiddingModal.tsx';
 import AdminLeadActionsModal from './components/AdminLeadActionsModal.tsx';
 import AdminOAuthSettings from './components/AdminOAuthSettings.tsx';
-import AdminPaymentSettings, { GatewayAPI } from './components/AdminPaymentSettings.tsx';
+// Fix: Import AdminPaymentSettings without the non-exported GatewayAPI member
+import AdminPaymentSettings from './components/AdminPaymentSettings.tsx';
 import RevenueChart from './components/RevenueChart.tsx';
 import InvoiceLedger from './components/InvoiceLedger.tsx';
-import { Lead, User, PurchaseRequest, Notification, PlatformAnalytics, OAuthConfig, Invoice } from './types.ts';
+// Fix: Import GatewayAPI from types.ts where it is defined
+import { Lead, User, PurchaseRequest, Notification, PlatformAnalytics, OAuthConfig, Invoice, GatewayAPI } from './types.ts';
 import { apiService } from './services/apiService.ts';
 import { soundService } from './services/soundService.ts';
 
@@ -181,7 +183,8 @@ const App: React.FC = () => {
 
   useEffect(() => { 
     fetchAppData();
-    const interval = setInterval(fetchAppData, 30000);
+    // High-frequency polling (10s) for high-stakes coordination
+    const interval = setInterval(fetchAppData, 10000);
     return () => clearInterval(interval);
   }, [fetchAppData]);
 
@@ -218,7 +221,8 @@ const App: React.FC = () => {
     setIsSubmitting(true);
     try {
       await Promise.all(ids.map(id => apiService.updateLead(id, { status: 'approved' })));
-      await fetchAppData();
+      // Run background sync after clearing overlay for better speed perception
+      fetchAppData(); 
       showToast(`Batch Protocol: ${ids.length} nodes approved.`);
     } catch (e) {
       showToast("Batch Error: Signal Interrupted.", "error");
@@ -231,7 +235,7 @@ const App: React.FC = () => {
     setIsSubmitting(true);
     try {
       await Promise.all(ids.map(id => apiService.updateLead(id, { status: 'rejected' })));
-      await fetchAppData();
+      fetchAppData();
       showToast(`Batch Protocol: ${ids.length} nodes rejected.`);
     } catch (e) {
       showToast("Batch Error: Signal Interrupted.", "error");
@@ -265,16 +269,16 @@ const App: React.FC = () => {
   return (
     <div className="flex flex-col lg:flex-row h-screen bg-[var(--bg-platform)] text-[var(--text-main)] overflow-hidden theme-transition optimize-gpu contain-strict">
       {isSubmitting && (
-        <div className="fixed inset-0 z-[300] bg-black/60 backdrop-blur-md flex items-center justify-center animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[300] bg-black/60 backdrop-blur-sm flex items-center justify-center animate-in fade-in duration-150">
            <div className="flex flex-col items-center gap-4">
-              <Database className="text-neutral-500 animate-bounce" size={48} />
-              <p className="text-neutral-400 font-black text-xs uppercase tracking-[0.3em]">Committing to Ledger...</p>
+              <Database className="text-[#facc15]/60 animate-pulse" size={48} />
+              <p className="text-neutral-400 font-black text-[10px] uppercase tracking-[0.4em] italic">COMMITTING NODE...</p>
            </div>
         </div>
       )}
 
       {toast && (
-        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[200] px-5 py-3 rounded-xl shadow-xl border bg-neutral-900/60 border-neutral-800/40 backdrop-blur-xl flex items-center gap-3 animate-in slide-in-from-top-4">
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[200] px-5 py-3 rounded-xl shadow-xl border bg-neutral-900/60 border-neutral-800/40 backdrop-blur-xl flex items-center gap-3 animate-in slide-in-from-top-2">
           <CheckCircle className="text-[#facc15]/60" size={16} />
           <span className="text-[10px] font-black uppercase tracking-widest text-neutral-300">{toast.message}</span>
         </div>
@@ -371,7 +375,18 @@ const App: React.FC = () => {
           {activeTab === 'payment-config' && user!.role === 'admin' && <AdminPaymentSettings gateways={marketData.gateways} onGatewaysChange={(gws) => apiService.updateGateways(gws).then(fetchAppData)} onDeploy={() => { fetchAppData(); showToast("Gateways Deployed"); }} />}
           {activeTab === 'profile' && <ProfileSettings user={user!} onUpdate={(u) => apiService.updateUser(user!.id, u).then(fetchAppData)} />}
           {activeTab === 'settings' && <WalletSettings stripeConnected={user!.stripeConnected} onConnect={() => {}} balance={user!.balance} onDeposit={(amt) => apiService.deposit(user!.id, amt).then(fetchAppData)} gateways={marketData.gateways} />}
-          {activeTab === 'create' && <LeadSubmissionForm onSubmit={(l) => { setIsSubmitting(true); apiService.createLead({...l, ownerId: user!.id}).then(() => { fetchAppData(); setActiveTab('market'); showToast("Lead Provisioned Successfully"); setIsSubmitting(false); }); }} />}
+          {activeTab === 'create' && <LeadSubmissionForm onSubmit={(l) => { 
+            setIsSubmitting(true); 
+            apiService.createLead({...l, ownerId: user!.id}).then(async () => { 
+              await fetchAppData(); // CRITICAL: Ensure fresh data is pulled before switching
+              setActiveTab('market'); 
+              showToast("Asset Provisioned Successfully"); 
+              setIsSubmitting(false); 
+            }).catch(() => {
+              setIsSubmitting(false);
+              showToast("Provisioning Failed", "error");
+            }); 
+          }} />}
           {activeTab === 'inbox' && (
              <div className="space-y-6 animate-in fade-in duration-200 max-w-4xl">
                 <h2 className="text-xl font-black text-neutral-400 italic uppercase flex items-center gap-3"><Inbox className="text-[#facc15]/40" /> System Logs</h2>

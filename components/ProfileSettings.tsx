@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { ShieldCheck, Mail, User as UserIcon, Lock, Camera, Save, RefreshCw, FileText, Globe, MonitorSmartphone, Briefcase, MessageSquare, Target, Phone, Link as LinkIcon } from 'lucide-react';
 import { User } from '../types';
@@ -94,10 +93,12 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onUpdate }) => 
     };
     if (formData.newPassword) updates.password = formData.newPassword;
     onUpdate(updates);
+    
+    // Optimized feedback loop: Reduced from 800ms to 300ms
     setTimeout(() => {
       setIsSaving(false);
       setFormData(prev => ({ ...prev, newPassword: '', confirmPassword: '' }));
-    }, 800);
+    }, 300);
   };
 
   return (

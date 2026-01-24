@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   ShieldCheck, 
@@ -19,16 +20,7 @@ import {
   Scan,
   CheckCircle2
 } from 'lucide-react';
-
-export interface GatewayAPI {
-  id: string;
-  name: string;
-  provider: 'stripe' | 'crypto' | 'upi' | 'paypal' | 'binance' | 'custom';
-  publicKey: string;
-  secretKey: string;
-  fee: string;
-  status: 'active' | 'inactive';
-}
+import { GatewayAPI } from '../types.ts';
 
 interface AdminPaymentSettingsProps {
   gateways: GatewayAPI[];

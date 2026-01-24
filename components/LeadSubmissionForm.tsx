@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Lead, AIInsight } from '../types.ts';
 import { analyzeLeadQuality } from '../services/geminiService.ts';
 import { apiService } from '../services/apiService.ts';
-import { Sparkles, Loader2, Link as LinkIcon, Globe, DollarSign, Target, ChevronDown, ListFilter } from 'lucide-react';
+import { Sparkles, Loader2, Link as LinkIcon, Globe, DollarSign, Target, ChevronDown, ListFilter, MapPin } from 'lucide-react';
 
 interface LeadSubmissionFormProps {
   onSubmit: (lead: Partial<Lead>) => void;
@@ -15,7 +15,9 @@ const LeadSubmissionForm: React.FC<LeadSubmissionFormProps> = ({ onSubmit }) => 
     description: '',
     businessUrl: '',
     targetLeadUrl: '',
-    basePrice: 50
+    basePrice: 50,
+    countryCode: 'US',
+    region: 'Remote'
   });
   const [categories, setCategories] = useState<Record<string, string[]>>({});
   const [aiInsight, setAiInsight] = useState<AIInsight | null>(null);
@@ -35,6 +37,17 @@ const LeadSubmissionForm: React.FC<LeadSubmissionFormProps> = ({ onSubmit }) => 
       }
     };
     fetchCategories();
+
+    // Attempt Geolocation detection for market placement
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          // In a real app, we'd reverse geocode. For now, we'll tag it as Localized.
+          setFormData(prev => ({ ...prev, region: 'Detected (Lat/Lng)' }));
+        },
+        () => console.debug('Geo Denied')
+      );
+    }
   }, []);
 
   const handleAnalyze = async () => {
@@ -151,6 +164,30 @@ const LeadSubmissionForm: React.FC<LeadSubmissionFormProps> = ({ onSubmit }) => 
               placeholder="Google Ads / FB Ads Destination"
               value={formData.targetLeadUrl}
               onChange={e => setFormData({...formData, targetLeadUrl: e.target.value})}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1 flex items-center gap-2">
+              <MapPin size={14} className="text-[#facc15]" /> Target Region Lock
+            </label>
+            <input 
+              className="w-full bg-black border border-neutral-800 rounded-2xl px-6 py-4 text-white font-bold outline-none focus:border-[#facc15] transition-all placeholder:text-neutral-800"
+              placeholder="e.g. California, US"
+              value={formData.region}
+              onChange={e => setFormData({...formData, region: e.target.value})}
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1">Country ISO Code</label>
+            <input 
+              className="w-full bg-black border border-neutral-800 rounded-2xl px-6 py-4 text-white font-bold outline-none focus:border-[#facc15] transition-all placeholder:text-neutral-800"
+              placeholder="US"
+              maxLength={2}
+              value={formData.countryCode}
+              onChange={e => setFormData({...formData, countryCode: e.target.value.toUpperCase()})}
             />
           </div>
         </div>

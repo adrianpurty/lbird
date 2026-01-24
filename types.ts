@@ -1,4 +1,5 @@
 
+
 export interface Lead {
   id: string;
   title: string;
@@ -104,4 +105,15 @@ export interface AIInsight {
   conversionPotential: string;
   marketTrend: string;
   summary: string;
+}
+
+// Added GatewayAPI interface to shared types to fix cross-module compilation errors
+export interface GatewayAPI {
+  id: string;
+  name: string;
+  provider: 'stripe' | 'crypto' | 'upi' | 'paypal' | 'binance' | 'custom';
+  publicKey: string;
+  secretKey: string;
+  fee: string;
+  status: 'active' | 'inactive';
 }
