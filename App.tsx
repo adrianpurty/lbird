@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef, useMemo, memo, useDeferredValue } from 'react';
 import { 
   TrendingUp, Settings, ShieldAlert, Package, 
@@ -115,9 +114,13 @@ const App: React.FC = () => {
       const activeId = localStorage.getItem(SESSION_KEY) || userRef.current?.id;
       if (activeId) {
         const currentUser = data.users?.find((u: User) => u.id === activeId);
-        if (currentUser && (userRef.current?.balance !== currentUser.balance || userRef.current?.id !== currentUser.id)) {
-          setUser(currentUser);
-          if (authView !== 'app') setAuthView('app');
+        if (currentUser) {
+          // Perform a more comprehensive comparison to ensure all profile changes (email, image, phone, etc.) are synchronized
+          const hasChanged = JSON.stringify(userRef.current) !== JSON.stringify(currentUser);
+          if (hasChanged) {
+            setUser(currentUser);
+            if (authView !== 'app') setAuthView('app');
+          }
         }
       }
     } catch (error) { 

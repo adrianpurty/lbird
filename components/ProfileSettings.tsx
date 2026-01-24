@@ -1,7 +1,5 @@
-
 import React, { useState, useRef, useEffect } from 'react';
-// Added Target to the lucide-react imports to fix the "Cannot find name 'Target'" error on line 178.
-import { ShieldCheck, Mail, User as UserIcon, Lock, Camera, Save, RefreshCw, FileText, Globe, MonitorSmartphone, Briefcase, MessageSquare, Target } from 'lucide-react';
+import { ShieldCheck, Mail, User as UserIcon, Lock, Camera, Save, RefreshCw, FileText, Globe, MonitorSmartphone, Briefcase, MessageSquare, Target, Phone } from 'lucide-react';
 import { User } from '../types';
 import { NICHE_PROTOCOLS } from '../services/apiService';
 
@@ -14,6 +12,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onUpdate }) => 
   const [formData, setFormData] = useState({
     name: user.name,
     email: user.email,
+    phone: user.phone || '',
     bio: user.bio || '',
     profileImage: user.profileImage || '',
     newPassword: '',
@@ -81,6 +80,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onUpdate }) => 
     const updates: Partial<User> = {
       name: formData.name,
       email: formData.email,
+      phone: formData.phone,
       bio: formData.bio,
       profileImage: formData.profileImage,
       companyWebsite: formData.companyWebsite,
@@ -134,6 +134,19 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onUpdate }) => 
                     className="w-full bg-black/5 dark:bg-black border border-[var(--border-main)] rounded-xl pl-12 pr-4 py-3 text-[var(--text-main)] focus:border-[var(--text-accent)] outline-none transition-all"
                     value={formData.email}
                     onChange={e => setFormData({...formData, email: e.target.value})}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1">Contact Token (Phone)</label>
+                <div className="relative">
+                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700" size={16} />
+                  <input 
+                    type="tel"
+                    className="w-full bg-black/5 dark:bg-black border border-[var(--border-main)] rounded-xl pl-12 pr-4 py-3 text-[var(--text-main)] focus:border-[var(--text-accent)] outline-none transition-all"
+                    placeholder="+1 555-000-0000"
+                    value={formData.phone}
+                    onChange={e => setFormData({...formData, phone: e.target.value})}
                   />
                 </div>
               </div>
