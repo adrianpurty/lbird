@@ -9,10 +9,14 @@ header('Pragma: no-cache');
 
 $db_file = 'database.json';
 
+/**
+ * Initializes the database with default data if the file does not exist.
+ * Includes a permanent Admin Node for system oversight.
+ */
 function init_db($file) {
     $default_data = [
         'metadata' => [
-            'version' => '2.1.1',
+            'version' => '2.1.2-STABLE',
             'last_updated' => date('Y-m-d H:i:s')
         ],
         'leads' => [],
@@ -33,10 +37,10 @@ function init_db($file) {
         'invoices' => [],
         'notifications' => [],
         'analytics' => [
-           'totalVolume' => 2450000,
-           'activeTraders' => 1850,
-           'avgCPA' => 145,
-           'successRate' => 98,
+           'totalVolume' => 0,
+           'activeTraders' => 1,
+           'avgCPA' => 0,
+           'successRate' => 100,
            'revenueHistory' => []
         ],
         'authConfig' => [ 
@@ -66,15 +70,22 @@ function init_db($file) {
     return $data ?: $default_data;
 }
 
+/**
+ * Retrieves the database contents.
+ */
 function get_db() {
     global $db_file;
     return init_db($db_file);
 }
 
+/**
+ * Persists data to the local JSON ledger with atomic locking.
+ */
 function save_db($data) {
     global $db_file;
     $data['metadata']['last_updated'] = date('Y-m-d H:i:s');
-    file_put_contents($db_file, json_encode($data, JSON_PRETTY_PRINT));
+    // Atomic write with exclusive lock to prevent corruption
+    file_put_contents($db_file, json_encode($data, JSON_PRETTY_PRINT), LOCK_EX);
 }
 
 $input = json_decode(file_get_contents('php://input'), true);
@@ -92,13 +103,13 @@ switch ($action) {
             $email = $input['email'] ?? '';
             foreach ($db['users'] as $u) {
                 if ($u['username'] === $username || $u['email'] === $email) {
-                    echo json_encode(['status' => 'error', 'message' => 'Identity collision']);
+                    echo json_encode(['status' => 'error', 'message' => 'Identity collision detected.']);
                     exit;
                 }
             }
             $newUser = array_merge([
                 'id' => bin2hex(random_bytes(4)),
-                'balance' => 100,
+                'balance' => 1000,
                 'stripeConnected' => false,
                 'role' => 'user',
                 'wishlist' => []
@@ -113,6 +124,7 @@ switch ($action) {
         if ($input) {
             $username = $input['username'] ?? '';
             $token = $input['token'] ?? '';
+            // Hardcoded bypass for the primary admin node
             if ($username === 'admin' && $token === '1234') {
                 echo json_encode(['status' => 'success', 'user' => [
                     'id' => 'admin_1', 'name' => 'System Administrator', 'username' => 'admin',
@@ -142,7 +154,8 @@ switch ($action) {
                 'facebookAppSecret' => (string)($input['facebookAppSecret'] ?? '')
             ];
             save_db($db);
-            echo json_encode(['status' => 'success']);
+            // Return explicit success for OAuth commit verification
+            echo json_encode(['status' => 'success', 'timestamp' => date('Y-m-d H:i:s')]);
         }
         break;
 
@@ -176,21 +189,24 @@ switch ($action) {
             foreach ($db['users'] as $i => $u) { if ($u['id'] === $input['userId']) { $userIndex = $i; break; } }
             $leadIndex = -1;
             foreach ($db['leads'] as $i => $l) { if ($l['id'] === $input['leadId']) { $leadIndex = $i; break; } }
-            if ($userIndex === -1 || $leadIndex === -1) { echo json_encode(['status' => 'error']); break; }
+            if ($userIndex === -1 || $leadIndex === -1) { echo json_encode(['status' => 'error', 'message' => 'Node offline.']); break; }
+            
             $totalCost = (float)$input['totalDailyCost'];
-            if ($db['users'][$userIndex]['balance'] < $totalCost) { echo json_encode(['status' => 'error']); break; }
+            if ($db['users'][$userIndex]['balance'] < $totalCost) { echo json_encode(['status' => 'error', 'message' => 'Insufficient liquidity.']); break; }
 
             $db['users'][$userIndex]['balance'] -= $totalCost;
             $db['leads'][$leadIndex]['currentBid'] = (float)$input['bidAmount'];
             $db['leads'][$leadIndex]['bidCount']++;
             $requestId = 'req_' . bin2hex(random_bytes(4));
             $timestamp = date('Y-m-d H:i:s');
+            
             $db['purchaseRequests'][] = [
                 'id' => $requestId, 'userId' => $input['userId'], 'leadId' => $input['leadId'],
                 'bidAmount' => $input['bidAmount'], 'leadsPerDay' => $input['leadsPerDay'],
                 'totalDailyCost' => $totalCost, 'timestamp' => $timestamp, 'status' => 'approved',
                 'buyerBusinessUrl' => $input['buyerBusinessUrl'], 'buyerTargetLeadUrl' => $input['buyerTargetLeadUrl']
             ];
+            
             $db['invoices'][] = [
                 'id' => 'INV-' . strtoupper(bin2hex(random_bytes(3))), 'purchaseRequestId' => $requestId,
                 'userId' => $input['userId'], 'userName' => $db['users'][$userIndex]['name'],
@@ -198,6 +214,7 @@ switch ($action) {
                 'unitPrice' => $input['bidAmount'], 'dailyVolume' => $input['leadsPerDay'],
                 'totalSettlement' => $totalCost, 'timestamp' => $timestamp, 'status' => 'paid'
             ];
+            
             save_db($db);
             echo json_encode(['status' => 'success']);
         }

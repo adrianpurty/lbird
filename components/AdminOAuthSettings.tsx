@@ -9,19 +9,21 @@ import {
   EyeOff,
   AlertCircle,
   ExternalLink,
-  CheckCircle2
+  CheckCircle2,
+  XCircle
 } from 'lucide-react';
 import { OAuthConfig } from '../types';
 
 interface AdminOAuthSettingsProps {
   config: OAuthConfig;
-  onConfigChange: (config: OAuthConfig) => void;
+  onConfigChange: (config: OAuthConfig) => Promise<any>;
 }
 
 const AdminOAuthSettings: React.FC<AdminOAuthSettingsProps> = ({ config, onConfigChange }) => {
   const [showSecrets, setShowSecrets] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState(false);
   const [localConfig, setLocalConfig] = useState<OAuthConfig>({ ...config });
 
   // Sync local state when external config (from API/parent) changes
@@ -42,23 +44,29 @@ const AdminOAuthSettings: React.FC<AdminOAuthSettingsProps> = ({ config, onConfi
     
     setIsSaving(true);
     setSaveSuccess(false);
+    setSaveError(false);
     
-    // AUTO-ACTIVATE NODES: If keys are present, ensure status is set to ACTIVE (true)
+    // Auto-toggle status if fields are cleared or populated
     const committedConfig = {
       ...localConfig,
-      googleEnabled: (localConfig.googleClientId && localConfig.googleClientSecret) ? true : localConfig.googleEnabled,
-      facebookEnabled: (localConfig.facebookAppId && localConfig.facebookAppSecret) ? true : localConfig.facebookEnabled
+      googleEnabled: (!localConfig.googleClientId || !localConfig.googleClientSecret) ? false : localConfig.googleEnabled,
+      facebookEnabled: (!localConfig.facebookAppId || !localConfig.facebookAppSecret) ? false : localConfig.facebookEnabled
     };
 
-    // Update local state to reflect auto-activation immediately
-    setLocalConfig(committedConfig);
-
     try {
-      await onConfigChange(committedConfig);
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
+      const response = await onConfigChange(committedConfig);
+      
+      // Verify response integrity from api.php
+      if (response && response.status === 'success') {
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 4000);
+      } else {
+        throw new Error("Ledger write failed.");
+      }
     } catch (error) {
       console.error("Config Persistence Error:", error);
+      setSaveError(true);
+      setTimeout(() => setSaveError(false), 4000);
     } finally {
       setIsSaving(false);
     }
@@ -88,24 +96,28 @@ const AdminOAuthSettings: React.FC<AdminOAuthSettingsProps> = ({ config, onConfi
             className={`flex-1 md:flex-none px-8 py-4 rounded-2xl font-black text-xs flex items-center justify-center gap-2 transition-all shadow-xl active:scale-95 disabled:opacity-50 border-b-4 ${
               saveSuccess 
                 ? 'bg-emerald-500 text-white border-emerald-700 shadow-emerald-500/20' 
-                : 'bg-[#facc15] text-black border-yellow-600 shadow-yellow-400/10 hover:scale-105'
+                : saveError
+                  ? 'bg-red-600 text-white border-red-800'
+                  : 'bg-[#facc15] text-black border-yellow-600 shadow-yellow-400/10 hover:scale-105'
             }`}
           >
             {isSaving ? (
               <RefreshCw className="animate-spin" size={16} />
             ) : saveSuccess ? (
               <CheckCircle2 size={16} />
+            ) : saveError ? (
+              <XCircle size={16} />
             ) : (
               <Save size={16} />
             )} 
-            {isSaving ? 'UPDATING...' : saveSuccess ? 'COMMIT SUCCESS' : 'COMMIT API KEYS'}
+            {isSaving ? 'UPDATING...' : saveSuccess ? 'COMMIT SUCCESS' : saveError ? 'SYNC FAILED' : 'COMMIT API KEYS'}
           </button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
         {/* Google OAuth Panel */}
-        <div className="bg-[#121212] p-8 rounded-[2.5rem] border border-neutral-900 shadow-2xl space-y-8 relative hover:border-[#facc15]/20 transition-all flex flex-col group">
+        <div className={`bg-[#121212] p-8 rounded-[2.5rem] border transition-all flex flex-col group ${saveError ? 'border-red-500/50' : 'border-neutral-900 shadow-2xl'}`}>
           <div className="flex justify-between items-start">
              <div className="flex items-center gap-5">
                 <div className="w-16 h-16 bg-white rounded-3xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
@@ -124,7 +136,7 @@ const AdminOAuthSettings: React.FC<AdminOAuthSettingsProps> = ({ config, onConfi
                {localConfig.googleEnabled ? 'ACTIVE' : 'OFFLINE'}
              </button>
           </div>
-          <div className="space-y-5">
+          <div className="space-y-5 mt-8">
             <div className="space-y-1.5">
               <label className="text-[9px] font-black text-neutral-500 uppercase tracking-widest px-1">Google Client ID</label>
               <input 
@@ -148,7 +160,7 @@ const AdminOAuthSettings: React.FC<AdminOAuthSettingsProps> = ({ config, onConfi
         </div>
 
         {/* Facebook OAuth Panel */}
-        <div className="bg-[#121212] p-8 rounded-[2.5rem] border border-neutral-900 shadow-2xl space-y-8 relative hover:border-[#facc15]/20 transition-all flex flex-col group">
+        <div className={`bg-[#121212] p-8 rounded-[2.5rem] border transition-all flex flex-col group ${saveError ? 'border-red-500/50' : 'border-neutral-900 shadow-2xl'}`}>
           <div className="flex justify-between items-start">
              <div className="flex items-center gap-5">
                 <div className="w-16 h-16 bg-[#1877F2] rounded-3xl flex items-center justify-center text-white group-hover:scale-110 transition-transform shadow-lg">
@@ -167,7 +179,7 @@ const AdminOAuthSettings: React.FC<AdminOAuthSettingsProps> = ({ config, onConfi
                {localConfig.facebookEnabled ? 'ACTIVE' : 'OFFLINE'}
              </button>
           </div>
-          <div className="space-y-5">
+          <div className="space-y-5 mt-8">
             <div className="space-y-1.5">
               <label className="text-[9px] font-black text-neutral-500 uppercase tracking-widest px-1">Facebook App ID</label>
               <input 
