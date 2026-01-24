@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ShieldCheck, 
   Bitcoin, 
@@ -17,7 +16,8 @@ import {
   Globe,
   ToggleLeft,
   ToggleRight,
-  Scan
+  Scan,
+  CheckCircle2
 } from 'lucide-react';
 
 export interface GatewayAPI {
@@ -39,7 +39,13 @@ interface AdminPaymentSettingsProps {
 const AdminPaymentSettings: React.FC<AdminPaymentSettingsProps> = ({ gateways, onGatewaysChange, onDeploy }) => {
   const [showKeys, setShowKeys] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [localGateways, setLocalGateways] = useState<GatewayAPI[]>([]);
+
+  useEffect(() => {
+    setLocalGateways([...gateways]);
+  }, [gateways]);
   
   const [newGateway, setNewGateway] = useState<Omit<GatewayAPI, 'id' | 'status'>>({
     name: '',
@@ -51,27 +57,21 @@ const AdminPaymentSettings: React.FC<AdminPaymentSettingsProps> = ({ gateways, o
 
   const getLabels = (provider: GatewayAPI['provider']) => {
     switch (provider) {
-      case 'stripe':
-        return { public: 'Stripe Publishable Key', secret: 'Stripe Secret Key' };
-      case 'crypto':
-        return { public: 'Crypto Wallet Address', secret: 'Node API Token' };
-      case 'binance':
-        return { public: 'Binance Pay ID / API Key', secret: 'Binance Secret Key' };
-      case 'upi':
-        return { public: 'UPI Merchant ID / VPA', secret: 'Merchant Secret Key' };
-      case 'paypal':
-        return { public: 'PayPal Client ID', secret: 'PayPal Secret Key' };
-      default:
-        return { public: 'Public API Key', secret: 'Secret API Token' };
+      case 'stripe': return { public: 'Stripe Publishable Key', secret: 'Stripe Secret Key' };
+      case 'crypto': return { public: 'Crypto Wallet Address', secret: 'Node API Token' };
+      case 'binance': return { public: 'Binance Pay ID / API Key', secret: 'Binance Secret Key' };
+      case 'upi': return { public: 'UPI Merchant ID / VPA', secret: 'Merchant Secret Key' };
+      case 'paypal': return { public: 'PayPal Client ID', secret: 'PayPal Secret Key' };
+      default: return { public: 'Public API Key', secret: 'Secret API Token' };
     }
   };
 
   const handleUpdateGateway = (id: string, field: keyof GatewayAPI, value: string) => {
-    onGatewaysChange(gateways.map(g => g.id === id ? { ...g, [field]: value } : g));
+    setLocalGateways(prev => prev.map(g => g.id === id ? { ...g, [field]: value } : g));
   };
 
   const toggleStatus = (id: string) => {
-    onGatewaysChange(gateways.map(g => g.id === id ? { ...g, status: g.status === 'active' ? 'inactive' : 'active' } : g));
+    setLocalGateways(prev => prev.map(g => g.id === id ? { ...g, status: g.status === 'active' ? 'inactive' : 'active' } : g));
   };
 
   const handleAddGateway = (e: React.FormEvent) => {
@@ -81,23 +81,30 @@ const AdminPaymentSettings: React.FC<AdminPaymentSettingsProps> = ({ gateways, o
       id: `gw_${Math.random().toString(36).substr(2, 5)}`,
       status: 'active'
     };
-    onGatewaysChange([...gateways, api]);
+    setLocalGateways(prev => [...prev, api]);
     setShowAddModal(false);
     setNewGateway({ name: '', provider: 'stripe', publicKey: '', secretKey: '', fee: '2.5' });
   };
 
   const removeGateway = (id: string) => {
-    if(confirm('Disconnect and purge this gateway node from the global ledger?')) {
-      onGatewaysChange(gateways.filter(g => g.id !== id));
+    if(confirm('Disconnect and purge this gateway node?')) {
+      setLocalGateways(prev => prev.filter(g => g.id !== id));
     }
   };
 
-  const handleDeploy = () => {
+  const handleDeploy = async () => {
+    if (isDeploying) return;
     setIsDeploying(true);
-    onDeploy(gateways);
-    setTimeout(() => {
+    setSaveSuccess(false);
+    try {
+      await onGatewaysChange(localGateways);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (err) {
+      console.error(err);
+    } finally {
       setIsDeploying(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -107,7 +114,7 @@ const AdminPaymentSettings: React.FC<AdminPaymentSettingsProps> = ({ gateways, o
           <h2 className="text-3xl font-black text-white uppercase tracking-tighter italic flex items-center gap-3">
             <Settings className="text-[#facc15]" /> Financial Nodes
           </h2>
-          <p className="text-neutral-500 text-sm font-medium mt-1">Configure API keys for Stripe, Binance, Crypto, and UPI payment infrastructure.</p>
+          <p className="text-neutral-500 text-sm font-medium mt-1">Configure API keys for Stripe, Binance, Crypto, and UPI infrastructure.</p>
         </div>
         <div className="flex gap-4 w-full md:w-auto">
           <button 
@@ -119,10 +126,14 @@ const AdminPaymentSettings: React.FC<AdminPaymentSettingsProps> = ({ gateways, o
           <button 
             onClick={handleDeploy}
             disabled={isDeploying}
-            className="flex-1 md:flex-none bg-[#facc15] text-black px-8 py-4 rounded-2xl font-black text-xs flex items-center justify-center gap-2 hover:scale-105 transition-transform shadow-xl shadow-yellow-400/10 border-b-4 border-yellow-600 active:scale-95 disabled:opacity-50"
+            className={`flex-1 md:flex-none px-8 py-4 rounded-2xl font-black text-xs flex items-center justify-center gap-2 transition-all shadow-xl active:scale-95 disabled:opacity-50 border-b-4 ${
+              saveSuccess 
+                ? 'bg-emerald-500 text-white border-emerald-700' 
+                : 'bg-[#facc15] text-black border-yellow-600 hover:scale-105'
+            }`}
           >
-            {isDeploying ? <RefreshCw className="animate-spin" size={16} /> : <Save size={16} />}
-            {isDeploying ? 'DEPLOYING...' : 'SAVE CONFIG'}
+            {isDeploying ? <RefreshCw className="animate-spin" size={16} /> : saveSuccess ? <CheckCircle2 size={16} /> : <Save size={16} />}
+            {isDeploying ? 'UPDATING...' : saveSuccess ? 'DEPLOYED' : 'COMMIT CONFIG'}
           </button>
         </div>
       </div>
@@ -142,7 +153,7 @@ const AdminPaymentSettings: React.FC<AdminPaymentSettingsProps> = ({ gateways, o
           <div className="hidden sm:flex items-center gap-6 px-4">
              <div className="text-center">
                 <span className="text-[9px] text-neutral-500 font-black uppercase tracking-widest block mb-1">Operational</span>
-                <span className="text-emerald-500 font-black text-xs">{gateways.filter(g => g.status === 'active').length} Nodes</span>
+                <span className="text-emerald-500 font-black text-xs">{localGateways.filter(g => g.status === 'active').length} Nodes</span>
              </div>
              <div className="w-px h-8 bg-neutral-800" />
              <div className="text-center">
@@ -153,7 +164,7 @@ const AdminPaymentSettings: React.FC<AdminPaymentSettingsProps> = ({ gateways, o
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-        {gateways.map((api) => {
+        {localGateways.map((api) => {
           const labels = getLabels(api.provider);
           return (
             <div key={api.id} className={`bg-[#121212] p-8 rounded-[2.5rem] border transition-all flex flex-col group ${api.status === 'active' ? 'border-neutral-900' : 'border-red-500/20 opacity-60'}`}>
@@ -249,7 +260,6 @@ const AdminPaymentSettings: React.FC<AdminPaymentSettingsProps> = ({ gateways, o
                   onChange={e => setNewGateway({...newGateway, name: e.target.value})}
                 />
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-[9px] font-black text-neutral-600 uppercase tracking-widest px-1">Infrastructure Provider</label>
@@ -277,35 +287,16 @@ const AdminPaymentSettings: React.FC<AdminPaymentSettingsProps> = ({ gateways, o
                   />
                 </div>
               </div>
-
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-[9px] font-black text-neutral-600 uppercase tracking-widest px-1">
-                    {getLabels(newGateway.provider).public}
-                  </label>
-                  <input 
-                    required
-                    className="w-full bg-black border border-neutral-800 rounded-2xl px-6 py-4 text-white font-mono text-xs focus:border-[#facc15]"
-                    placeholder={newGateway.provider === 'stripe' ? 'pk_live_...' : newGateway.provider === 'binance' ? 'Binance Pay ID' : '0x...'}
-                    value={newGateway.publicKey}
-                    onChange={e => setNewGateway({...newGateway, publicKey: e.target.value})}
-                  />
+                  <label className="text-[9px] font-black text-neutral-600 uppercase tracking-widest px-1">{getLabels(newGateway.provider).public}</label>
+                  <input required className="w-full bg-black border border-neutral-800 rounded-2xl px-6 py-4 text-white font-mono text-xs focus:border-[#facc15]" value={newGateway.publicKey} onChange={e => setNewGateway({...newGateway, publicKey: e.target.value})} />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[9px] font-black text-neutral-600 uppercase tracking-widest px-1">
-                    {getLabels(newGateway.provider).secret}
-                  </label>
-                  <input 
-                    required
-                    type="password"
-                    className="w-full bg-black border border-neutral-800 rounded-2xl px-6 py-4 text-white font-mono text-xs focus:border-[#facc15]"
-                    placeholder={newGateway.provider === 'stripe' ? 'sk_live_...' : '••••••••'}
-                    value={newGateway.secretKey}
-                    onChange={e => setNewGateway({...newGateway, secretKey: e.target.value})}
-                  />
+                  <label className="text-[9px] font-black text-neutral-600 uppercase tracking-widest px-1">{getLabels(newGateway.provider).secret}</label>
+                  <input required type="password" className="w-full bg-black border border-neutral-800 rounded-2xl px-6 py-4 text-white font-mono text-xs focus:border-[#facc15]" value={newGateway.secretKey} onChange={e => setNewGateway({...newGateway, secretKey: e.target.value})} />
                 </div>
               </div>
-
               <div className="pt-4 flex flex-col gap-3">
                  <button type="submit" className="w-full bg-[#facc15] text-black py-5 rounded-[2rem] font-black text-lg hover:bg-yellow-500 transition-colors shadow-xl shadow-yellow-400/5">ACTIVATE NODE</button>
                  <button type="button" onClick={() => setShowAddModal(false)} className="w-full text-neutral-600 py-2 text-[10px] font-black uppercase tracking-widest hover:text-white transition-colors">Abort Provisioning</button>

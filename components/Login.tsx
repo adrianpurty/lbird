@@ -18,8 +18,8 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
 
   const requestLocation = async (): Promise<string> => {
     return new Promise((resolve) => {
-      if (!("geolocation" in navigator)) return resolve("Geo Not Supported");
-      const timeout = setTimeout(() => resolve("Geo Timeout"), 4000);
+      if (!("geolocation" in navigator)) return resolve("N/A");
+      const timeout = setTimeout(() => resolve("Timeout"), 1000); // Reduced to 1s for snappier login
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           clearTimeout(timeout);
@@ -27,9 +27,9 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
         },
         () => {
           clearTimeout(timeout);
-          resolve("Geo Denied");
+          resolve("Denied");
         },
-        { timeout: 3500 }
+        { timeout: 900 }
       );
     });
   };
@@ -43,6 +43,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSyncing) return;
     setIsSyncing(true);
     setError('');
     
@@ -51,26 +52,19 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
       
       if (user) {
         if (activeMode === 'admin' && user.role !== 'admin') {
-          setError('Access Denied: Node Role Mismatch');
+          setError('Access Denied: Admin Role Required');
           setIsSyncing(false);
           return;
         }
 
         const location = await requestLocation();
         const deviceInfo = getDeviceInfo();
-        
-        const enrichedUser = {
-          ...user,
-          location,
-          deviceInfo
-        };
-
-        onLogin(enrichedUser as User);
+        onLogin({ ...user, location, deviceInfo } as User);
       } else {
-        setError('Access Denied: Invalid Credentials');
+        setError('Invalid Credentials');
       }
     } catch (err) {
-      setError('System Error: Handshake Failed');
+      setError('System Error');
     } finally {
       setIsSyncing(false);
     }
@@ -79,12 +73,10 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
   const handleSocialLogin = async (provider: 'google' | 'facebook') => {
     if (authConfig) {
       if (provider === 'google' && (!authConfig.googleEnabled || !authConfig.googleClientId)) {
-        setError('Google Node Offline: Setup required in Control Room.');
-        return;
+        setError('Google Provider Offline'); return;
       }
       if (provider === 'facebook' && (!authConfig.facebookEnabled || !authConfig.facebookAppId)) {
-        setError('Facebook Node Offline: Setup required in Control Room.');
-        return;
+        setError('Facebook Provider Offline'); return;
       }
     }
 
@@ -92,30 +84,21 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
     setError('');
     
     try {
-      // Mock logic: In a real app, this would redirect to OAuth flow
-      const user = await apiService.authenticateUser(`${provider}@global-network.net`, 'social-auth-token');
-      if (user) {
-        onLogin(user as User);
-      } else {
+      const user = await apiService.authenticateUser(`${provider}@social.node`, 'social-token');
+      if (user) { onLogin(user as User); } 
+      else {
         const newUser = await apiService.registerUser({
-          name: `${provider.charAt(0).toUpperCase() + provider.slice(1)} Trader`,
-          email: `${provider}@global-network.net`,
-          username: provider,
-          password: 'social-auth-token',
-          location: await requestLocation(),
-          deviceInfo: getDeviceInfo()
+          name: `${provider} Trader`, email: `${provider}@social.node`,
+          username: provider + Math.floor(Math.random() * 1000), password: 'social-token'
         });
         onLogin(newUser as User);
       }
     } catch (err) {
-      setError('Social Handshake Failed');
+      setError('Social Login Failed');
     } finally {
       setIsSyncing(false);
     }
   };
-
-  const isGoogleDown = authConfig && (!authConfig.googleEnabled || !authConfig.googleClientId);
-  const isFacebookDown = authConfig && (!authConfig.facebookEnabled || !authConfig.facebookAppId);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#050810] p-4 font-sans relative overflow-hidden">
@@ -132,63 +115,34 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
           <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic leading-none">
             LEAD<span className="text-[#facc15]">BID</span><span className="text-neutral-700 not-italic ml-1">PRO</span>
           </h1>
-          <p className="text-neutral-500 text-[9px] mt-3 font-black uppercase tracking-[0.5em] opacity-40 italic">Identity Verification Required</p>
+          <p className="text-neutral-500 text-[9px] mt-3 font-black uppercase tracking-[0.5em] opacity-40 italic">Handshake Required</p>
         </div>
 
         <div className="px-10">
           <div className="flex bg-black border border-neutral-800 rounded-2xl p-1.5 mb-8">
-            <button 
-              type="button"
-              onClick={() => { setActiveMode('trader'); setError(''); }} 
-              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${activeMode === 'trader' ? 'bg-[#facc15] text-black shadow-lg shadow-yellow-400/10' : 'text-neutral-500 hover:text-white'}`}
-            >
-              <UserIcon size={14} /> Trader
-            </button>
-            <button 
-              type="button"
-              onClick={() => { setActiveMode('admin'); setError(''); }} 
-              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${activeMode === 'admin' ? 'bg-red-600 text-white shadow-lg shadow-red-600/10' : 'text-neutral-500 hover:text-white'}`}
-            >
-              <Cpu size={14} /> Operator
-            </button>
+            <button type="button" onClick={() => setActiveMode('trader')} className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase transition-all ${activeMode === 'trader' ? 'bg-[#facc15] text-black shadow-lg shadow-yellow-400/10' : 'text-neutral-500'}`}>Trader</button>
+            <button type="button" onClick={() => setActiveMode('admin')} className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase transition-all ${activeMode === 'admin' ? 'bg-red-600 text-white shadow-lg' : 'text-neutral-500'}`}>Admin</button>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-neutral-600 uppercase tracking-widest px-1">Access Terminal</label>
-              <input 
-                required 
-                className="w-full bg-black border border-neutral-800 rounded-2xl px-6 py-4 text-white text-sm outline-none focus:border-[#facc15] transition-all font-bold placeholder:text-neutral-800" 
-                placeholder={activeMode === 'admin' ? "Operator ID" : "Username / Email"} 
-                value={username} 
-                onChange={e => setUsername(e.target.value)} 
-              />
+              <label className="text-[10px] font-black text-neutral-600 uppercase tracking-widest px-1">Access ID</label>
+              <input required className="w-full bg-black border border-neutral-800 rounded-2xl px-6 py-4 text-white text-sm outline-none focus:border-[#facc15] transition-all font-bold placeholder:text-neutral-800" placeholder={activeMode === 'admin' ? "admin" : "User / Email"} value={username} onChange={e => setUsername(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-neutral-600 uppercase tracking-widest px-1">Secret Token</label>
-              <input 
-                required 
-                type="password" 
-                className="w-full bg-black border border-neutral-800 rounded-2xl px-6 py-4 text-white text-sm outline-none focus:border-[#facc15] transition-all font-bold placeholder:text-neutral-800" 
-                placeholder="••••" 
-                value={password} 
-                onChange={e => setPassword(e.target.value)} 
-              />
+              <label className="text-[10px] font-black text-neutral-600 uppercase tracking-widest px-1">Token</label>
+              <input required type="password" className="w-full bg-black border border-neutral-800 rounded-2xl px-6 py-4 text-white text-sm outline-none focus:border-[#facc15] transition-all font-bold placeholder:text-neutral-800" placeholder="••••" value={password} onChange={e => setPassword(e.target.value)} />
             </div>
 
             {error && (
-              <div className="bg-red-500/10 border border-red-500/20 p-3 rounded-xl flex items-center gap-2 justify-center">
+              <div className="bg-red-500/10 border border-red-500/20 p-3 rounded-xl flex items-center gap-2 justify-center animate-shake">
                 <AlertTriangle size={14} className="text-red-500" />
-                <p className="text-red-500 text-[10px] font-black uppercase text-center">{error}</p>
+                <p className="text-red-500 text-[10px] font-black uppercase">{error}</p>
               </div>
             )}
 
-            <button 
-              type="submit" 
-              disabled={isSyncing} 
-              className={`w-full py-5 rounded-2xl font-black text-sm transition-all transform active:scale-95 shadow-xl disabled:opacity-50 border-b-[5px] ${activeMode === 'admin' ? 'bg-red-600 text-white hover:bg-red-500 border-red-800' : 'bg-[#facc15] text-black hover:bg-[#eab308] border-yellow-600'}`}
-            >
-              {isSyncing ? <Loader2 className="animate-spin mx-auto" size={20} /> : 'AUTHENTICATE SESSION'}
+            <button type="submit" disabled={isSyncing} className={`w-full py-5 rounded-2xl font-black text-sm transition-all transform active:scale-95 shadow-xl disabled:opacity-50 border-b-[5px] ${activeMode === 'admin' ? 'bg-red-600 text-white border-red-800' : 'bg-[#facc15] text-black border-yellow-600'}`}>
+              {isSyncing ? <Loader2 className="animate-spin mx-auto" size={20} /> : 'AUTHENTICATE'}
             </button>
           </form>
 
@@ -196,38 +150,15 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
             <div className="mt-8 space-y-4">
               <div className="relative flex items-center gap-4">
                 <div className="flex-1 h-[1px] bg-neutral-900" />
-                <span className="text-[9px] font-black text-neutral-700 uppercase tracking-widest">Network Nodes</span>
+                <span className="text-[9px] font-black text-neutral-700 uppercase">OAuth Nodes</span>
                 <div className="flex-1 h-[1px] bg-neutral-900" />
               </div>
-
               <div className="grid grid-cols-2 gap-4 pb-8">
-                <button 
-                  type="button"
-                  onClick={() => handleSocialLogin('google')} 
-                  className={`py-3 rounded-xl font-bold flex items-center justify-center gap-2 border transition-all text-[10px] uppercase tracking-widest group ${isGoogleDown ? 'bg-neutral-950 text-neutral-800 border-neutral-900 cursor-not-allowed grayscale' : 'bg-neutral-900 text-neutral-400 border-neutral-800 hover:text-white hover:bg-neutral-800'}`}
-                >
-                  <Globe size={12} className={isGoogleDown ? '' : 'group-hover:text-[#facc15]'} /> {isGoogleDown ? 'LOCKED' : 'Google'}
-                </button>
-                <button 
-                  type="button"
-                  onClick={() => handleSocialLogin('facebook')} 
-                  className={`py-3 rounded-xl font-bold flex items-center justify-center gap-2 border transition-all text-[10px] uppercase tracking-widest group ${isFacebookDown ? 'bg-neutral-950 text-neutral-800 border-neutral-900 cursor-not-allowed grayscale' : 'bg-neutral-900 text-neutral-400 border-neutral-800 hover:text-white hover:bg-neutral-800'}`}
-                >
-                  <ShieldCheck size={12} className={isFacebookDown ? '' : 'group-hover:text-[#facc15]'} /> {isFacebookDown ? 'LOCKED' : 'Facebook'}
-                </button>
+                <button onClick={() => handleSocialLogin('google')} className="py-3 rounded-xl font-bold flex items-center justify-center gap-2 border border-neutral-800 hover:text-white hover:bg-neutral-800 text-[10px] uppercase transition-all">Google</button>
+                <button onClick={() => handleSocialLogin('facebook')} className="py-3 rounded-xl font-bold flex items-center justify-center gap-2 border border-neutral-800 hover:text-white hover:bg-neutral-800 text-[10px] uppercase transition-all">Facebook</button>
               </div>
             </div>
           )}
-        </div>
-
-        <div className="p-10 pt-8 text-center bg-neutral-900/20">
-          <button 
-            type="button"
-            onClick={onSwitchToSignup} 
-            className="text-neutral-600 text-[10px] font-black uppercase hover:text-[#facc15] transition-colors flex items-center justify-center gap-2 mx-auto"
-          >
-            New Node? Provision Credentials
-          </button>
         </div>
       </div>
     </div>
