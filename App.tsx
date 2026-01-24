@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef, useMemo, memo, useDeferredValue } from 'react';
 import { 
   TrendingUp, Settings, ShieldAlert, Package, 
@@ -235,7 +234,7 @@ const App: React.FC = () => {
              </div>
           )}
 
-          {activeTab === 'auth-config' && user.role === 'admin' && <AdminOAuthSettings config={marketData.authConfig} onConfigChange={(cfg) => apiService.updateAuthConfig(cfg).then(() => { fetchAppData(); showToast("Identity Node Updated"); })} />}
+          {activeTab === 'auth-config' && user.role === 'admin' && <AdminOAuthSettings config={marketData.authConfig} onConfigChange={(cfg) => apiService.updateAuthConfig(cfg).then((res) => { fetchAppData(); showToast("Identity Node Updated"); return res; })} />}
           {activeTab === 'payment-config' && user.role === 'admin' && <AdminPaymentSettings gateways={marketData.gateways} onGatewaysChange={(gws) => apiService.updateGateways(gws).then(fetchAppData)} onDeploy={() => { fetchAppData(); showToast("Gateways Deployed"); }} />}
           {activeTab === 'profile' && <ProfileSettings user={user} onUpdate={(u) => apiService.updateUser(user.id, u).then(fetchAppData)} />}
           {activeTab === 'settings' && <WalletSettings stripeConnected={user.stripeConnected} onConnect={() => {}} balance={user.balance} onDeposit={(amt) => apiService.deposit(user.id, amt).then(fetchAppData)} gateways={marketData.gateways} />}
