@@ -44,14 +44,14 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, role, onLogou
   const visibleItems = menuItems.filter(item => item.roles.includes(role));
 
   return (
-    <aside className="w-64 bg-[var(--sidebar-bg)] border-r border-[var(--border-main)] flex flex-col theme-transition">
-      <div className="p-8 flex items-center gap-3">
-        <div className="w-10 h-10 bg-[var(--text-accent)] rounded-xl flex items-center justify-center shadow-[0_0_15px_rgba(250,204,21,0.15)]">
-          <Zap className="text-black fill-current" />
+    <aside className="w-64 bg-[#0a0a0a]/40 border-r border-neutral-800/30 flex flex-col theme-transition backdrop-blur-md">
+      <div className="p-8 flex items-center gap-3 opacity-80 hover:opacity-100 transition-opacity">
+        <div className="w-10 h-10 bg-[#facc15]/10 rounded-xl flex items-center justify-center border border-[#facc15]/20 shadow-sm">
+          <Zap className="text-[#facc15]/60 fill-[#facc15]/20" size={20} />
         </div>
         <div className="flex flex-col">
-          <span className="text-xl font-black tracking-tighter text-[var(--text-main)] leading-none">
-            LEAD<span className="text-[var(--text-accent)]">BID</span>
+          <span className="text-xl font-black tracking-tighter text-neutral-300 leading-none">
+            LEAD<span className="text-[#facc15]/50">BID</span>
           </span>
           <span className="text-[9px] text-neutral-600 font-black uppercase tracking-widest mt-1">
             {role === 'admin' ? 'SYSTEM OPERATOR' : 'PREMIUM TRADER'}
@@ -59,33 +59,38 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, role, onLogou
         </div>
       </div>
 
-      <nav className="flex-1 px-4 space-y-2 py-6">
+      <nav className="flex-1 px-4 space-y-1 py-6">
         {visibleItems.map((item) => (
           <button
             key={item.id}
             onClick={() => onTabChange(item.id)}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group relative ${
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group relative border ${
               activeTab === item.id 
-                ? 'bg-[var(--text-accent)] text-black shadow-lg shadow-yellow-400/10' 
-                : 'text-neutral-500 hover:text-[var(--text-main)] hover:bg-neutral-100 dark:hover:bg-neutral-900'
+                ? 'bg-[#facc15]/50 text-neutral-100 border-[#facc15]/30 shadow-md' 
+                : 'text-neutral-600 border-transparent hover:text-neutral-400 hover:bg-white/5 hover:border-neutral-800/20'
             }`}
           >
-            <item.icon size={20} className={activeTab === item.id ? 'stroke-current' : 'group-hover:text-[var(--text-accent)]'} />
-            <span className="font-semibold text-sm">{item.label}</span>
+            <item.icon 
+              size={18} 
+              className={`transition-colors ${
+                activeTab === item.id ? 'text-white' : 'text-neutral-700 group-hover:text-[#facc15]/40'
+              }`} 
+            />
+            <span className="font-bold text-xs tracking-tight uppercase tracking-widest">{item.label}</span>
             {item.indicator && (
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 w-2 h-2 bg-red-500 rounded-full animate-ping" />
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-red-900/60 rounded-full animate-pulse shadow-[0_0_8px_rgba(127,29,29,0.4)]" />
             )}
           </button>
         ))}
       </nav>
 
-      <div className="p-4 border-t border-[var(--border-main)]">
+      <div className="p-4 border-t border-neutral-800/30">
         <button 
           onClick={onLogout}
-          className="w-full flex items-center gap-3 px-4 py-3 text-neutral-500 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all"
+          className="w-full flex items-center gap-3 px-4 py-3 text-neutral-700 hover:text-red-900/70 hover:bg-red-950/10 rounded-xl transition-all border border-transparent hover:border-red-900/20"
         >
-          <LogOut size={20} />
-          <span className="font-semibold text-sm">Sign Out</span>
+          <LogOut size={18} />
+          <span className="font-black text-[10px] uppercase tracking-widest">Sign Out Session</span>
         </button>
       </div>
     </aside>

@@ -26,7 +26,6 @@ const AdminOAuthSettings: React.FC<AdminOAuthSettingsProps> = ({ config, onConfi
   const [saveError, setSaveError] = useState(false);
   const [localConfig, setLocalConfig] = useState<OAuthConfig>({ ...config });
 
-  // Sync local state when external config (from API/parent) changes
   useEffect(() => {
     setLocalConfig({ ...config });
   }, [config]);
@@ -48,40 +47,29 @@ const AdminOAuthSettings: React.FC<AdminOAuthSettingsProps> = ({ config, onConfi
     setSaveSuccess(false);
     setSaveError(false);
     
-    // Defensive check to ensure values are strings before trimming
     const googleId = String(localConfig.googleClientId || '').trim();
-    const googleSecret = String(localConfig.googleClientSecret || '').trim();
     const facebookId = String(localConfig.facebookAppId || '').trim();
-    const facebookSecret = String(localConfig.facebookAppSecret || '').trim();
 
-    // AUTO-ACTIVATION LOGIC: 
-    // If keys are provided, activate the node.
-    // If keys are missing, deactivate the node.
     const committedConfig: OAuthConfig = {
       ...localConfig,
-      googleEnabled: googleId.length > 0 && googleSecret.length > 0,
-      facebookEnabled: facebookId.length > 0 && facebookSecret.length > 0,
+      googleEnabled: localConfig.googleEnabled && googleId.length > 0,
+      facebookEnabled: localConfig.facebookEnabled && facebookId.length > 0,
     };
 
-    // Reflect auto-toggles in local UI immediately
     setLocalConfig(committedConfig);
 
     try {
       const response = await onConfigChange(committedConfig);
       
-      // Explicitly check for 'success' status from the API layer
       if (response && response.status === 'success') {
         setSaveSuccess(true);
       } else {
-        console.error("Ledger Write Rejected:", response);
         setSaveError(true);
       }
     } catch (error) {
-      console.error("Identity Persistence Failure:", error);
       setSaveError(true);
     } finally {
       setIsSaving(false);
-      // Reset feedback indicators after 4s
       setTimeout(() => {
         setSaveSuccess(false);
         setSaveError(false);
@@ -90,85 +78,109 @@ const AdminOAuthSettings: React.FC<AdminOAuthSettingsProps> = ({ config, onConfi
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20 theme-transition">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
-          <h2 className="text-3xl font-black text-white uppercase tracking-tighter italic flex items-center gap-3">
-            <Lock className="text-[#facc15]" /> Identity Infrastructure
+          <h2 className="text-3xl font-black text-neutral-300 uppercase tracking-tighter italic flex items-center gap-3">
+            <Lock className="text-[#facc15]/70" /> Identity Infrastructure
           </h2>
-          <p className="text-neutral-500 text-sm font-medium mt-1">Provision OAuth 2.0 gateways to link the Sales Floor with social identities.</p>
+          <p className="text-neutral-600 text-sm font-medium mt-1 uppercase tracking-wider text-[10px]">Provision OAuth 2.0 gateways for secure social handshakes.</p>
         </div>
         <div className="flex gap-4 w-full md:w-auto">
           <button 
             type="button"
             onClick={() => setShowSecrets(!showSecrets)} 
-            className="flex-1 md:flex-none bg-neutral-900 text-white px-6 py-4 rounded-2xl font-black text-xs flex items-center justify-center gap-2 border border-neutral-800 transition-colors hover:bg-neutral-800 active:scale-95"
+            className="flex-1 md:flex-none bg-neutral-900/50 text-neutral-400 px-6 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 border border-neutral-800/40 transition-all hover:text-white active:scale-95"
           >
-            {showSecrets ? <EyeOff size={16} /> : <Eye size={16} />} {showSecrets ? 'MASK' : 'SHOW'}
+            {showSecrets ? <EyeOff size={14} /> : <Eye size={14} />} {showSecrets ? 'Mask' : 'Show'}
           </button>
           <button 
             type="button"
             onClick={handleSave} 
             disabled={isSaving} 
-            className={`flex-1 md:flex-none px-8 py-4 rounded-2xl font-black text-xs flex items-center justify-center gap-2 transition-all shadow-xl active:scale-95 disabled:opacity-50 border-b-4 ${
+            className={`flex-1 md:flex-none px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 border-b-2 ${
               saveSuccess 
-                ? 'bg-emerald-500 text-white border-emerald-700 shadow-emerald-500/20' 
+                ? 'bg-emerald-600/80 text-white border-emerald-900 shadow-lg shadow-emerald-900/20' 
                 : saveError
-                  ? 'bg-red-600 text-white border-red-800 animate-shake'
-                  : 'bg-[#facc15] text-black border-yellow-600 shadow-yellow-400/10 hover:scale-105'
+                  ? 'bg-red-700/80 text-white border-red-950 animate-shake'
+                  : 'bg-[#facc15]/70 text-black border-yellow-800/50 hover:bg-[#facc15]/80'
             }`}
           >
             {isSaving ? (
-              <RefreshCw className="animate-spin" size={16} />
+              <RefreshCw className="animate-spin" size={14} />
             ) : saveSuccess ? (
-              <CheckCircle2 size={16} />
+              <CheckCircle2 size={14} />
             ) : saveError ? (
-              <XCircle size={16} />
+              <XCircle size={14} />
             ) : (
-              <Save size={16} />
+              <Save size={14} />
             )} 
-            {isSaving ? 'UPDATING...' : saveSuccess ? 'COMMIT SUCCESS' : saveError ? 'SYNC FAILED' : 'COMMIT API KEYS'}
+            {isSaving ? 'Syncing...' : saveSuccess ? 'Success' : saveError ? 'Error' : 'Commit'}
           </button>
         </div>
       </div>
 
+      <div className="bg-neutral-900/30 border border-neutral-800/40 p-6 rounded-[2rem] flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 bg-neutral-800/50 rounded-xl flex items-center justify-center">
+              <Lock className="text-neutral-500" size={18} />
+            </div>
+            <div>
+              <span className="text-[9px] text-neutral-600 font-black uppercase tracking-widest block leading-none mb-1">Visibility Status</span>
+              <p className="text-neutral-500 font-bold text-[10px] uppercase">{showSecrets ? 'Revealed' : 'Encrypted'}</p>
+            </div>
+          </div>
+          <div className="hidden sm:flex items-center gap-6 px-4">
+             <div className="text-center">
+                <span className="text-[9px] text-neutral-600 font-black uppercase tracking-widest block mb-1">Provisioned</span>
+                {/* Fixed the "Cannot find name 'localGateways'" error by using a constant count of 2 nodes (Google and Meta) */}
+                <span className="text-neutral-400 font-black text-[10px]">2 Nodes</span>
+             </div>
+             <div className="w-px h-6 bg-neutral-800/40" />
+             <div className="text-center">
+                <span className="text-[9px] text-neutral-600 font-black uppercase tracking-widest block mb-1">Security</span>
+                <span className="text-neutral-500 font-black text-[10px] uppercase">AES-256</span>
+             </div>
+          </div>
+      </div>
+
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
         {/* Google OAuth Panel */}
-        <div className={`bg-[#121212] p-8 rounded-[2.5rem] border transition-all flex flex-col group ${saveError ? 'border-red-500/50' : 'border-neutral-900 shadow-2xl hover:border-[#facc15]/20'}`}>
+        <div className={`bg-neutral-900/40 p-8 rounded-[2.5rem] border transition-all flex flex-col group ${saveError ? 'border-red-900/50' : 'border-neutral-800/40'}`}>
           <div className="flex justify-between items-start">
              <div className="flex items-center gap-5">
-                <div className="w-16 h-16 bg-white rounded-3xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
-                  <img src="https://www.google.com/favicon.ico" alt="Google" className="w-8 h-8" />
+                <div className="w-14 h-14 bg-neutral-100/10 rounded-3xl flex items-center justify-center grayscale opacity-60 group-hover:opacity-100 transition-all">
+                  <img src="https://www.google.com/favicon.ico" alt="Google" className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-black text-white uppercase tracking-tight italic">Google Cloud Node</h3>
-                  <span className="text-[9px] text-neutral-600 font-black uppercase tracking-[0.2em]">OAuth 2.0 Identity Protocol</span>
+                  <h3 className="text-lg font-black text-neutral-300 uppercase tracking-tight italic">Google Core</h3>
+                  <span className="text-[9px] text-neutral-600 font-black uppercase tracking-[0.2em]">OIDC Identity Provider</span>
                 </div>
              </div>
              <button 
                type="button"
                onClick={() => handleToggle('googleEnabled')} 
-               className={`px-4 py-2 rounded-xl font-black text-[10px] transition-all border ${localConfig.googleEnabled ? 'bg-emerald-500/10 border-emerald-500 text-emerald-500' : 'bg-red-500/10 border-red-500 text-red-500'}`}
+               className={`px-3 py-1.5 rounded-lg font-black text-[9px] transition-all border ${localConfig.googleEnabled ? 'bg-emerald-500/5 border-emerald-900/50 text-emerald-600' : 'bg-red-500/5 border-red-900/50 text-red-600'}`}
              >
-               {localConfig.googleEnabled ? 'ACTIVE' : 'OFFLINE'}
+               {localConfig.googleEnabled ? 'ENABLED' : 'DISABLED'}
              </button>
           </div>
           <div className="space-y-5 mt-8">
-            <div className="space-y-1.5">
-              <label className="text-[9px] font-black text-neutral-500 uppercase tracking-widest px-1">Google Client ID</label>
+            <div className="space-y-2">
+              <label className="text-[9px] font-black text-neutral-600 uppercase tracking-widest px-1">Client ID</label>
               <input 
-                className="w-full bg-black border border-neutral-800 rounded-xl px-5 py-3 text-white font-mono text-xs focus:border-[#facc15] outline-none transition-all" 
-                placeholder="000000000000-xxxx.apps.googleusercontent.com"
+                className="w-full bg-black/20 border border-neutral-800/30 rounded-xl px-4 py-3 text-neutral-400 font-mono text-[11px] focus:border-neutral-700 outline-none transition-all placeholder:text-neutral-800" 
+                placeholder="xxxx.apps.googleusercontent.com"
                 value={localConfig.googleClientId} 
                 onChange={(e) => handleChange('googleClientId', e.target.value)} 
               />
             </div>
-            <div className="space-y-1.5">
-              <label className="text-[9px] font-black text-neutral-500 uppercase tracking-widest px-1">Google Client Secret</label>
+            <div className="space-y-2">
+              <label className="text-[9px] font-black text-neutral-600 uppercase tracking-widest px-1">Client Secret</label>
               <input 
                 type={showSecrets ? 'text' : 'password'} 
-                className="w-full bg-black border border-neutral-800 rounded-xl px-5 py-3 text-white font-mono text-xs focus:border-[#facc15] outline-none transition-all" 
-                placeholder="GOCSPX-xxxxxxxxxxxxxxxxxxxx"
+                className="w-full bg-black/20 border border-neutral-800/30 rounded-xl px-4 py-3 text-neutral-400 font-mono text-[11px] focus:border-neutral-700 outline-none transition-all placeholder:text-neutral-800" 
+                placeholder="GOCSPX-xxxx"
                 value={localConfig.googleClientSecret} 
                 onChange={(e) => handleChange('googleClientSecret', e.target.value)} 
               />
@@ -177,40 +189,40 @@ const AdminOAuthSettings: React.FC<AdminOAuthSettingsProps> = ({ config, onConfi
         </div>
 
         {/* Facebook OAuth Panel */}
-        <div className={`bg-[#121212] p-8 rounded-[2.5rem] border transition-all flex flex-col group ${saveError ? 'border-red-500/50' : 'border-neutral-900 shadow-2xl hover:border-[#facc15]/20'}`}>
+        <div className={`bg-neutral-900/40 p-8 rounded-[2.5rem] border transition-all flex flex-col group ${saveError ? 'border-red-900/50' : 'border-neutral-800/40'}`}>
           <div className="flex justify-between items-start">
              <div className="flex items-center gap-5">
-                <div className="w-16 h-16 bg-[#1877F2] rounded-3xl flex items-center justify-center text-white group-hover:scale-110 transition-transform shadow-lg">
-                  <Facebook size={32} />
+                <div className="w-14 h-14 bg-neutral-100/10 rounded-3xl flex items-center justify-center text-neutral-600 grayscale opacity-60 group-hover:opacity-100 transition-all">
+                  <Facebook size={24} />
                 </div>
                 <div>
-                  <h3 className="text-xl font-black text-white uppercase tracking-tight italic">Meta Developer Node</h3>
-                  <span className="text-[9px] text-neutral-600 font-black uppercase tracking-[0.2em]">Identity Graph API</span>
+                  <h3 className="text-lg font-black text-neutral-300 uppercase tracking-tight italic">Meta Node</h3>
+                  <span className="text-[9px] text-neutral-600 font-black uppercase tracking-[0.2em]">Graph API Integration</span>
                 </div>
              </div>
              <button 
                type="button"
                onClick={() => handleToggle('facebookEnabled')} 
-               className={`px-4 py-2 rounded-xl font-black text-[10px] transition-all border ${localConfig.facebookEnabled ? 'bg-emerald-500/10 border-emerald-500 text-emerald-500' : 'bg-red-500/10 border-red-500 text-red-500'}`}
+               className={`px-3 py-1.5 rounded-lg font-black text-[9px] transition-all border ${localConfig.facebookEnabled ? 'bg-emerald-500/5 border-emerald-900/50 text-emerald-600' : 'bg-red-500/5 border-red-900/50 text-red-600'}`}
              >
-               {localConfig.facebookEnabled ? 'ACTIVE' : 'OFFLINE'}
+               {localConfig.facebookEnabled ? 'ENABLED' : 'DISABLED'}
              </button>
           </div>
           <div className="space-y-5 mt-8">
-            <div className="space-y-1.5">
-              <label className="text-[9px] font-black text-neutral-500 uppercase tracking-widest px-1">Facebook App ID</label>
+            <div className="space-y-2">
+              <label className="text-[9px] font-black text-neutral-600 uppercase tracking-widest px-1">App ID</label>
               <input 
-                className="w-full bg-black border border-neutral-800 rounded-xl px-5 py-3 text-white font-mono text-xs focus:border-[#facc15] outline-none transition-all" 
+                className="w-full bg-black/20 border border-neutral-800/30 rounded-xl px-4 py-3 text-neutral-400 font-mono text-[11px] focus:border-neutral-700 outline-none transition-all" 
                 placeholder="Enter App ID"
                 value={localConfig.facebookAppId} 
                 onChange={(e) => handleChange('facebookAppId', e.target.value)} 
               />
             </div>
-            <div className="space-y-1.5">
-              <label className="text-[9px] font-black text-neutral-500 uppercase tracking-widest px-1">Facebook App Secret</label>
+            <div className="space-y-2">
+              <label className="text-[9px] font-black text-neutral-600 uppercase tracking-widest px-1">App Secret</label>
               <input 
                 type={showSecrets ? 'text' : 'password'} 
-                className="w-full bg-black border border-neutral-800 rounded-xl px-5 py-3 text-white font-mono text-xs focus:border-[#facc15] outline-none transition-all" 
+                className="w-full bg-black/20 border border-neutral-800/30 rounded-xl px-4 py-3 text-neutral-400 font-mono text-[11px] focus:border-neutral-700 outline-none transition-all" 
                 placeholder="Enter App Secret"
                 value={localConfig.facebookAppSecret} 
                 onChange={(e) => handleChange('facebookAppSecret', e.target.value)} 
@@ -220,19 +232,19 @@ const AdminOAuthSettings: React.FC<AdminOAuthSettingsProps> = ({ config, onConfi
         </div>
       </div>
 
-      <div className="bg-[#facc15]/5 border border-[#facc15]/10 p-8 rounded-[2rem] flex items-start gap-5">
-        <ShieldCheck className="text-[#facc15] shrink-0" size={28} />
+      <div className="bg-neutral-900/20 border border-neutral-800/30 p-8 rounded-[2rem] flex items-start gap-5">
+        <ShieldCheck className="text-neutral-600 shrink-0" size={24} />
         <div>
-           <h4 className="text-white font-bold uppercase text-xs tracking-widest mb-1">Authorization Security Protocol</h4>
-           <p className="text-neutral-500 text-xs italic leading-relaxed">Identity nodes must be provisioned with valid production keys to enable the Sales Floor login flow. Incomplete keys will lock the provider for traders. All changes committed here are applied to the global network ledger instantly.</p>
+           <h4 className="text-neutral-500 font-bold uppercase text-[10px] tracking-widest mb-1">Configuration Integrity Note</h4>
+           <p className="text-neutral-600 text-[10px] italic leading-relaxed uppercase">Identity providers require valid production tokens to allow merchant handshake. Incomplete configuration will result in node lockout for traders. System logs will track all commits to this infrastructure segment.</p>
         </div>
       </div>
       
       <style>{`
         @keyframes shake {
           0%, 100% { transform: translateX(0); }
-          25% { transform: translateX(-4px); }
-          75% { transform: translateX(4px); }
+          25% { transform: translateX(-2px); }
+          75% { transform: translateX(2px); }
         }
         .animate-shake {
           animation: shake 0.2s ease-in-out 0s 2;

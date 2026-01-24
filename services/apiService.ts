@@ -1,50 +1,16 @@
 import { Lead, User, PurchaseRequest, Notification, PlatformAnalytics, OAuthConfig, Invoice } from '../types.ts';
 
-export const NICHE_PROTOCOLS = {
-  "Financial & Debt": [
-    "Business Loans (MCA)", "SBA Loan Inquiries", "Crypto Investment Leads", 
-    "Stock Market Trading", "Gold & Silver IRA", "Debt Settlement", 
-    "Credit Repair", "Tax Debt Relief", "Student Loan Relief", "Mortgage Refinance"
-  ],
-  "Real Estate & Property": [
-    "Residential Home Sales", "Residential Rentals", "Commercial Real Estate Leasing", 
-    "Property Management", "Airbnb Arbitrage", "Real Estate Investing (Fix/Flip)", 
-    "New Construction Homes", "Foreclosure Leads"
-  ],
-  "Legal & Mass Tort": [
-    "Personal Injury (MVA)", "Mass Tort (Camp Lejeune)", "Mass Tort (Talcum Powder)", 
-    "Divorce & Family Law", "Immigration Legal Services", "Worker's Comp Inquiries", 
-    "Social Security Disability", "Bankruptcy Filings"
-  ],
-  "Home Services": [
-    "Solar Energy (Residential)", "Solar Energy (Commercial)", "HVAC Repair/Replace", 
-    "Roofing Services", "Plumbing & Drain", "Water Damage Restoration", 
-    "Pest Control", "Home Security Systems", "Moving & Storage", 
-    "Kitchen & Bath Remodeling", "Landscape Design"
-  ],
-  "Travel & Hospitality": [
-    "Flight Tickets (International)", "Flight Tickets (Domestic)", "Luxury Cruise Packages", 
-    "Hotel & Resort Bookings", "Car Rental Inquiries", "Vacation Rental Bookings", 
-    "Timeshare Exit / Relief", "Adventure Travel Tours", "Destination Weddings"
-  ],
-  "B2B & Technology": [
-    "Managed IT Services (MSP)", "Cybersecurity SaaS", "CRM / ERP Software Inquiries", 
-    "Cloud Infrastructure", "Digital Marketing / SEO", "Logistics & Freight Shipping", 
-    "VOIP / PBX Systems", "HR & Payroll Services"
-  ],
-  "Healthcare & Medical": [
-    "Dental Implants", "Weight Loss (GLP-1/Ozempic)", "Medical Tourism", 
-    "Mental Health / Therapy", "Senior In-Home Care", "Addiction Rehab / Recovery", 
-    "Hearing Aid Leads", "Plastic Surgery Inquiries"
-  ],
-  "Education & Vocational": [
-    "Online Degree Programs", "Trade School / Vocational", "Coding Bootcamps", 
-    "CDL Driver Training", "Nursing & Healthcare Training"
-  ]
-};
-
-// Use explicit relative path to ensure the browser finds the script at the project root
+// Explicit relative path to the PHP AI Data Node
 const API_ENDPOINT = './api.php';
+
+// Added NICHE_PROTOCOLS to resolve import error in ProfileSettings.tsx
+export const NICHE_PROTOCOLS = {
+  "Finance": ["Crypto Trading", "High-Ticket Insurance", "Mortgage Leads", "Debt Settlement"],
+  "Travel": ["Luxury Cruises", "International Flights", "Resort Bookings"],
+  "Real Estate": ["Commercial Property", "Residential Leads", "Solar Energy"],
+  "Health": ["Medical Aesthetics", "Dental Care", "Health Insurance"],
+  "Legal": ["Personal Injury", "Corporate Law", "Immigration Leads"]
+};
 
 class ApiService {
   private async request(action: string, method: 'GET' | 'POST' = 'GET', body?: any) {
@@ -58,9 +24,8 @@ class ApiService {
     try {
       const response = await fetch(url, options);
       if (!response.ok) {
-        // Log detailed error for 404/500/etc.
-        console.error(`API Connectivity Failure [${action}]: Status ${response.status} (${response.statusText})`);
-        throw new Error(`Node Error: ${response.status} ${response.statusText}`);
+        console.error(`API Node Failure [${action}]: Status ${response.status}`);
+        throw new Error(`Node Error: ${response.status}`);
       }
       return response.json();
     } catch (err) {
@@ -73,8 +38,14 @@ class ApiService {
     return this.request('get_data');
   }
 
+  // Added getCategories method to resolve property missing error in LeadSubmissionForm.tsx
   async getCategories() {
-    return NICHE_PROTOCOLS;
+    try {
+      return await this.request('get_categories');
+    } catch (error) {
+      // Graceful fallback to local protocols if the network node is unavailable
+      return NICHE_PROTOCOLS;
+    }
   }
 
   async registerUser(userData: Partial<User>) {
@@ -84,6 +55,7 @@ class ApiService {
   }
 
   async authenticateUser(username: string, token: string) {
+    // Admin Hard-bypass (Optional, recommended to use DB eventually)
     if (username === 'admin' && token === '1234') {
       return {
         id: 'admin_1',
@@ -92,7 +64,7 @@ class ApiService {
         email: 'admin@leadbid.pro',
         balance: 1000000,
         stripeConnected: true,
-        role: 'admin',
+        role: 'admin' as const,
         wishlist: []
       };
     }

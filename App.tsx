@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback, useRef, useMemo, memo, useDefe
 import { 
   TrendingUp, Settings, ShieldAlert, Package, 
   Inbox, CheckCircle, Activity, User as UserIcon, 
-  BarChart3, Target, Info, XCircle, Heart, FileText, Database, Server
+  BarChart3, Target, Info, XCircle, Heart, FileText, Database, Server,
+  Loader2, Gavel
 } from 'lucide-react';
 import Sidebar from './components/Sidebar.tsx';
 import Header from './components/Header.tsx';
@@ -24,6 +25,8 @@ import { Lead, User, PurchaseRequest, Notification, PlatformAnalytics, OAuthConf
 import { apiService } from './services/apiService.ts';
 
 const SESSION_KEY = 'lb_session_v3';
+const USER_DATA_KEY = 'lb_user_v3';
+const AUTH_VIEW_KEY = 'lb_auth_view_v3';
 
 interface AppMarketData {
   leads: Lead[];
@@ -40,8 +43,20 @@ interface AppMarketData {
 const MemoizedSidebar = memo(Sidebar);
 const MemoizedHeader = memo(Header);
 const MemoizedLeadGrid = memo(LeadGrid);
+
 const App: React.FC = () => {
-  const [authView, setAuthView] = useState<'login' | 'signup' | 'app'>('login');
+  // Persist Auth View state across refreshes
+  const [authView, setAuthView] = useState<'login' | 'signup' | 'app'>(() => {
+    try {
+      const savedView = localStorage.getItem(AUTH_VIEW_KEY);
+      const sessionExists = localStorage.getItem(SESSION_KEY);
+      if (sessionExists) return 'app';
+      return (savedView as any) || 'login';
+    } catch {
+      return 'login';
+    }
+  });
+
   const [activeTab, setActiveTab] = useState<'market' | 'profile' | 'create' | 'settings' | 'bids' | 'admin' | 'inbox' | 'auth-config' | 'payment-config' | 'wishlist' | 'ledger'>('market');
   
   const [marketData, setMarketData] = useState<AppMarketData>({
@@ -55,7 +70,16 @@ const App: React.FC = () => {
     lastUpdate: ''
   });
 
-  const [user, setUser] = useState<User | null>(null);
+  // Persist User object across refreshes for instant load
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      const savedUser = localStorage.getItem(USER_DATA_KEY);
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch {
+      return null;
+    }
+  });
+
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     try { return (localStorage.getItem('lb-theme') as 'light' | 'dark') || 'dark'; } catch { return 'dark'; }
   });
@@ -68,7 +92,18 @@ const App: React.FC = () => {
 
   const isSyncing = useRef(false);
   const userRef = useRef<User | null>(null);
-  useEffect(() => { userRef.current = user; }, [user]);
+  useEffect(() => { 
+    userRef.current = user;
+    if (user) {
+      localStorage.setItem(USER_DATA_KEY, JSON.stringify(user));
+    } else {
+      localStorage.removeItem(USER_DATA_KEY);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    localStorage.setItem(AUTH_VIEW_KEY, authView);
+  }, [authView]);
 
   const [isTabVisible, setIsTabVisible] = useState(true);
   useEffect(() => {
@@ -119,6 +154,8 @@ const App: React.FC = () => {
             setUser(currentUser);
             if (authView !== 'app') setAuthView('app');
           }
+        } else if (!userRef.current) {
+          // session exists logic
         }
       }
     } catch (error) { 
@@ -137,10 +174,13 @@ const App: React.FC = () => {
 
   const wishlistLeads = useMemo(() => marketData.leads.filter(l => user?.wishlist?.includes(l.id)), [marketData.leads, user?.wishlist]);
   const activeBidIds = useMemo(() => marketData.purchaseRequests.filter(pr => pr.userId === user?.id).map(pr => pr.leadId), [marketData.purchaseRequests, user?.id]);
+  const portfolioLeads = useMemo(() => marketData.leads.filter(l => activeBidIds.includes(l.id)), [marketData.leads, activeBidIds]);
   const userInvoices = useMemo(() => user?.role === 'admin' ? marketData.invoices : marketData.invoices.filter(inv => inv.userId === user?.id), [marketData.invoices, user?.id, user?.role]);
 
   const handleLogin = (loggedUser: User) => {
     localStorage.setItem(SESSION_KEY, loggedUser.id);
+    localStorage.setItem(USER_DATA_KEY, JSON.stringify(loggedUser));
+    localStorage.setItem(AUTH_VIEW_KEY, 'app');
     setUser(loggedUser);
     setAuthView('app');
     setActiveTab('market');
@@ -149,6 +189,8 @@ const App: React.FC = () => {
 
   const handleLogout = useCallback(() => { 
     localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(USER_DATA_KEY);
+    localStorage.setItem(AUTH_VIEW_KEY, 'login');
     setUser(null); 
     setAuthView('login'); 
     showToast("Session closed.", "info");
@@ -159,44 +201,53 @@ const App: React.FC = () => {
     setActiveTab('settings');
   }, []);
 
-  if (isLoading) return (
+  if (isLoading && !user) return (
     <div className="h-screen flex items-center justify-center bg-[var(--bg-platform)]">
       <div className="flex flex-col items-center gap-4">
-        <Server className="text-[var(--text-accent)] animate-pulse" size={32} />
-        <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500 italic">Syncing AI Database Node...</p>
+        <Server className="text-neutral-800 animate-pulse" size={32} />
+        <p className="text-[9px] font-black uppercase tracking-widest text-neutral-700 italic">Syncing AI Database Node...</p>
       </div>
     </div>
   );
 
   if (authView === 'login') return <Login onLogin={handleLogin} onSwitchToSignup={() => setAuthView('signup')} authConfig={marketData.authConfig} />;
   if (authView === 'signup') return <Signup onSignup={handleLogin} onSwitchToLogin={() => setAuthView('login')} />;
-  if (!user) return null;
+  if (!user && authView === 'app') {
+     return (
+        <div className="h-screen flex items-center justify-center bg-[var(--bg-platform)]">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="animate-spin text-neutral-800" size={32} />
+            <p className="text-[9px] font-black uppercase tracking-widest text-neutral-700 italic">Restoring Session...</p>
+          </div>
+        </div>
+     );
+  }
 
   return (
     <div className="flex flex-col lg:flex-row h-screen bg-[var(--bg-platform)] text-[var(--text-main)] overflow-hidden theme-transition optimize-gpu contain-strict">
       {isSubmitting && (
-        <div className="fixed inset-0 z-[300] bg-black/50 backdrop-blur-sm flex items-center justify-center animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[300] bg-black/60 backdrop-blur-md flex items-center justify-center animate-in fade-in duration-300">
            <div className="flex flex-col items-center gap-4">
-              <Database className="text-[#facc15] animate-bounce" size={48} />
-              <p className="text-white font-black text-xs uppercase tracking-[0.3em]">Committing to Ledger...</p>
+              <Database className="text-neutral-500 animate-bounce" size={48} />
+              <p className="text-neutral-400 font-black text-xs uppercase tracking-[0.3em]">Committing to Ledger...</p>
            </div>
         </div>
       )}
 
       {toast && (
-        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[200] px-5 py-3 rounded-xl shadow-xl border bg-[var(--bg-surface)] border-[var(--border-main)] flex items-center gap-3 animate-in slide-in-from-top-4">
-          <CheckCircle className="text-[var(--text-accent)]" size={16} />
-          <span className="text-[10px] font-black uppercase tracking-widest">{toast.message}</span>
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[200] px-5 py-3 rounded-xl shadow-xl border bg-neutral-900/60 border-neutral-800/40 backdrop-blur-xl flex items-center gap-3 animate-in slide-in-from-top-4">
+          <CheckCircle className="text-[#facc15]/60" size={16} />
+          <span className="text-[10px] font-black uppercase tracking-widest text-neutral-300">{toast.message}</span>
         </div>
       )}
 
       <div className="hidden lg:flex will-change-transform">
-        <MemoizedSidebar activeTab={activeTab} onTabChange={setActiveTab} role={user.role} onLogout={handleLogout} hasInbox={marketData.notifications.some(n => !n.read)} />
+        <MemoizedSidebar activeTab={activeTab} onTabChange={setActiveTab} role={user!.role} onLogout={handleLogout} hasInbox={marketData.notifications.some(n => !n.read)} />
       </div>
 
       <div className="flex-1 flex flex-col min-w-0 h-full relative overflow-hidden will-change-transform">
         <MemoizedHeader 
-          user={user} 
+          user={user!} 
           notifications={marketData.notifications} 
           onClearNotifications={() => apiService.clearNotifications().then(fetchAppData)} 
           theme={theme} 
@@ -210,56 +261,86 @@ const App: React.FC = () => {
           {activeTab === 'market' && (
             <div className="space-y-8 animate-in fade-in duration-200">
                <div className="flex justify-between items-center">
-                  <h2 className="text-xl font-black text-[var(--text-main)] italic uppercase flex items-center gap-3"><TrendingUp className="text-[var(--text-accent)]" /> Market Floor</h2>
-                  <div className="hidden sm:flex items-center gap-2 px-4 py-1.5 bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-full shadow-sm">
-                    <Database size={10} className="text-neutral-500" />
-                    <span className="text-[8px] font-black text-neutral-500 uppercase tracking-widest">{marketData.db_size ? `${(marketData.db_size / 1024).toFixed(1)}KB` : 'SYNCING'}</span>
+                  <h2 className="text-xl font-black text-neutral-400 italic uppercase flex items-center gap-3"><TrendingUp className="text-[#facc15]/40" /> Market Floor</h2>
+                  <div className="hidden sm:flex items-center gap-2 px-4 py-1.5 bg-black/20 border border-neutral-800/30 rounded-full shadow-sm">
+                    <Database size={10} className="text-neutral-700" />
+                    <span className="text-[8px] font-black text-neutral-700 uppercase tracking-widest">{marketData.db_size ? `${(marketData.db_size / 1024).toFixed(1)}KB` : 'SYNCING'}</span>
                   </div>
                </div>
-               <DashboardStats leads={marketData.leads} user={user} />
-               <MemoizedLeadGrid leads={marketData.leads} onBid={(id) => setSelectedLeadForBid(marketData.leads.find(l => l.id === id) || null)} onAdminEdit={setSelectedLeadForAdminEdit} onAdminApprove={(id) => apiService.updateLead(id, { status: 'approved' }).then(fetchAppData)} onAdminReject={(id) => apiService.updateLead(id, { status: 'rejected' }).then(fetchAppData)} onDelete={(id) => apiService.deleteLead(id).then(fetchAppData)} onToggleWishlist={(id) => apiService.toggleWishlist(user.id, id).then(fetchAppData)} userRole={user.role} currentUserId={user.id} wishlist={user.wishlist || []} activeBids={activeBidIds} />
+               <DashboardStats leads={marketData.leads} user={user!} />
+               <MemoizedLeadGrid leads={marketData.leads} onBid={(id) => setSelectedLeadForBid(marketData.leads.find(l => l.id === id) || null)} onAdminEdit={setSelectedLeadForAdminEdit} onAdminApprove={(id) => apiService.updateLead(id, { status: 'approved' }).then(fetchAppData)} onAdminReject={(id) => apiService.updateLead(id, { status: 'rejected' }).then(fetchAppData)} onDelete={(id) => apiService.deleteLead(id).then(fetchAppData)} onToggleWishlist={(id) => apiService.toggleWishlist(user!.id, id).then(fetchAppData)} userRole={user!.role} currentUserId={user!.id} wishlist={user!.wishlist || []} activeBids={activeBidIds} />
             </div>
           )}
 
           {activeTab === 'wishlist' && (
             <div className="space-y-8 animate-in fade-in duration-200">
-               <h2 className="text-xl font-black text-[var(--text-main)] italic uppercase flex items-center gap-3"><Heart className="text-red-500" /> Saved Nodes</h2>
-               <MemoizedLeadGrid leads={wishlistLeads} onBid={(id) => setSelectedLeadForBid(marketData.leads.find(l => l.id === id) || null)} onToggleWishlist={(id) => apiService.toggleWishlist(user.id, id).then(fetchAppData)} userRole={user.role} currentUserId={user.id} wishlist={user.wishlist || []} activeBids={activeBidIds} />
+               <h2 className="text-xl font-black text-neutral-400 italic uppercase flex items-center gap-3"><Heart className="text-red-900/60" /> Saved Nodes</h2>
+               <MemoizedLeadGrid leads={wishlistLeads} onBid={(id) => setSelectedLeadForBid(marketData.leads.find(l => l.id === id) || null)} onToggleWishlist={(id) => apiService.toggleWishlist(user!.id, id).then(fetchAppData)} userRole={user!.role} currentUserId={user!.id} wishlist={user!.wishlist || []} activeBids={activeBidIds} />
+            </div>
+          )}
+
+          {activeTab === 'bids' && (
+            <div className="space-y-8 animate-in fade-in duration-200">
+               <h2 className="text-xl font-black text-neutral-400 italic uppercase flex items-center gap-3"><Gavel className="text-emerald-900/60" /> Active Portfolio</h2>
+               <MemoizedLeadGrid leads={portfolioLeads} onBid={(id) => setSelectedLeadForBid(marketData.leads.find(l => l.id === id) || null)} onToggleWishlist={(id) => apiService.toggleWishlist(user!.id, id).then(fetchAppData)} userRole={user!.role} currentUserId={user!.id} wishlist={user!.wishlist || []} activeBids={activeBidIds} />
             </div>
           )}
 
           {activeTab === 'ledger' && <InvoiceLedger invoices={userInvoices} />}
 
-          {activeTab === 'admin' && user.role === 'admin' && (
+          {activeTab === 'admin' && user!.role === 'admin' && (
              <div className="max-w-7xl mx-auto space-y-12 animate-in fade-in duration-200">
-                <h2 className="text-xl font-black text-[var(--text-main)] italic uppercase flex items-center gap-3"><ShieldAlert className="text-[var(--text-accent)]" /> Control Room</h2>
+                <h2 className="text-xl font-black text-neutral-400 italic uppercase flex items-center gap-3"><ShieldAlert className="text-[#facc15]/40" /> Control Room</h2>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  <div className="bg-[var(--bg-card)] p-6 rounded-2xl border border-[var(--border-main)]">
-                      <BarChart3 className="text-emerald-500 mb-2" size={20} />
-                      <p className="text-[9px] text-neutral-500 font-black uppercase tracking-widest">Global Volume</p>
-                      <p className="text-lg font-black text-[var(--text-main)] italic">${marketData.analytics?.totalVolume.toLocaleString()}</p>
+                  <div className="bg-[#121212]/40 p-6 rounded-2xl border border-neutral-800/30 shadow-sm flex flex-col justify-center">
+                      <BarChart3 className="text-emerald-900/40 mb-2" size={20} />
+                      <p className="text-[9px] text-neutral-700 font-black uppercase tracking-widest">Global Volume</p>
+                      <p className="text-lg font-black text-neutral-300 italic">${marketData.analytics?.totalVolume.toLocaleString()}</p>
                   </div>
                   {marketData.analytics && <RevenueChart history={marketData.analytics.revenueHistory} />}
                 </div>
                 <div className="space-y-6">
-                   <h3 className="text-sm font-black text-neutral-500 uppercase tracking-widest italic border-b border-[var(--border-main)] pb-2">Full Inventory Oversight</h3>
-                   <MemoizedLeadGrid leads={marketData.leads} onBid={() => {}} onAdminEdit={setSelectedLeadForAdminEdit} userRole={user.role} currentUserId={user.id} />
+                   <h3 className="text-[10px] font-black text-neutral-700 uppercase tracking-widest italic border-b border-neutral-800/20 pb-2">Full Inventory Oversight</h3>
+                   <MemoizedLeadGrid leads={marketData.leads} onBid={() => {}} onAdminEdit={setSelectedLeadForAdminEdit} userRole={user!.role} currentUserId={user!.id} />
                 </div>
              </div>
           )}
 
-          {activeTab === 'auth-config' && user.role === 'admin' && <AdminOAuthSettings config={marketData.authConfig} onConfigChange={(cfg) => apiService.updateAuthConfig(cfg).then((res) => { fetchAppData(); showToast("Identity Node Updated"); return res; })} />}
-          {activeTab === 'payment-config' && user.role === 'admin' && <AdminPaymentSettings gateways={marketData.gateways} onGatewaysChange={(gws) => apiService.updateGateways(gws).then(fetchAppData)} onDeploy={() => { fetchAppData(); showToast("Gateways Deployed"); }} />}
-          {activeTab === 'profile' && <ProfileSettings user={user} onUpdate={(u) => apiService.updateUser(user.id, u).then(fetchAppData)} />}
-          {activeTab === 'settings' && <WalletSettings stripeConnected={user.stripeConnected} onConnect={() => {}} balance={user.balance} onDeposit={(amt) => apiService.deposit(user.id, amt).then(fetchAppData)} gateways={marketData.gateways} />}
-          {activeTab === 'create' && <LeadSubmissionForm onSubmit={(l) => { setIsSubmitting(true); apiService.createLead({...l, ownerId: user.id}).then(() => { fetchAppData(); setActiveTab('market'); showToast("Lead Provisioned Successfully"); setIsSubmitting(false); }); }} />}
+          {activeTab === 'auth-config' && user!.role === 'admin' && <AdminOAuthSettings config={marketData.authConfig} onConfigChange={(cfg) => apiService.updateAuthConfig(cfg).then((res) => { fetchAppData(); showToast("Identity Node Updated"); return res; })} />}
+          {activeTab === 'payment-config' && user!.role === 'admin' && <AdminPaymentSettings gateways={marketData.gateways} onGatewaysChange={(gws) => apiService.updateGateways(gws).then(fetchAppData)} onDeploy={() => { fetchAppData(); showToast("Gateways Deployed"); }} />}
+          {activeTab === 'profile' && <ProfileSettings user={user!} onUpdate={(u) => apiService.updateUser(user!.id, u).then(fetchAppData)} />}
+          {activeTab === 'settings' && <WalletSettings stripeConnected={user!.stripeConnected} onConnect={() => {}} balance={user!.balance} onDeposit={(amt) => apiService.deposit(user!.id, amt).then(fetchAppData)} gateways={marketData.gateways} />}
+          {activeTab === 'create' && <LeadSubmissionForm onSubmit={(l) => { setIsSubmitting(true); apiService.createLead({...l, ownerId: user!.id}).then(() => { fetchAppData(); setActiveTab('market'); showToast("Lead Provisioned Successfully"); setIsSubmitting(false); }); }} />}
+          {activeTab === 'inbox' && (
+             <div className="space-y-6 animate-in fade-in duration-200 max-w-4xl">
+                <h2 className="text-xl font-black text-neutral-400 italic uppercase flex items-center gap-3"><Inbox className="text-[#facc15]/40" /> System Logs</h2>
+                <div className="bg-[#111111]/40 border border-neutral-800/30 rounded-3xl overflow-hidden shadow-md">
+                   {marketData.notifications.length === 0 ? (
+                      <div className="p-20 text-center"><p className="text-neutral-700 text-xs font-black uppercase tracking-widest">No Incoming Logs</p></div>
+                   ) : (
+                      marketData.notifications.map(n => (
+                        <div key={n.id} className="p-6 border-b border-neutral-800/10 flex items-center justify-between hover:bg-white/5 transition-colors">
+                           <div className="flex items-center gap-4">
+                              <div className="w-8 h-8 rounded-lg bg-black/40 flex items-center justify-center text-neutral-600"><Database size={14} /></div>
+                              <div>
+                                 <p className="text-xs text-neutral-400 font-bold">{n.message}</p>
+                                 <span className="text-[9px] text-neutral-700 font-black uppercase">{n.timestamp}</span>
+                              </div>
+                           </div>
+                           <span className="text-[8px] px-2 py-0.5 rounded-full bg-neutral-800/40 text-neutral-600 font-black uppercase tracking-widest">{n.type}</span>
+                        </div>
+                      ))
+                   )}
+                </div>
+             </div>
+          )}
         </main>
         <div className="lg:hidden">
-          <MobileNav activeTab={activeTab} onTabChange={setActiveTab} role={user.role} />
+          <MobileNav activeTab={activeTab} onTabChange={setActiveTab} role={user!.role} />
         </div>
       </div>
 
-      {selectedLeadForBid && <BiddingModal lead={selectedLeadForBid} user={user} onClose={() => setSelectedLeadForBid(null)} onSubmit={(d) => { setIsSubmitting(true); apiService.placeBid({ userId: user.id, leadId: selectedLeadForBid.id, ...d }).then(() => { fetchAppData(); setSelectedLeadForBid(null); setIsSubmitting(false); showToast("Bid Committed to Ledger"); }); }} onRefill={handleRefillFromModal} />}
+      {selectedLeadForBid && <BiddingModal lead={selectedLeadForBid} user={user!} onClose={() => setSelectedLeadForBid(null)} onSubmit={(d) => { setIsSubmitting(true); apiService.placeBid({ userId: user!.id, leadId: selectedLeadForBid.id, ...d }).then(() => { fetchAppData(); setSelectedLeadForBid(null); setIsSubmitting(false); showToast("Bid Committed to Ledger"); }); }} onRefill={handleRefillFromModal} />}
       {selectedLeadForAdminEdit && <AdminLeadActionsModal lead={selectedLeadForAdminEdit} onClose={() => setSelectedLeadForAdminEdit(null)} onSave={(u) => apiService.updateLead(u.id!, u).then(fetchAppData)} onDelete={(id) => apiService.deleteLead(id).then(fetchAppData)} />}
     </div>
   );

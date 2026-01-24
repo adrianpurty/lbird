@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Invoice } from '../types';
 import { Download, FileText, CheckCircle, Zap, ShieldCheck, Printer } from 'lucide-react';
@@ -90,63 +89,63 @@ const InvoiceLedger: React.FC<InvoiceLedgerProps> = ({ invoices }) => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-[#0a0a0a] border border-neutral-900 p-6 rounded-[2rem] flex items-center justify-between">
+    <div className="space-y-6 theme-transition animate-in fade-in duration-500">
+      <div className="bg-[#0a0a0a]/40 border border-neutral-800/30 p-6 rounded-[2rem] flex items-center justify-between shadow-sm">
          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-[#facc15]/10 rounded-2xl flex items-center justify-center border border-[#facc15]/20">
-               <ShieldCheck className="text-[#facc15]" size={24} />
+            <div className="w-10 h-10 bg-[#facc15]/5 rounded-2xl flex items-center justify-center border border-[#facc15]/10">
+               <ShieldCheck className="text-[#facc15]/40" size={20} />
             </div>
             <div>
-               <h3 className="text-white font-black text-sm uppercase tracking-widest">Audit Ledger</h3>
-               <p className="text-[10px] text-neutral-600 font-black uppercase tracking-tighter">Verified Daily Settlement History</p>
+               <h3 className="text-neutral-300 font-black text-sm uppercase tracking-widest">Audit Ledger</h3>
+               <p className="text-[10px] text-neutral-700 font-black uppercase tracking-tighter">Verified Daily Settlement History</p>
             </div>
          </div>
          <div className="text-right">
-            <span className="text-[9px] text-neutral-600 font-black uppercase tracking-widest block mb-1">Total Records</span>
-            <span className="text-white font-black text-xl italic">{invoices.length}</span>
+            <span className="text-[9px] text-neutral-700 font-black uppercase tracking-widest block mb-1">Total Records</span>
+            <span className="text-neutral-400 font-black text-xl italic">{invoices.length}</span>
          </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4">
         {invoices.length === 0 ? (
-          <div className="bg-[#111] p-20 rounded-[3rem] border border-neutral-900 text-center space-y-4">
-            <FileText className="text-neutral-800 mx-auto" size={48} />
-            <p className="text-neutral-500 text-xs font-black uppercase tracking-[0.2em]">No financial records found in the current node.</p>
+          <div className="bg-[#111111]/20 p-20 rounded-[3rem] border border-neutral-800/20 text-center space-y-4">
+            <FileText className="text-neutral-900 mx-auto" size={48} />
+            <p className="text-neutral-700 text-xs font-black uppercase tracking-[0.2em]">No financial records found in the current node.</p>
           </div>
         ) : (
           invoices.map((inv) => (
-            <div key={inv.id} className="bg-[#111] p-6 sm:p-8 rounded-[2rem] border border-neutral-900 group hover:border-[#facc15]/40 transition-all flex flex-col md:flex-row items-center justify-between gap-6">
+            <div key={inv.id} className="bg-[#111111]/40 p-6 sm:p-8 rounded-[2rem] border border-neutral-800/30 group hover:border-[#facc15]/20 transition-all flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
                <div className="flex items-center gap-6 w-full md:w-auto">
-                  <div className="w-14 h-14 bg-black rounded-2xl flex items-center justify-center border border-neutral-800 group-hover:border-[#facc15]/20 transition-all">
-                     <FileText className="text-neutral-500 group-hover:text-[#facc15]" size={24} />
+                  <div className="w-12 h-12 bg-black/20 rounded-2xl flex items-center justify-center border border-neutral-800/40 group-hover:border-[#facc15]/10 transition-all">
+                     <FileText className="text-neutral-700 group-hover:text-neutral-400" size={20} />
                   </div>
                   <div className="flex-1">
                      <div className="flex items-center gap-3">
-                        <h4 className="text-white font-black text-sm italic">{inv.id}</h4>
-                        <span className="bg-emerald-500/10 text-emerald-500 text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest flex items-center gap-1">
+                        <h4 className="text-neutral-400 font-black text-sm italic">{inv.id}</h4>
+                        <span className="bg-emerald-900/10 text-emerald-800/60 text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest flex items-center gap-1 border border-emerald-900/20">
                            <CheckCircle size={8} /> Settled
                         </span>
                      </div>
-                     <p className="text-neutral-400 text-[11px] font-bold mt-1">{inv.leadTitle}</p>
+                     <p className="text-neutral-500 text-[11px] font-bold mt-1">{inv.leadTitle}</p>
                      <div className="flex items-center gap-2 mt-2">
-                        <span className="text-[9px] text-neutral-600 font-black uppercase">{new Date(inv.timestamp).toLocaleDateString()}</span>
+                        <span className="text-[9px] text-neutral-700 font-black uppercase">{new Date(inv.timestamp).toLocaleDateString()}</span>
                         <span className="text-neutral-800">•</span>
-                        <span className="text-[9px] text-neutral-600 font-black uppercase">{inv.category}</span>
+                        <span className="text-[9px] text-neutral-700 font-black uppercase">{inv.category}</span>
                      </div>
                   </div>
                </div>
 
                <div className="flex items-center gap-8 w-full md:w-auto justify-between md:justify-end">
                   <div className="text-right">
-                     <span className="text-[9px] text-neutral-600 font-black uppercase tracking-widest block mb-1">Settlement</span>
-                     <span className="text-white font-black text-xl italic">${inv.totalSettlement.toLocaleString()}</span>
+                     <span className="text-[9px] text-neutral-700 font-black uppercase tracking-widest block mb-1">Settlement</span>
+                     <span className="text-neutral-300 font-black text-xl italic">${inv.totalSettlement.toLocaleString()}</span>
                   </div>
                   <button 
                     onClick={() => handlePrint(inv)}
-                    className="p-4 bg-black border border-neutral-800 rounded-2xl text-neutral-400 hover:text-[#facc15] hover:border-[#facc15]/30 transition-all group/btn flex items-center gap-3 shadow-xl"
+                    className="p-4 bg-black/30 border border-neutral-800/40 rounded-2xl text-neutral-600 hover:text-neutral-300 hover:border-neutral-700 transition-all group/btn flex items-center gap-3 shadow-md"
                   >
-                    <Download size={18} className="group-hover/btn:scale-110 transition-transform" />
-                    <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Download Invoice</span>
+                    <Download size={18} className="group-hover/btn:scale-105 transition-transform" />
+                    <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Get Statement</span>
                   </button>
                </div>
             </div>

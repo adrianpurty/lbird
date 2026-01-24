@@ -53,16 +53,16 @@ const Header: React.FC<HeaderProps> = ({
   }, []);
 
   return (
-    <header className="h-20 border-b border-[var(--border-main)] flex items-center justify-between px-4 md:px-8 bg-[var(--bg-surface)] backdrop-blur-xl sticky top-0 z-40 w-full theme-transition">
+    <header className="h-20 border-b border-neutral-800 flex items-center justify-between px-4 md:px-8 bg-[#070707] sticky top-0 z-40 w-full theme-transition shadow-2xl">
       <div className="flex items-center gap-4">
-        <div className="md:hidden w-8 h-8 bg-[var(--text-accent)] rounded-lg flex items-center justify-center">
+        <div className="md:hidden w-8 h-8 bg-[#facc15] rounded-lg flex items-center justify-center">
            <span className="text-black font-black text-xs">LB</span>
         </div>
         <div className="hidden md:flex flex-col">
-          <span className="text-neutral-600 text-[10px] font-black uppercase tracking-widest">AI Data Node</span>
+          <span className="text-neutral-500 text-[10px] font-black uppercase tracking-widest">AI Data Node</span>
           <div className="flex items-center gap-2">
-            <Activity size={10} className={`${pulseColor} transition-colors duration-500`} />
-            <span className="text-emerald-500 font-mono text-xs tracking-widest">SYNC_STABLE</span>
+            <Activity size={10} className={`${pulseColor} transition-colors duration-500 shadow-[0_0_8px_rgba(16,185,129,0.2)]`} />
+            <span className="text-emerald-500 font-mono text-xs tracking-widest font-bold">SYNC_STABLE</span>
           </div>
         </div>
       </div>
@@ -70,7 +70,7 @@ const Header: React.FC<HeaderProps> = ({
       <div className="flex items-center gap-3 md:gap-6">
         <button 
           onClick={onToggleTheme}
-          className="p-2.5 bg-neutral-100 dark:bg-neutral-900 text-neutral-500 hover:text-[var(--text-accent)] rounded-xl transition-all border border-[var(--border-main)]"
+          className="p-2.5 bg-neutral-900 text-neutral-300 hover:text-white rounded-xl transition-all border border-neutral-700"
           title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
         >
           {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
@@ -78,11 +78,11 @@ const Header: React.FC<HeaderProps> = ({
 
         <button 
           onClick={onNavigateToWallet}
-          className="flex items-center gap-2 bg-neutral-100 dark:bg-[#121212] rounded-full px-3 md:px-4 py-1.5 md:py-2 border border-[var(--border-main)] hover:border-[var(--text-accent)]/40 transition-all active:scale-95 group"
+          className="flex items-center gap-2 bg-black rounded-full px-3 md:px-4 py-1.5 md:py-2 border border-neutral-700 hover:border-[#facc15]/50 transition-all active:scale-95 group shadow-lg"
           title="Open Wallet Settings"
         >
-          <Wallet size={14} className="text-[var(--text-accent)] group-hover:scale-110 transition-transform" />
-          <span className="font-black text-xs md:text-sm text-[var(--text-main)]">${user.balance.toLocaleString()}</span>
+          <Wallet size={14} className="text-[#facc15] group-hover:scale-110 transition-transform" />
+          <span className="font-black text-xs md:text-sm text-white">${user.balance.toLocaleString()}</span>
         </button>
         
         <div className="relative" ref={notificationMenuRef}>
@@ -91,41 +91,41 @@ const Header: React.FC<HeaderProps> = ({
                 setShowNotifications(!showNotifications);
                 setShowProfileMenu(false);
             }}
-            className="p-2 text-neutral-500 hover:text-[var(--text-accent)] transition-colors relative"
+            className="p-2 text-neutral-400 hover:text-white transition-colors relative"
             title="Notifications"
           >
             <Bell size={20} />
             {unreadCount > 0 && (
-              <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-black flex items-center justify-center rounded-full animate-pulse">
+              <span className="absolute top-1 right-1 w-4 h-4 bg-red-600 text-white text-[10px] font-black flex items-center justify-center rounded-full border border-black shadow-lg">
                 {unreadCount}
               </span>
             )}
           </button>
 
           {showNotifications && (
-            <div className="absolute right-0 mt-4 w-80 bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-3xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
-              <div className="p-4 border-b border-[var(--border-main)] flex justify-between items-center bg-black/5 dark:bg-black/40">
-                <span className="text-xs font-black uppercase tracking-widest text-[var(--text-accent)]">Activity Logs</span>
-                <button onClick={onClearNotifications} className="text-[10px] font-black uppercase text-neutral-500 hover:text-[var(--text-main)]">Clear All</button>
+            <div className="absolute right-0 mt-4 w-80 bg-[#0f0f0f] border border-neutral-700 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+              <div className="p-4 border-b border-neutral-800 flex justify-between items-center bg-black/40">
+                <span className="text-xs font-black uppercase tracking-widest text-[#facc15]">Activity Logs</span>
+                <button onClick={onClearNotifications} className="text-[10px] font-black uppercase text-neutral-500 hover:text-white">Clear All</button>
               </div>
               <div className="max-h-96 overflow-y-auto scrollbar-hide">
                 {notifications.length === 0 ? (
                   <div className="p-10 text-center">
-                    <p className="text-neutral-600 text-xs italic">No activity logs yet</p>
+                    <p className="text-neutral-500 text-xs italic">No activity logs yet</p>
                   </div>
                 ) : (
                   notifications.map((n) => (
-                    <div key={n.id} className={`p-4 border-b border-[var(--border-main)]/50 flex gap-3 hover:bg-black/5 transition-colors ${!n.read ? 'bg-black/5' : ''}`}>
+                    <div key={n.id} className={`p-4 border-b border-neutral-800 flex gap-3 hover:bg-white/5 transition-colors ${!n.read ? 'bg-white/5' : ''}`}>
                       <div className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-                        n.type === 'buy' ? 'bg-blue-500/10 text-blue-500' : 
-                        n.type === 'sell' ? 'bg-yellow-500/10 text-yellow-500' :
-                        n.type === 'approval' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-neutral-500/10 text-neutral-500'
+                        n.type === 'buy' ? 'bg-blue-600/20 text-blue-500' : 
+                        n.type === 'sell' ? 'bg-yellow-600/20 text-yellow-500' :
+                        n.type === 'approval' ? 'bg-emerald-600/20 text-emerald-500' : 'bg-neutral-700/20 text-neutral-400'
                       }`}>
                         {n.type === 'approval' ? <CheckCircle size={14} /> : n.type === 'buy' ? <Info size={14} /> : <AlertTriangle size={14} />}
                       </div>
                       <div className="flex-1">
-                        <p className="text-[var(--text-main)] text-xs leading-relaxed">{n.message}</p>
-                        <span className="text-[9px] text-neutral-600 font-bold uppercase mt-1 block">{n.timestamp}</span>
+                        <p className="text-neutral-200 text-xs leading-relaxed">{n.message}</p>
+                        <span className="text-[9px] text-neutral-500 font-bold uppercase mt-1 block">{n.timestamp}</span>
                       </div>
                     </div>
                   ))
@@ -141,14 +141,14 @@ const Header: React.FC<HeaderProps> = ({
                 setShowProfileMenu(!showProfileMenu);
                 setShowNotifications(false);
             }}
-            className="flex items-center gap-3 border-l border-[var(--border-main)] pl-4 md:pl-6 group hover:opacity-80 transition-all text-left outline-none"
+            className="flex items-center gap-3 border-l border-neutral-800 pl-4 md:pl-6 group hover:opacity-100 transition-all text-left outline-none"
             title="Account Menu"
           >
             <div className="text-right hidden sm:block">
-              <p className="text-sm font-bold text-[var(--text-main)] leading-none group-hover:text-[var(--text-accent)] transition-colors">{user.name}</p>
-              <p className="text-[10px] text-neutral-600 uppercase font-black tracking-tighter">{user.role}</p>
+              <p className="text-sm font-bold text-white leading-none group-hover:text-[#facc15] transition-colors">{user.name}</p>
+              <p className="text-[10px] text-neutral-500 uppercase font-black tracking-tighter mt-1">{user.role}</p>
             </div>
-            <div className="w-9 h-9 md:w-10 md:h-10 rounded-full border border-[var(--border-main)] overflow-hidden bg-neutral-100 dark:bg-neutral-900 flex items-center justify-center text-neutral-500 group-hover:border-[var(--text-accent)]/30 transition-colors relative">
+            <div className="w-9 h-9 md:w-10 md:h-10 rounded-full border-2 border-neutral-700 overflow-hidden bg-neutral-800 flex items-center justify-center text-neutral-300 group-hover:border-[#facc15] transition-colors relative shadow-inner">
                {user.profileImage ? (
                   <img src={user.profileImage} alt={user.name} className="w-full h-full object-cover" />
                ) : (
@@ -159,10 +159,10 @@ const Header: React.FC<HeaderProps> = ({
           </button>
 
           {showProfileMenu && (
-            <div className="absolute right-0 mt-4 w-56 bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-2xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 py-2">
-              <div className="px-4 py-3 border-b border-[var(--border-main)]/50 mb-1">
+            <div className="absolute right-0 mt-4 w-56 bg-[#0f0f0f] border border-neutral-700 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 py-2">
+              <div className="px-4 py-3 border-b border-neutral-800 mb-1">
                 <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">Session Identity</p>
-                <p className="text-xs font-bold text-[var(--text-main)] truncate mt-0.5">{user.email}</p>
+                <p className="text-xs font-bold text-white truncate mt-0.5">{user.email}</p>
               </div>
               
               <button 
@@ -170,9 +170,9 @@ const Header: React.FC<HeaderProps> = ({
                   onNavigateToProfile?.();
                   setShowProfileMenu(false);
                 }}
-                className="w-full flex items-center gap-3 px-4 py-3 text-neutral-600 hover:text-[var(--text-accent)] hover:bg-black/5 transition-all text-left"
+                className="w-full flex items-center gap-3 px-4 py-3 text-neutral-300 hover:text-white hover:bg-white/5 transition-all text-left"
               >
-                <UserIcon size={16} />
+                <UserIcon size={16} className="text-[#facc15]" />
                 <span className="text-xs font-bold">My Identity</span>
               </button>
 
@@ -181,20 +181,20 @@ const Header: React.FC<HeaderProps> = ({
                   onNavigateToWallet?.();
                   setShowProfileMenu(false);
                 }}
-                className="w-full flex items-center gap-3 px-4 py-3 text-neutral-600 hover:text-[var(--text-accent)] hover:bg-black/5 transition-all text-left"
+                className="w-full flex items-center gap-3 px-4 py-3 text-neutral-300 hover:text-white hover:bg-white/5 transition-all text-left"
               >
-                <Wallet size={16} />
+                <Wallet size={16} className="text-[#facc15]" />
                 <span className="text-xs font-bold">Wallet & Billing</span>
               </button>
 
-              <div className="border-t border-[var(--border-main)]/50 my-1"></div>
+              <div className="border-t border-neutral-800 my-1"></div>
 
               <button 
                 onClick={() => {
                   onLogout();
                   setShowProfileMenu(false);
                 }}
-                className="w-full flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-500/10 transition-all text-left"
+                className="w-full flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-950/30 transition-all text-left"
               >
                 <LogOut size={16} />
                 <span className="text-xs font-bold">Sign Out Session</span>
