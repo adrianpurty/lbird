@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef, useMemo, memo, useDeferredValue } from 'react';
 import { 
   TrendingUp, Settings, ShieldAlert, Package, 
@@ -149,12 +150,17 @@ const App: React.FC = () => {
     showToast(`Session Active: ${loggedUser.name}`);
   };
 
-  const handleLogout = () => { 
+  const handleLogout = useCallback(() => { 
     localStorage.removeItem(SESSION_KEY);
     setUser(null); 
     setAuthView('login'); 
     showToast("Session closed.", "info");
-  };
+  }, [showToast]);
+
+  const handleRefillFromModal = useCallback(() => {
+    setSelectedLeadForBid(null);
+    setActiveTab('settings');
+  }, []);
 
   if (isLoading) return (
     <div className="h-screen flex items-center justify-center bg-[var(--bg-platform)]">
@@ -191,6 +197,7 @@ const App: React.FC = () => {
           onToggleTheme={toggleTheme} 
           onNavigateToProfile={() => setActiveTab('profile')}
           onNavigateToWallet={() => setActiveTab('settings')}
+          onLogout={handleLogout}
         />
         
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10 space-y-8 pb-32 lg:pb-10 scroll-smooth contain-layout">
@@ -240,7 +247,7 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      {selectedLeadForBid && <BiddingModal lead={selectedLeadForBid} userBalance={user.balance} onClose={() => setSelectedLeadForBid(null)} onSubmit={(d) => apiService.placeBid({ userId: user.id, leadId: selectedLeadForBid.id, ...d }).then(() => { fetchAppData(); setSelectedLeadForBid(null); })} onRefill={() => setActiveTab('settings')} />}
+      {selectedLeadForBid && <BiddingModal lead={selectedLeadForBid} userBalance={user.balance} onClose={() => setSelectedLeadForBid(null)} onSubmit={(d) => apiService.placeBid({ userId: user.id, leadId: selectedLeadForBid.id, ...d }).then(() => { fetchAppData(); setSelectedLeadForBid(null); })} onRefill={handleRefillFromModal} />}
       {selectedLeadForAdminEdit && <AdminLeadActionsModal lead={selectedLeadForAdminEdit} onClose={() => setSelectedLeadForAdminEdit(null)} onSave={(u) => apiService.updateLead(u.id!, u).then(fetchAppData)} onDelete={(id) => apiService.deleteLead(id).then(fetchAppData)} />}
     </div>
   );

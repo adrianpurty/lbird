@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { Bell, Wallet, UserCircle, X, Info, CheckCircle, AlertTriangle, Sun, Moon } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Bell, Wallet, UserCircle, X, Info, CheckCircle, AlertTriangle, Sun, Moon, LogOut, User as UserIcon, ChevronDown } from 'lucide-react';
 import { User, Notification } from '../types.ts';
 
 interface HeaderProps {
@@ -9,6 +9,7 @@ interface HeaderProps {
   onClearNotifications: () => void;
   onNavigateToProfile?: () => void;
   onNavigateToWallet?: () => void;
+  onLogout: () => void;
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
 }
@@ -19,11 +20,30 @@ const Header: React.FC<HeaderProps> = ({
   onClearNotifications, 
   onNavigateToProfile, 
   onNavigateToWallet,
+  onLogout,
   theme, 
   onToggleTheme 
 }) => {
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const unreadCount = notifications.filter(n => !n.read).length;
+  
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+  const notificationMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close menus when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+        setShowProfileMenu(false);
+      }
+      if (notificationMenuRef.current && !notificationMenuRef.current.contains(event.target as Node)) {
+        setShowNotifications(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   return (
     <header className="h-20 border-b border-[var(--border-main)] flex items-center justify-between px-4 md:px-8 bg-[var(--bg-surface)] backdrop-blur-xl sticky top-0 z-40 w-full theme-transition">
@@ -55,9 +75,12 @@ const Header: React.FC<HeaderProps> = ({
           <span className="font-black text-xs md:text-sm text-[var(--text-main)]">${user.balance.toLocaleString()}</span>
         </button>
         
-        <div className="relative">
+        <div className="relative" ref={notificationMenuRef}>
           <button 
-            onClick={() => setShowNotifications(!showNotifications)}
+            onClick={() => {
+                setShowNotifications(!showNotifications);
+                setShowProfileMenu(false);
+            }}
             className="p-2 text-neutral-500 hover:text-[var(--text-accent)] transition-colors relative"
             title="Notifications"
           >
@@ -102,23 +125,73 @@ const Header: React.FC<HeaderProps> = ({
           )}
         </div>
 
-        <button 
-          onClick={onNavigateToProfile}
-          className="flex items-center gap-3 border-l border-[var(--border-main)] pl-4 md:pl-6 group hover:opacity-80 transition-opacity text-left outline-none"
-          title="My Identity & Profile"
-        >
-          <div className="text-right hidden sm:block">
-            <p className="text-sm font-bold text-[var(--text-main)] leading-none group-hover:text-[var(--text-accent)] transition-colors">{user.name}</p>
-            <p className="text-[10px] text-neutral-600 uppercase font-black tracking-tighter">{user.role}</p>
-          </div>
-          <div className="w-9 h-9 md:w-10 md:h-10 rounded-full border border-[var(--border-main)] overflow-hidden bg-neutral-100 dark:bg-neutral-900 flex items-center justify-center text-neutral-500 group-hover:border-[var(--text-accent)]/30 transition-colors">
-             {user.profileImage ? (
-                <img src={user.profileImage} alt={user.name} className="w-full h-full object-cover" />
-             ) : (
-                <UserCircle size={24} />
-             )}
-          </div>
-        </button>
+        <div className="relative" ref={profileMenuRef}>
+          <button 
+            onClick={() => {
+                setShowProfileMenu(!showProfileMenu);
+                setShowNotifications(false);
+            }}
+            className="flex items-center gap-3 border-l border-[var(--border-main)] pl-4 md:pl-6 group hover:opacity-80 transition-all text-left outline-none"
+            title="Account Menu"
+          >
+            <div className="text-right hidden sm:block">
+              <p className="text-sm font-bold text-[var(--text-main)] leading-none group-hover:text-[var(--text-accent)] transition-colors">{user.name}</p>
+              <p className="text-[10px] text-neutral-600 uppercase font-black tracking-tighter">{user.role}</p>
+            </div>
+            <div className="w-9 h-9 md:w-10 md:h-10 rounded-full border border-[var(--border-main)] overflow-hidden bg-neutral-100 dark:bg-neutral-900 flex items-center justify-center text-neutral-500 group-hover:border-[var(--text-accent)]/30 transition-colors relative">
+               {user.profileImage ? (
+                  <img src={user.profileImage} alt={user.name} className="w-full h-full object-cover" />
+               ) : (
+                  <UserCircle size={24} />
+               )}
+            </div>
+            <ChevronDown size={14} className={`text-neutral-500 transition-transform duration-300 ${showProfileMenu ? 'rotate-180' : ''}`} />
+          </button>
+
+          {showProfileMenu && (
+            <div className="absolute right-0 mt-4 w-56 bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-2xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 py-2">
+              <div className="px-4 py-3 border-b border-[var(--border-main)]/50 mb-1">
+                <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">Session Identity</p>
+                <p className="text-xs font-bold text-[var(--text-main)] truncate mt-0.5">{user.email}</p>
+              </div>
+              
+              <button 
+                onClick={() => {
+                  onNavigateToProfile?.();
+                  setShowProfileMenu(false);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 text-neutral-600 hover:text-[var(--text-accent)] hover:bg-black/5 transition-all text-left"
+              >
+                <UserIcon size={16} />
+                <span className="text-xs font-bold">My Identity</span>
+              </button>
+
+              <button 
+                onClick={() => {
+                  onNavigateToWallet?.();
+                  setShowProfileMenu(false);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 text-neutral-600 hover:text-[var(--text-accent)] hover:bg-black/5 transition-all text-left"
+              >
+                <Wallet size={16} />
+                <span className="text-xs font-bold">Wallet & Billing</span>
+              </button>
+
+              <div className="border-t border-[var(--border-main)]/50 my-1"></div>
+
+              <button 
+                onClick={() => {
+                  onLogout();
+                  setShowProfileMenu(false);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-500/10 transition-all text-left"
+              >
+                <LogOut size={16} />
+                <span className="text-xs font-bold">Sign Out Session</span>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );
