@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Bell, Wallet, UserCircle, X, Info, CheckCircle, AlertTriangle, Sun, Moon } from 'lucide-react';
 import { User, Notification } from '../types.ts';
@@ -7,11 +8,20 @@ interface HeaderProps {
   notifications: Notification[];
   onClearNotifications: () => void;
   onNavigateToProfile?: () => void;
+  onNavigateToWallet?: () => void;
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ user, notifications, onClearNotifications, onNavigateToProfile, theme, onToggleTheme }) => {
+const Header: React.FC<HeaderProps> = ({ 
+  user, 
+  notifications, 
+  onClearNotifications, 
+  onNavigateToProfile, 
+  onNavigateToWallet,
+  theme, 
+  onToggleTheme 
+}) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -36,15 +46,20 @@ const Header: React.FC<HeaderProps> = ({ user, notifications, onClearNotificatio
           {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
         </button>
 
-        <div className="flex items-center gap-2 bg-neutral-100 dark:bg-[#121212] rounded-full px-3 md:px-4 py-1.5 md:py-2 border border-[var(--border-main)]">
-          <Wallet size={14} className="text-[var(--text-accent)]" />
+        <button 
+          onClick={onNavigateToWallet}
+          className="flex items-center gap-2 bg-neutral-100 dark:bg-[#121212] rounded-full px-3 md:px-4 py-1.5 md:py-2 border border-[var(--border-main)] hover:border-[var(--text-accent)]/40 transition-all active:scale-95 group"
+          title="Open Wallet Settings"
+        >
+          <Wallet size={14} className="text-[var(--text-accent)] group-hover:scale-110 transition-transform" />
           <span className="font-black text-xs md:text-sm text-[var(--text-main)]">${user.balance.toLocaleString()}</span>
-        </div>
+        </button>
         
         <div className="relative">
           <button 
             onClick={() => setShowNotifications(!showNotifications)}
             className="p-2 text-neutral-500 hover:text-[var(--text-accent)] transition-colors relative"
+            title="Notifications"
           >
             <Bell size={20} />
             {unreadCount > 0 && (
@@ -89,7 +104,8 @@ const Header: React.FC<HeaderProps> = ({ user, notifications, onClearNotificatio
 
         <button 
           onClick={onNavigateToProfile}
-          className="flex items-center gap-3 border-l border-[var(--border-main)] pl-4 md:pl-6 group hover:opacity-80 transition-opacity text-left"
+          className="flex items-center gap-3 border-l border-[var(--border-main)] pl-4 md:pl-6 group hover:opacity-80 transition-opacity text-left outline-none"
+          title="My Identity & Profile"
         >
           <div className="text-right hidden sm:block">
             <p className="text-sm font-bold text-[var(--text-main)] leading-none group-hover:text-[var(--text-accent)] transition-colors">{user.name}</p>

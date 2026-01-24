@@ -180,7 +180,15 @@ const App: React.FC = () => {
       </div>
 
       <div className="flex-1 flex flex-col min-w-0 h-full relative overflow-hidden will-change-transform">
-        <MemoizedHeader user={user} notifications={marketData.notifications} onClearNotifications={() => apiService.clearNotifications().then(fetchAppData)} theme={theme} onToggleTheme={toggleTheme} />
+        <MemoizedHeader 
+          user={user} 
+          notifications={marketData.notifications} 
+          onClearNotifications={() => apiService.clearNotifications().then(fetchAppData)} 
+          theme={theme} 
+          onToggleTheme={toggleTheme} 
+          onNavigateToProfile={() => setActiveTab('profile')}
+          onNavigateToWallet={() => setActiveTab('settings')}
+        />
         
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10 space-y-8 pb-32 lg:pb-10 scroll-smooth contain-layout">
           {activeTab === 'market' && (
