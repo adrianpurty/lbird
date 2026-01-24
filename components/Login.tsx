@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Zap, ShieldCheck, Lock, User as UserIcon, Loader2, Cpu, Globe, AlertTriangle } from 'lucide-react';
-import { User, OAuthConfig } from '../types';
-import { apiService } from '../services/apiService';
+import { User, OAuthConfig } from '../types.ts';
+import { apiService } from '../services/apiService.ts';
 
 interface LoginProps {
   onLogin: (user: User) => void;
@@ -120,7 +120,6 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
         <div className="absolute top-1/4 left-1/4 w-[22rem] h-[22rem] bg-[#facc15] rounded-full blur-[100px] opacity-20" />
       </div>
 
-      {/* Card size increased by 5% (from 20rem to 21rem) */}
       <div className="w-full max-w-[21rem] bg-[#0a0a0a]/80 backdrop-blur-2xl rounded-[2.5rem] border border-white/10 shadow-[0_35px_60px_-15px_rgba(0,0,0,0.9)] overflow-hidden relative z-10 animate-in fade-in zoom-in-95 duration-700">
         <div className="p-8 pb-4 text-center">
           <div className="inline-flex p-3 bg-[#facc15]/10 rounded-2xl border border-[#facc15]/20 mb-4 group hover:scale-110 transition-transform duration-500">

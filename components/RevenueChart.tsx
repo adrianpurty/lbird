@@ -1,5 +1,5 @@
 import React from 'react';
-import { PlatformAnalytics } from '../types';
+import { PlatformAnalytics } from '../types.ts';
 
 interface RevenueChartProps {
   history: PlatformAnalytics['revenueHistory'];

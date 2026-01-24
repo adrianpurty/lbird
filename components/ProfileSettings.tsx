@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ShieldCheck, Mail, User as UserIcon, Lock, Camera, Save, RefreshCw, FileText, Globe, MonitorSmartphone, Briefcase, MessageSquare, Target, Phone, Link as LinkIcon } from 'lucide-react';
-import { User } from '../types';
-import { NICHE_PROTOCOLS } from '../services/apiService';
+import { User } from '../types.ts';
+import { NICHE_PROTOCOLS } from '../services/apiService.ts';
 
 interface ProfileSettingsProps {
   user: User;

@@ -1,7 +1,6 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { X, Globe, Target, Phone, Zap, ChevronRight, Calculator, AlertTriangle, Wallet, Info } from 'lucide-react';
-import { Lead, User } from '../types';
+import { Lead, User } from '../types.ts';
 
 interface BiddingModalProps {
   lead: Lead;

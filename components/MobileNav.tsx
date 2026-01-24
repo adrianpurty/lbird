@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   LayoutDashboard, 
@@ -11,7 +10,7 @@ import {
   User as UserIcon,
   Globe
 } from 'lucide-react';
-import { UserRole } from '../types';
+import { UserRole } from '../types.ts';
 
 interface MobileNavProps {
   activeTab: string;

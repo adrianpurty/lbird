@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Zap, Mail, User as UserIcon, Lock, Phone, Globe, Loader2, ShieldCheck } from 'lucide-react';
-import { User } from '../types';
-import { apiService } from '../services/apiService';
+import { User } from '../types.ts';
+import { apiService } from '../services/apiService.ts';
 
 interface SignupProps {
   onSignup: (user: User) => void;

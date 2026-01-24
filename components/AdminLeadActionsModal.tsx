@@ -1,7 +1,6 @@
-
 import React, { useState } from 'react';
 import { X, Save, Trash2, ShieldCheck, AlertCircle, Globe, DollarSign, Target } from 'lucide-react';
-import { Lead } from '../types';
+import { Lead } from '../types.ts';
 
 interface AdminLeadActionsModalProps {
   lead: Lead;

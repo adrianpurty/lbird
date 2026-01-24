@@ -12,7 +12,7 @@ import {
   CheckCircle2,
   XCircle
 } from 'lucide-react';
-import { OAuthConfig } from '../types';
+import { OAuthConfig } from '../types.ts';
 
 interface AdminOAuthSettingsProps {
   config: OAuthConfig;
@@ -133,7 +133,6 @@ const AdminOAuthSettings: React.FC<AdminOAuthSettingsProps> = ({ config, onConfi
           <div className="hidden sm:flex items-center gap-6 px-4">
              <div className="text-center">
                 <span className="text-[9px] text-neutral-600 font-black uppercase tracking-widest block mb-1">Provisioned</span>
-                {/* Fixed the "Cannot find name 'localGateways'" error by using a constant count of 2 nodes (Google and Meta) */}
                 <span className="text-neutral-400 font-black text-[10px]">2 Nodes</span>
              </div>
              <div className="w-px h-6 bg-neutral-800/40" />

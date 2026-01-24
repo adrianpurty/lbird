@@ -1,5 +1,5 @@
 import React from 'react';
-import { Invoice } from '../types';
+import { Invoice } from '../types.ts';
 import { Download, FileText, CheckCircle, Zap, ShieldCheck, Printer } from 'lucide-react';
 
 interface InvoiceLedgerProps {

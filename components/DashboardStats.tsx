@@ -1,5 +1,5 @@
 import React from 'react';
-import { Lead, User } from '../types';
+import { Lead, User } from '../types.ts';
 import { TrendingUp, Users, Target, Zap } from 'lucide-react';
 
 interface StatsProps {
