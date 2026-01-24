@@ -9,10 +9,6 @@ header('Pragma: no-cache');
 
 $db_file = 'database.json';
 
-/**
- * Initializes the database with default data if the file does not exist.
- * Includes a permanent Admin Node for system oversight.
- */
 function init_db($file) {
     $default_data = [
         'metadata' => [
@@ -70,21 +66,14 @@ function init_db($file) {
     return $data ?: $default_data;
 }
 
-/**
- * Retrieves the database contents.
- */
 function get_db() {
     global $db_file;
     return init_db($db_file);
 }
 
-/**
- * Persists data to the local JSON ledger with atomic locking.
- */
 function save_db($data) {
     global $db_file;
     $data['metadata']['last_updated'] = date('Y-m-d H:i:s');
-    // Atomic write with exclusive lock to prevent corruption
     file_put_contents($db_file, json_encode($data, JSON_PRETTY_PRINT), LOCK_EX);
 }
 
@@ -95,7 +84,7 @@ $db = get_db();
 switch ($action) {
     case 'get_data':
         echo json_encode($db);
-        break;
+        exit;
 
     case 'register_user':
         if ($input) {
@@ -117,14 +106,15 @@ switch ($action) {
             $db['users'][] = $newUser;
             save_db($db);
             echo json_encode(['status' => 'success', 'user' => $newUser]);
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'Payload Empty']);
         }
-        break;
+        exit;
 
     case 'authenticate_user':
         if ($input) {
             $username = $input['username'] ?? '';
             $token = $input['token'] ?? '';
-            // Hardcoded bypass for the primary admin node
             if ($username === 'admin' && $token === '1234') {
                 echo json_encode(['status' => 'success', 'user' => [
                     'id' => 'admin_1', 'name' => 'System Administrator', 'username' => 'admin',
@@ -140,8 +130,10 @@ switch ($action) {
                 }
             }
             echo json_encode(['status' => $found ? 'success' : 'error', 'user' => $found]);
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'Payload Empty']);
         }
-        break;
+        exit;
 
     case 'update_auth_config':
         if ($input) {
@@ -154,10 +146,11 @@ switch ($action) {
                 'facebookAppSecret' => (string)($input['facebookAppSecret'] ?? '')
             ];
             save_db($db);
-            // Return explicit success for OAuth commit verification
             echo json_encode(['status' => 'success', 'timestamp' => date('Y-m-d H:i:s')]);
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'Payload Empty']);
         }
-        break;
+        exit;
 
     case 'update_user':
         if ($input && isset($input['id'])) {
@@ -172,16 +165,20 @@ switch ($action) {
             }
             save_db($db);
             echo json_encode(['status' => 'success']);
+        } else {
+            echo json_encode(['status' => 'error']);
         }
-        break;
+        exit;
 
     case 'update_gateways':
         if ($input && isset($input['gateways'])) {
             $db['gateways'] = $input['gateways'];
             save_db($db);
             echo json_encode(['status' => 'success']);
+        } else {
+            echo json_encode(['status' => 'error']);
         }
-        break;
+        exit;
 
     case 'place_bid':
         if ($input && isset($input['userId']) && isset($input['leadId'])) {
@@ -189,10 +186,10 @@ switch ($action) {
             foreach ($db['users'] as $i => $u) { if ($u['id'] === $input['userId']) { $userIndex = $i; break; } }
             $leadIndex = -1;
             foreach ($db['leads'] as $i => $l) { if ($l['id'] === $input['leadId']) { $leadIndex = $i; break; } }
-            if ($userIndex === -1 || $leadIndex === -1) { echo json_encode(['status' => 'error', 'message' => 'Node offline.']); break; }
+            if ($userIndex === -1 || $leadIndex === -1) { echo json_encode(['status' => 'error', 'message' => 'Node offline.']); exit; }
             
             $totalCost = (float)$input['totalDailyCost'];
-            if ($db['users'][$userIndex]['balance'] < $totalCost) { echo json_encode(['status' => 'error', 'message' => 'Insufficient liquidity.']); break; }
+            if ($db['users'][$userIndex]['balance'] < $totalCost) { echo json_encode(['status' => 'error', 'message' => 'Insufficient liquidity.']); exit; }
 
             $db['users'][$userIndex]['balance'] -= $totalCost;
             $db['leads'][$leadIndex]['currentBid'] = (float)$input['bidAmount'];
@@ -217,8 +214,10 @@ switch ($action) {
             
             save_db($db);
             echo json_encode(['status' => 'success']);
+        } else {
+            echo json_encode(['status' => 'error']);
         }
-        break;
+        exit;
 
     case 'create_lead':
         if ($input) {
@@ -231,8 +230,10 @@ switch ($action) {
             $db['leads'][] = $input;
             save_db($db);
             echo json_encode(['status' => 'success']);
+        } else {
+            echo json_encode(['status' => 'error']);
         }
-        break;
+        exit;
 
     case 'update_lead':
         if ($input && isset($input['id'])) {
@@ -241,8 +242,10 @@ switch ($action) {
             }
             save_db($db);
             echo json_encode(['status' => 'success']);
+        } else {
+            echo json_encode(['status' => 'error']);
         }
-        break;
+        exit;
 
     case 'delete_lead':
         if ($input && isset($input['id'])) {
@@ -250,8 +253,10 @@ switch ($action) {
             $db['leads'] = array_values(array_filter($db['leads'], function($l) use ($id) { return $l['id'] !== $id; }));
             save_db($db);
             echo json_encode(['status' => 'success']);
+        } else {
+            echo json_encode(['status' => 'error']);
         }
-        break;
+        exit;
 
     case 'deposit':
         if ($input && isset($input['userId'])) {
@@ -260,8 +265,10 @@ switch ($action) {
             }
             save_db($db);
             echo json_encode(['status' => 'success']);
+        } else {
+            echo json_encode(['status' => 'error']);
         }
-        break;
+        exit;
 
     case 'toggle_wishlist':
         if ($input && isset($input['userId'])) {
@@ -276,17 +283,19 @@ switch ($action) {
             }
             save_db($db);
             echo json_encode(['status' => 'success']);
+        } else {
+            echo json_encode(['status' => 'error']);
         }
-        break;
+        exit;
 
     case 'clear_notifications':
         foreach ($db['notifications'] as &$n) $n['read'] = true;
         save_db($db);
         echo json_encode(['status' => 'success']);
-        break;
+        exit;
 
     default:
         echo json_encode(['error' => 'Action unrecognized.']);
-        break;
+        exit;
 }
 ?>

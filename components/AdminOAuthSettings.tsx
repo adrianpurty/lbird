@@ -48,35 +48,37 @@ const AdminOAuthSettings: React.FC<AdminOAuthSettingsProps> = ({ config, onConfi
     setSaveSuccess(false);
     setSaveError(false);
     
-    // AUTO-ACTIVATION LOGIC: If keys are newly populated, automatically set status to ACTIVE.
-    // If keys are cleared, automatically set status to OFFLINE.
-    const committedConfig = {
+    // AUTO-ACTIVATION LOGIC: 
+    // If keys are provided, activate the node.
+    // If keys are missing, deactivate the node.
+    const committedConfig: OAuthConfig = {
       ...localConfig,
-      googleEnabled: (localConfig.googleClientId.trim() !== '' && localConfig.googleClientSecret.trim() !== '') ? true : (localConfig.googleClientId.trim() === '' ? false : localConfig.googleEnabled),
-      facebookEnabled: (localConfig.facebookAppId.trim() !== '' && localConfig.facebookAppSecret.trim() !== '') ? true : (localConfig.facebookAppId.trim() === '' ? false : localConfig.facebookEnabled)
+      googleEnabled: localConfig.googleClientId.trim().length > 0 && localConfig.googleClientSecret.trim().length > 0,
+      facebookEnabled: localConfig.facebookAppId.trim().length > 0 && localConfig.facebookAppSecret.trim().length > 0,
     };
 
-    // Update local state immediately to reflect auto-activation in UI
+    // Reflect auto-toggles in local UI immediately
     setLocalConfig(committedConfig);
 
     try {
       const response = await onConfigChange(committedConfig);
       
-      // Check for success from the API via the App.tsx promise chain
+      // Explicitly check for 'success' status from api.php
       if (response && response.status === 'success') {
         setSaveSuccess(true);
-        setTimeout(() => setSaveSuccess(false), 4000);
       } else {
-        // Fallback success if response is empty but promise resolved
-        setSaveSuccess(true);
-        setTimeout(() => setSaveSuccess(false), 4000);
+        throw new Error("Ledger rejected write");
       }
     } catch (error) {
       console.error("Identity Persistence Failure:", error);
       setSaveError(true);
-      setTimeout(() => setSaveError(false), 4000);
     } finally {
       setIsSaving(false);
+      // Reset feedback after 3s
+      setTimeout(() => {
+        setSaveSuccess(false);
+        setSaveError(false);
+      }, 3000);
     }
   };
 
