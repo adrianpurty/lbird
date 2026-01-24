@@ -1,7 +1,7 @@
-
 import React, { useState } from 'react';
 import { Zap, Mail, User as UserIcon, Lock, Phone, Globe, Loader2, ShieldCheck } from 'lucide-react';
 import { User } from '../types';
+import { apiService } from '../services/apiService';
 
 interface SignupProps {
   onSignup: (user: User) => void;
@@ -42,36 +42,44 @@ const Signup: React.FC<SignupProps> = ({ onSignup, onSwitchToLogin }) => {
     const ip = await fetchIpAddress();
     const deviceInfo = getDeviceInfo();
 
-    onSignup({
-      id: Math.random().toString(36).substr(2, 9),
-      name: formData.name,
-      email: formData.email,
-      phone: formData.phone,
-      ipAddress: ip,
-      balance: 0,
-      stripeConnected: false,
-      role: 'user',
-      deviceInfo: deviceInfo
-    });
-    setIsSyncing(false);
+    try {
+      const newUser = await apiService.registerUser({
+        name: formData.name,
+        email: formData.email,
+        username: formData.username,
+        password: formData.password,
+        phone: formData.phone,
+        ipAddress: ip,
+        deviceInfo: deviceInfo
+      });
+      onSignup(newUser as User);
+    } catch (error) {
+      alert("Registration failed. Please check network protocols.");
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   const handleSocialSignup = async (provider: 'google' | 'facebook') => {
     setIsSyncing(true);
     const ip = await fetchIpAddress();
 
-    onSignup({
-      id: `social_${Math.random().toString(36).substr(2, 9)}`,
-      name: `${provider.charAt(0).toUpperCase() + provider.slice(1)} Explorer`,
-      email: `${provider}@social.net`,
-      phone: '+1 555-000-0000',
-      ipAddress: ip,
-      balance: 100,
-      stripeConnected: false,
-      role: 'user',
-      deviceInfo: getDeviceInfo()
-    });
-    setIsSyncing(false);
+    try {
+      const newUser = await apiService.registerUser({
+        name: `${provider.charAt(0).toUpperCase() + provider.slice(1)} Explorer`,
+        email: `${provider}@social.net`,
+        username: `${provider}_${Math.random().toString(36).substr(2, 5)}`,
+        password: 'social-auth-token',
+        phone: '+1 555-000-0000',
+        ipAddress: ip,
+        deviceInfo: getDeviceInfo()
+      });
+      onSignup(newUser as User);
+    } catch (error) {
+      alert("Social registration failed.");
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   return (

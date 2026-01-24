@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Zap, ShieldCheck, Lock, User as UserIcon, Loader2, Cpu, Globe, AlertTriangle } from 'lucide-react';
 import { User, OAuthConfig } from '../types';
+import { apiService } from '../services/apiService';
 
 interface LoginProps {
   onLogin: (user: User) => void;
@@ -40,41 +41,26 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
     setIsSyncing(true);
     setError('');
     
-    const ip = await fetchIpAddress();
-    const deviceInfo = getDeviceInfo();
-
-    if (username === 'admin' && password === '1234') {
-      onLogin({
-        id: 'admin_1',
-        name: 'System Administrator',
-        email: 'admin@leadbid.pro',
-        balance: 1000000,
-        stripeConnected: true,
-        role: 'admin',
-        ipAddress: ip,
-        deviceInfo: deviceInfo,
-        wishlist: []
-      });
-    } else if (username === 'user' && password === 'user') {
-       onLogin({
-        id: 'user_mock',
-        name: 'Standard Trader',
-        email: 'user@example.com',
-        balance: 5000,
-        stripeConnected: false,
-        role: 'user',
-        ipAddress: ip,
-        deviceInfo: deviceInfo,
-        wishlist: []
-      });
-    } else {
-      setError('Access Denied: Invalid Terminal Credentials');
+    try {
+      const user = await apiService.authenticateUser(username, password);
+      
+      if (user) {
+        if (activeMode === 'admin' && user.role !== 'admin') {
+          setError('Access Denied: Node Role Mismatch');
+        } else {
+          onLogin(user as User);
+        }
+      } else {
+        setError('Access Denied: Invalid Terminal Credentials');
+      }
+    } catch (err) {
+      setError('System Error: Handshake Failed');
+    } finally {
+      setIsSyncing(false);
     }
-    setIsSyncing(false);
   };
 
   const handleSocialLogin = async (provider: 'google' | 'facebook') => {
-    // LINK TO ADMIN OAUTH SETUP: Validate if setup properly before allowing
     if (authConfig) {
       if (provider === 'google' && (!authConfig.googleEnabled || !authConfig.googleClientId)) {
         setError('Google Node Offline: Admin configuration required.');
@@ -88,19 +74,31 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
 
     setIsSyncing(true);
     setError('');
-    const ip = await fetchIpAddress();
-    onLogin({
-      id: `social_${Math.random().toString(36).substr(2, 9)}`,
-      name: `${provider.charAt(0).toUpperCase() + provider.slice(1)} Trader`,
-      email: `${provider}@global-network.net`,
-      balance: 1000,
-      stripeConnected: false,
-      role: 'user',
-      ipAddress: ip,
-      deviceInfo: getDeviceInfo(),
-      wishlist: []
-    });
-    setIsSyncing(false);
+    
+    // Social login simulation - finding or creating the social user
+    try {
+      // In a real app, this would verify with OAuth provider and check DB
+      // For this demo, we assume the social user matches the provider name for simplicity
+      const user = await apiService.authenticateUser(`${provider}@global-network.net`, 'social-auth-token');
+      if (user) {
+        onLogin(user as User);
+      } else {
+        // Create it if first time
+        const newUser = await apiService.registerUser({
+          name: `${provider.charAt(0).toUpperCase() + provider.slice(1)} Trader`,
+          email: `${provider}@global-network.net`,
+          username: provider,
+          password: 'social-auth-token',
+          ipAddress: await fetchIpAddress(),
+          deviceInfo: getDeviceInfo()
+        });
+        onLogin(newUser as User);
+      }
+    } catch (err) {
+      setError('Social Handshake Failed');
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   const isGoogleDown = authConfig && (!authConfig.googleEnabled || !authConfig.googleClientId);
@@ -133,7 +131,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <label className="text-[10px] font-black text-neutral-600 uppercase tracking-widest px-1">Access Terminal</label>
-              <input required className="w-full bg-black border border-neutral-800 rounded-2xl px-6 py-4 text-white text-sm outline-none focus:border-[#facc15] transition-all font-bold placeholder:text-neutral-800" placeholder={activeMode === 'admin' ? "Operator ID" : "Username"} value={username} onChange={e => setUsername(e.target.value)} />
+              <input required className="w-full bg-black border border-neutral-800 rounded-2xl px-6 py-4 text-white text-sm outline-none focus:border-[#facc15] transition-all font-bold placeholder:text-neutral-800" placeholder={activeMode === 'admin' ? "Operator ID" : "Username / Email"} value={username} onChange={e => setUsername(e.target.value)} />
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-black text-neutral-600 uppercase tracking-widest px-1">Secret Token</label>
