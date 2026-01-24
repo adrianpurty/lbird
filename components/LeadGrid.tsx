@@ -3,7 +3,7 @@ import { Lead, UserRole } from '../types.ts';
 import { 
   Timer, Zap, Settings2, Heart, ChevronLeft, ChevronRight, 
   BriefcaseBusiness, PlaneTakeoff, Ship, Hotel, Building2, 
-  Coins, ListFilter, Stethoscope, Shield, Info
+  Coins, ListFilter, Stethoscope, Shield, Info, CheckCircle2, XCircle, MousePointer2
 } from 'lucide-react';
 
 interface LeadGridProps {
@@ -12,6 +12,8 @@ interface LeadGridProps {
   onAdminEdit?: (lead: Lead) => void;
   onAdminApprove?: (id: string) => void;
   onAdminReject?: (id: string) => void;
+  onBulkApprove?: (ids: string[]) => void;
+  onBulkReject?: (ids: string[]) => void;
   onDelete?: (id: string) => void;
   onDeleteLead?: (id: string) => void;
   onToggleWishlist?: (id: string) => void;
@@ -55,7 +57,9 @@ const MemoizedLeadCard = memo(({
   onAdminEdit, 
   onAdminApprove, 
   onAdminReject, 
-  onToggleWishlist 
+  onToggleWishlist,
+  isSelected,
+  onToggleSelect
 }: any) => {
   const [successTrigger, setSuccessTrigger] = useState(false);
   const prevStatus = useRef(lead.status);
@@ -91,8 +95,24 @@ const MemoizedLeadCard = memo(({
     <div className={`bg-[#121212]/40 rounded-2xl border transition-all flex flex-col relative overflow-hidden animate-card-pop ${
       successTrigger ? 'animate-success z-30' : ''
     } ${
+      isSelected ? 'border-[#facc15]/60 ring-2 ring-[#facc15]/10 scale-[1.02] bg-[#facc15]/5' : 
       isUserEngaged ? 'border-[#facc15]/30 ring-1 ring-[#facc15]/5' : 'border-neutral-800/30'
     } hover:border-[#facc15]/20 group shadow-md`}>
+      
+      {/* Selection Interface for Admin */}
+      {isAdmin && (
+        <div className="absolute top-4 left-4 z-20">
+          <button 
+            onClick={() => onToggleSelect?.(lead.id)}
+            className={`w-5 h-5 rounded-md border-2 transition-all flex items-center justify-center ${
+              isSelected ? 'bg-[#facc15] border-[#facc15] text-black' : 'border-neutral-700 bg-black/40 hover:border-neutral-500'
+            }`}
+          >
+            {isSelected && <CheckCircle2 size={14} strokeWidth={3} />}
+          </button>
+        </div>
+      )}
+
       <div className="absolute top-4 right-4 z-20 flex gap-2">
         <button
           onClick={() => onToggleWishlist?.(lead.id)}
@@ -133,8 +153,8 @@ const MemoizedLeadCard = memo(({
           </div>
         </div>
 
-        {isAdmin && isPending && (
-          <div className="grid grid-cols-2 gap-3 mb-6">
+        {isAdmin && isPending && !isSelected && (
+          <div className="grid grid-cols-2 gap-3 mb-6 animate-in slide-in-from-top-1 duration-200">
             <button onClick={() => onAdminApprove?.(lead.id)} className="bg-emerald-900/40 text-emerald-600 py-2 rounded-xl font-black text-[10px] uppercase border border-emerald-900/20 hover:bg-emerald-800/40 transition-colors">Approve</button>
             <button onClick={() => onAdminReject?.(lead.id)} className="bg-red-900/40 text-red-600 py-2 rounded-xl font-black text-[10px] uppercase border border-red-900/20 hover:bg-red-800/40 transition-colors">Reject</button>
           </div>
@@ -143,14 +163,15 @@ const MemoizedLeadCard = memo(({
         <div className="flex items-center justify-between gap-4 pt-4 border-t border-neutral-800/30">
           <button
             onClick={() => onBid(lead.id)}
-            disabled={isPending || isOwner}
+            disabled={isPending || isOwner || isSelected}
             className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${
+              isSelected ? 'bg-neutral-800/50 text-neutral-600 border border-neutral-700' :
               isOwner ? 'bg-neutral-900/40 text-neutral-700' : 
               isPending ? 'bg-neutral-900/40 text-neutral-700' : 
               'bg-[#facc15]/60 text-black hover:bg-[#facc15]/80 active:scale-95 shadow-lg shadow-yellow-400/5'
             }`}
           >
-            {isOwner ? 'OWNER' : isPending ? 'PENDING' : 'SECURE POSITION'}
+            {isSelected ? 'LOCKED FOR BATCH' : isOwner ? 'OWNER' : isPending ? 'PENDING' : 'SECURE POSITION'}
           </button>
           {isAdmin && (
             <button onClick={() => onAdminEdit?.(lead)} className="p-2.5 text-neutral-700 hover:text-neutral-400 hover:bg-neutral-800/40 rounded-xl transition-all"><Settings2 size={18} /></button>
@@ -162,10 +183,11 @@ const MemoizedLeadCard = memo(({
 });
 
 const LeadGrid: React.FC<LeadGridProps> = ({ 
-  leads, onBid, onAdminEdit, onAdminApprove, onAdminReject, onDelete, onToggleWishlist, userRole, currentUserId, activeBids = [], wishlist = []
+  leads, onBid, onAdminEdit, onAdminApprove, onAdminReject, onBulkApprove, onBulkReject, onDelete, onToggleWishlist, userRole, currentUserId, activeBids = [], wishlist = []
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   
   const deferredCategory = useDeferredValue(selectedCategory);
   const ITEMS_PER_PAGE = 20;
@@ -185,9 +207,25 @@ const LeadGrid: React.FC<LeadGridProps> = ({
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentPage]);
 
+  const toggleSelect = (id: string) => {
+    const next = new Set(selectedIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelectedIds(next);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === currentLeads.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(currentLeads.map(l => l.id)));
+    }
+  };
+
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
+      setSelectedIds(new Set()); // Clear selection on page change for safety
     }
   };
 
@@ -219,10 +257,25 @@ const LeadGrid: React.FC<LeadGridProps> = ({
     return pages;
   };
 
+  const isAdmin = userRole === 'admin';
+
   return (
-    <div className="space-y-8 will-change-transform">
+    <div className="space-y-8 will-change-transform relative">
       <div className="flex flex-col sm:flex-row items-center justify-between gap-6 bg-[#0a0a0a]/40 border border-neutral-800/30 p-4 rounded-3xl shadow-sm">
         <div className="flex items-center gap-4 w-full sm:w-auto">
+          {isAdmin && (
+            <button 
+              onClick={toggleSelectAll}
+              className={`p-2.5 rounded-xl border transition-all flex items-center gap-2 font-black text-[9px] uppercase tracking-widest ${
+                selectedIds.size === currentLeads.length && currentLeads.length > 0
+                  ? 'bg-[#facc15] text-black border-[#facc15]'
+                  : 'bg-neutral-900/40 text-neutral-500 border-neutral-800/40'
+              }`}
+            >
+              <MousePointer2 size={16} /> 
+              <span className="hidden md:inline">{selectedIds.size === currentLeads.length ? 'Deselect All' : 'Select Page'}</span>
+            </button>
+          )}
           <div className="p-2.5 bg-neutral-900/40 rounded-xl text-neutral-700">
             <ListFilter size={20} />
           </div>
@@ -254,6 +307,8 @@ const LeadGrid: React.FC<LeadGridProps> = ({
               onAdminReject={onAdminReject}
               onDelete={onDelete}
               onToggleWishlist={onToggleWishlist}
+              isSelected={selectedIds.has(lead.id)}
+              onToggleSelect={toggleSelect}
             />
           ))
         ) : (
@@ -264,6 +319,47 @@ const LeadGrid: React.FC<LeadGridProps> = ({
           </div>
         )}
       </div>
+
+      {/* Floating Bulk Action Dock */}
+      {isAdmin && selectedIds.size > 0 && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-bottom-8 duration-500 flex items-center gap-4 bg-black/80 backdrop-blur-2xl border border-neutral-700/50 p-4 rounded-[2.5rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.8)] px-8">
+           <div className="flex items-center gap-4 border-r border-neutral-800 pr-6 mr-2">
+              <div className="w-10 h-10 bg-[#facc15]/10 rounded-full flex items-center justify-center border border-[#facc15]/20">
+                 <span className="text-[#facc15] font-black text-sm">{selectedIds.size}</span>
+              </div>
+              <div className="hidden md:block">
+                 <p className="text-[9px] font-black text-neutral-500 uppercase tracking-widest leading-none">Selected</p>
+                 <p className="text-[10px] font-bold text-neutral-300 uppercase mt-1">Batch Operations</p>
+              </div>
+           </div>
+           <div className="flex items-center gap-3">
+              <button 
+                onClick={() => {
+                  onBulkApprove?.(Array.from(selectedIds));
+                  setSelectedIds(new Set());
+                }}
+                className="bg-emerald-900/60 hover:bg-emerald-800 transition-all text-emerald-500 px-5 py-2.5 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2 border border-emerald-900/40"
+              >
+                <CheckCircle2 size={16} /> Approve
+              </button>
+              <button 
+                onClick={() => {
+                  onBulkReject?.(Array.from(selectedIds));
+                  setSelectedIds(new Set());
+                }}
+                className="bg-red-900/60 hover:bg-red-800 transition-all text-red-500 px-5 py-2.5 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2 border border-red-900/40"
+              >
+                <XCircle size={16} /> Reject
+              </button>
+              <button 
+                onClick={() => setSelectedIds(new Set())}
+                className="text-neutral-500 hover:text-neutral-300 font-black text-[9px] uppercase tracking-widest px-4"
+              >
+                Cancel
+              </button>
+           </div>
+        </div>
+      )}
 
       {totalPages > 1 && (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-8 py-10 border-t border-neutral-800/20">

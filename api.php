@@ -95,14 +95,35 @@ try {
            ->execute(['gw_stripe_primary', 'payment', 'stripe', 'Stripe Master Node', 'pk_test_sample', 'sk_test_sample', '2.5', 'active']);
 
         $cat_seeds = [
-            ['c1', 'SBA Loan Inquiries', 'Finance'], ['c2', 'Solar Energy (Residential)', 'Real Estate'],
-            ['c3', 'Personal Injury (MVA)', 'Legal'], ['c4', 'Crypto Trading', 'Finance'],
-            ['c5', 'Debt Settlement', 'Finance'], ['c6', 'Cybersecurity SaaS', 'B2B'],
-            ['c7', 'Luxury Cruises', 'Travel'], ['c8', 'Dental Care', 'Health'],
-            ['c9', 'Mortgage Leads', 'Finance'], ['c10', 'HVAC Repair', 'Home Services']
+            ['c1', 'International Flights', 'Travel'], 
+            ['c2', 'Luxury Cruises', 'Travel'],
+            ['c3', 'Resort Bookings', 'Travel'], 
+            ['c4', 'Crypto Trading', 'Finance'],
+            ['c5', 'Debt Settlement', 'Finance'], 
+            ['c6', 'Cybersecurity SaaS', 'B2B'],
+            ['c7', 'Medical Aesthetics', 'Health'], 
+            ['c8', 'Dental Care', 'Health'],
+            ['c9', 'Mortgage Leads', 'Finance'], 
+            ['c10', 'HVAC Repair', 'Home Services']
         ];
         $cat_stmt = $db->prepare("INSERT INTO categories (id, name, group_name) VALUES (?,?,?)");
         foreach($cat_seeds as $c) $cat_stmt->execute($c);
+
+        // --- SEEDING 10 TRAVEL INDUSTRY LEADS ---
+        $lead_seeds = [
+            ['l1', 'First Class: NYC to London', 'International Flights', 'Executive travelers looking for last-minute first class bookings between JFK and LHR. High-intent business travel segment.', 'https://sky-luxury.com', 'https://travel-ads.net/f-class', 150, 450, 15, '10h 30m', 95, 4.9, 'approved', 'US', 'New York', 'admin_1'],
+            ['l2', 'Private Overwater Villa (Maldives)', 'Resort Bookings', 'Honeymooners and luxury seekers looking for 7-night stays at premium Maldivian resorts. Direct inbound inquiries.', 'https://maldives-escapes.io', 'https://resort-leads.pro/villa', 80, 210, 8, '14h 15m', 91, 4.7, 'approved', 'MV', 'Male', 'admin_1'],
+            ['l3', 'Mediterranean Yacht Charter', 'Luxury Cruises', 'High net-worth group seeking private crewed yacht charters along the Amalfi Coast. Average budget $80k+.', 'https://azure-charters.com', 'https://yacht-ads.co/med', 300, 850, 5, '6h 45m', 98, 5.0, 'approved', 'IT', 'Amalfi', 'admin_1'],
+            ['l4', 'Serengeti Safari Expedition', 'Resort Bookings', 'Nature enthusiasts looking for all-inclusive luxury safari camps in Tanzania. High quality Score with full intent validation.', 'https://safari-gold.tz', 'https://africa-leads.net/safari', 45, 120, 12, '18h 0m', 89, 4.5, 'approved', 'TZ', 'Serengeti', 'admin_1'],
+            ['l5', 'Antarctica Expedition Cruise', 'Luxury Cruises', 'Adventure travelers seeking end-of-season expedition cruises to Antarctica on boutique research-style vessels.', 'https://polar-voyages.com', 'https://expedition-ads.io/polar', 500, 1450, 3, '4h 20m', 97, 4.9, 'approved', 'AR', 'Ushuaia', 'admin_1'],
+            ['l6', 'Business Class: Dubai to Paris', 'International Flights', 'Frequent corporate travelers seeking flat-bed comfort for Dubai (DXB) to Paris (CDG) routes. Verified industry traffic.', 'https://emirates-deals.ae', 'https://sky-leads.pro/biz', 120, 380, 20, '8h 15m', 93, 4.6, 'approved', 'AE', 'Dubai', 'admin_1'],
+            ['l7', 'Exclusive Aspen Ski Chalet', 'Resort Bookings', 'Group booking for winter 2024 season. Seeking ski-in/ski-out luxury accommodation with private chef services.', 'https://aspen-snow.com', 'https://chalet-ads.net/aspen', 95, 310, 10, '22h 45m', 88, 4.4, 'approved', 'US', 'Colorado', 'admin_1'],
+            ['l8', 'Caribbean Island Private Buyout', 'Resort Bookings', 'Corporate retreat seekers looking for exclusive island buyouts in the BVI for high-level summits.', 'https://island-nodes.io', 'https://corp-travel.ads/buyout', 1000, 3500, 2, '2h 0m', 99, 5.0, 'approved', 'VG', 'Tortola', 'admin_1'],
+            ['l9', 'Orient Express Luxury Rail', 'International Flights', 'Travelers looking for the classic Paris to Istanbul rail journey in Grand Suites. High-ticket travel niche.', 'https://rail-luxe.eu', 'https://eu-leads.pro/rail', 250, 680, 6, '12h 10m', 92, 4.8, 'approved', 'FR', 'Paris', 'admin_1'],
+            ['l10', 'Galapagos Island Hopper Cruise', 'Luxury Cruises', 'Eco-travelers seeking boutique small-ship cruises through the Galapagos archipelago with expert naturalists.', 'https://ecuador-nature.com', 'https://eco-travel.ads/galapagos', 180, 420, 14, '9h 30m', 90, 4.6, 'approved', 'EC', 'Galapagos', 'admin_1']
+        ];
+        $lead_stmt = $db->prepare("INSERT INTO leads (id, title, category, description, businessUrl, targetLeadUrl, basePrice, currentBid, bidCount, timeLeft, qualityScore, sellerRating, status, countryCode, region, ownerId) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+        foreach($lead_seeds as $l) $lead_stmt->execute($l);
     }
 } catch (PDOException $e) {
     echo json_encode(['error' => 'DATABASE_NODE_OFFLINE', 'message' => $e->getMessage()]);
@@ -225,6 +246,11 @@ switch ($action) {
         if ($idx !== false) array_splice($wishlist, $idx, 1);
         else $wishlist[] = $input['leadId'];
         $db->prepare("UPDATE users SET wishlist = ? WHERE id = ?")->execute([json_encode($wishlist), $input['userId']]);
+        echo json_encode(['status' => 'success']);
+        break;
+
+    case 'clear_notifications':
+        $db->exec("DELETE FROM notifications");
         echo json_encode(['status' => 'success']);
         break;
 

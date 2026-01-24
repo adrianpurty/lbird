@@ -23,6 +23,7 @@ import RevenueChart from './components/RevenueChart.tsx';
 import InvoiceLedger from './components/InvoiceLedger.tsx';
 import { Lead, User, PurchaseRequest, Notification, PlatformAnalytics, OAuthConfig, Invoice } from './types.ts';
 import { apiService } from './services/apiService.ts';
+import { soundService } from './services/soundService.ts';
 
 const SESSION_KEY = 'lb_session_v3';
 const USER_DATA_KEY = 'lb_user_v3';
@@ -45,6 +46,18 @@ const MemoizedHeader = memo(Header);
 const MemoizedLeadGrid = memo(LeadGrid);
 
 const App: React.FC = () => {
+  // Global click sound effect
+  useEffect(() => {
+    const handleGlobalClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const isInteractive = target.closest('button, a, input, select, textarea');
+      soundService.playClick(!!isInteractive);
+    };
+
+    window.addEventListener('mousedown', handleGlobalClick);
+    return () => window.removeEventListener('mousedown', handleGlobalClick);
+  }, []);
+
   // Persist Auth View state across refreshes
   const [authView, setAuthView] = useState<'login' | 'signup' | 'app'>(() => {
     try {
@@ -201,6 +214,32 @@ const App: React.FC = () => {
     setActiveTab('settings');
   }, []);
 
+  const handleBulkApprove = useCallback(async (ids: string[]) => {
+    setIsSubmitting(true);
+    try {
+      await Promise.all(ids.map(id => apiService.updateLead(id, { status: 'approved' })));
+      await fetchAppData();
+      showToast(`Batch Protocol: ${ids.length} nodes approved.`);
+    } catch (e) {
+      showToast("Batch Error: Signal Interrupted.", "error");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [fetchAppData, showToast]);
+
+  const handleBulkReject = useCallback(async (ids: string[]) => {
+    setIsSubmitting(true);
+    try {
+      await Promise.all(ids.map(id => apiService.updateLead(id, { status: 'rejected' })));
+      await fetchAppData();
+      showToast(`Batch Protocol: ${ids.length} nodes rejected.`);
+    } catch (e) {
+      showToast("Batch Error: Signal Interrupted.", "error");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [fetchAppData, showToast]);
+
   if (isLoading && !user) return (
     <div className="h-screen flex items-center justify-center bg-[var(--bg-platform)]">
       <div className="flex flex-col items-center gap-4">
@@ -268,7 +307,21 @@ const App: React.FC = () => {
                   </div>
                </div>
                <DashboardStats leads={marketData.leads} user={user!} />
-               <MemoizedLeadGrid leads={marketData.leads} onBid={(id) => setSelectedLeadForBid(marketData.leads.find(l => l.id === id) || null)} onAdminEdit={setSelectedLeadForAdminEdit} onAdminApprove={(id) => apiService.updateLead(id, { status: 'approved' }).then(fetchAppData)} onAdminReject={(id) => apiService.updateLead(id, { status: 'rejected' }).then(fetchAppData)} onDelete={(id) => apiService.deleteLead(id).then(fetchAppData)} onToggleWishlist={(id) => apiService.toggleWishlist(user!.id, id).then(fetchAppData)} userRole={user!.role} currentUserId={user!.id} wishlist={user!.wishlist || []} activeBids={activeBidIds} />
+               <MemoizedLeadGrid 
+                leads={marketData.leads} 
+                onBid={(id) => setSelectedLeadForBid(marketData.leads.find(l => l.id === id) || null)} 
+                onAdminEdit={setSelectedLeadForAdminEdit} 
+                onAdminApprove={(id) => apiService.updateLead(id, { status: 'approved' }).then(fetchAppData)} 
+                onAdminReject={(id) => apiService.updateLead(id, { status: 'rejected' }).then(fetchAppData)} 
+                onBulkApprove={handleBulkApprove}
+                onBulkReject={handleBulkReject}
+                onDelete={(id) => apiService.deleteLead(id).then(fetchAppData)} 
+                onToggleWishlist={(id) => apiService.toggleWishlist(user!.id, id).then(fetchAppData)} 
+                userRole={user!.role} 
+                currentUserId={user!.id} 
+                wishlist={user!.wishlist || []} 
+                activeBids={activeBidIds} 
+               />
             </div>
           )}
 
@@ -301,7 +354,15 @@ const App: React.FC = () => {
                 </div>
                 <div className="space-y-6">
                    <h3 className="text-[10px] font-black text-neutral-700 uppercase tracking-widest italic border-b border-neutral-800/20 pb-2">Full Inventory Oversight</h3>
-                   <MemoizedLeadGrid leads={marketData.leads} onBid={() => {}} onAdminEdit={setSelectedLeadForAdminEdit} userRole={user!.role} currentUserId={user!.id} />
+                   <MemoizedLeadGrid 
+                    leads={marketData.leads} 
+                    onBid={() => {}} 
+                    onAdminEdit={setSelectedLeadForAdminEdit} 
+                    onBulkApprove={handleBulkApprove}
+                    onBulkReject={handleBulkReject}
+                    userRole={user!.role} 
+                    currentUserId={user!.id} 
+                   />
                 </div>
              </div>
           )}
