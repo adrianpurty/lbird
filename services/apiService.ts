@@ -1,4 +1,3 @@
-
 import { Lead, User, PurchaseRequest, Notification, PlatformAnalytics, OAuthConfig, Invoice, GatewayAPI } from '../types.ts';
 
 const API_ENDPOINT = './api.php';
@@ -93,6 +92,25 @@ class ApiService {
         const user = db.users.find((u: any) => (u.username === body.username || u.email === body.username) && u.password === body.token);
         return { status: 'success', user: user || null };
 
+      case 'social_sync':
+        const existing = db.users.find((u: any) => u.email === body.email);
+        if (existing) return { status: 'success', user: existing };
+        
+        const socialUser = { 
+          id: 'u_' + Math.random().toString(36).substr(2, 5),
+          name: body.name,
+          email: body.email,
+          username: body.email.split('@')[0],
+          profileImage: body.profileImage,
+          balance: 1000, 
+          role: 'user', 
+          stripeConnected: false, 
+          wishlist: [] 
+        };
+        db.users.push(socialUser);
+        this.saveFallbackDB(db);
+        return { status: 'success', user: socialUser };
+
       case 'register_user':
         const newUser = { ...body, id: 'u_' + Math.random().toString(36).substr(2, 5), balance: 1000, role: 'user', stripeConnected: false, wishlist: [] };
         db.users.push(newUser);
@@ -173,6 +191,11 @@ class ApiService {
   
   async authenticateUser(username: string, token: string): Promise<User | null> {
     const res = await this.request('authenticate_user', 'POST', { username, token });
+    return res.user;
+  }
+
+  async socialSync(profile: { name: string, email: string, profileImage: string }): Promise<User> {
+    const res = await this.request('social_sync', 'POST', profile);
     return res.user;
   }
 

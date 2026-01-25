@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Zap, ShieldCheck, Lock, User as UserIcon, Loader2, Cpu, Globe, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Zap, ShieldCheck, Lock, User as UserIcon, Loader2, Cpu, Globe, AlertTriangle, Facebook } from 'lucide-react';
 import { User, OAuthConfig } from '../types.ts';
 import { apiService } from '../services/apiService.ts';
 
@@ -18,22 +18,130 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isSdkLoaded, setIsSdkLoaded] = useState({ google: false, facebook: false });
+
+  // Dynamically load Social SDKs
+  useEffect(() => {
+    if (authConfig?.googleEnabled && authConfig.googleClientId) {
+      if (!document.getElementById('google-jssdk')) {
+        const script = document.createElement('script');
+        script.id = 'google-jssdk';
+        script.src = "https://accounts.google.com/gsi/client";
+        script.async = true;
+        script.defer = true;
+        script.onload = () => {
+          setIsSdkLoaded(prev => ({ ...prev, google: true }));
+          (window as any).google?.accounts.id.initialize({
+            client_id: authConfig.googleClientId,
+            callback: handleGoogleResponse,
+          });
+        };
+        document.head.appendChild(script);
+      } else {
+        (window as any).google?.accounts.id.initialize({
+          client_id: authConfig.googleClientId,
+          callback: handleGoogleResponse,
+        });
+      }
+    }
+
+    if (authConfig?.facebookEnabled && authConfig.facebookAppId) {
+      if (!document.getElementById('facebook-jssdk')) {
+        const script = document.createElement('script');
+        script.id = 'facebook-jssdk';
+        script.src = "https://connect.facebook.net/en_US/sdk.js";
+        script.async = true;
+        script.defer = true;
+        script.onload = () => {
+          setIsSdkLoaded(prev => ({ ...prev, facebook: true }));
+          (window as any).FB.init({
+            appId: authConfig.facebookAppId,
+            cookie: true,
+            xfbml: true,
+            version: 'v18.0'
+          });
+        };
+        document.head.appendChild(script);
+      } else {
+        (window as any).FB?.init({
+          appId: authConfig.facebookAppId,
+          cookie: true,
+          xfbml: true,
+          version: 'v18.0'
+        });
+      }
+    }
+  }, [authConfig]);
+
+  const handleGoogleResponse = async (response: any) => {
+    setIsSyncing(true);
+    try {
+      const base64Url = response.credential.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const payload = JSON.parse(window.atob(base64));
+
+      const syncedUser = await apiService.socialSync({
+        name: payload.name,
+        email: payload.email,
+        profileImage: payload.picture
+      });
+
+      const location = await requestLocation();
+      onLogin({ ...syncedUser, location, deviceInfo: getDeviceInfo() } as User);
+    } catch (err) {
+      setError('Google Sync Failed');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleFacebookLogin = () => {
+    if (!(window as any).FB) {
+      setError('Meta SDK Not Ready');
+      return;
+    }
+
+    setIsSyncing(true);
+    (window as any).FB.login(async (response: any) => {
+      if (response.authResponse) {
+        (window as any).FB.api('/me', { fields: 'name,email,picture' }, async (userData: any) => {
+          try {
+            const syncedUser = await apiService.socialSync({
+              name: userData.name,
+              email: userData.email,
+              profileImage: userData.picture?.data?.url
+            });
+            const location = await requestLocation();
+            onLogin({ ...syncedUser, location, deviceInfo: getDeviceInfo() } as User);
+          } catch (err) {
+            setError('Meta Sync Failed');
+            setIsSyncing(false);
+          }
+        });
+      } else {
+        setError('Meta Login Canceled');
+        setIsSyncing(false);
+      }
+    }, { scope: 'public_profile,email' });
+  };
+
+  const handleGoogleClick = () => {
+    if (!(window as any).google) {
+      setError('Google SDK Not Ready');
+      return;
+    }
+    (window as any).google.accounts.id.prompt();
+  };
 
   const requestLocation = async (): Promise<string> => {
     return new Promise((resolve) => {
-      // Check if we've already requested location once on this device
       const hasRequested = localStorage.getItem(LOCATION_REQUESTED_KEY);
       const cachedLoc = localStorage.getItem(LAST_KNOWN_LOCATION_KEY);
       
-      if (hasRequested && cachedLoc) {
-        return resolve(cachedLoc);
-      }
-
+      if (hasRequested && cachedLoc) return resolve(cachedLoc);
       if (!("geolocation" in navigator)) return resolve("N/A");
       
-      // Mark as requested before calling the prompt
       localStorage.setItem(LOCATION_REQUESTED_KEY, 'true');
-
       const timeout = setTimeout(() => resolve(cachedLoc || "Timeout"), 1000);
       
       navigator.geolocation.getCurrentPosition(
@@ -83,36 +191,6 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
       }
     } catch (err) {
       setError('System Error');
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
-  const handleSocialLogin = async (provider: 'google' | 'facebook') => {
-    if (authConfig) {
-      if (provider === 'google' && (!authConfig.googleEnabled || !authConfig.googleClientId)) {
-        setError('Google Offline'); return;
-      }
-      if (provider === 'facebook' && (!authConfig.facebookEnabled || !authConfig.facebookAppId)) {
-        setError('Meta Offline'); return;
-      }
-    }
-
-    setIsSyncing(true);
-    setError('');
-    
-    try {
-      const user = await apiService.authenticateUser(`${provider}@social.node`, 'social-token');
-      if (user) { onLogin(user as User); } 
-      else {
-        const newUser = await apiService.registerUser({
-          name: `${provider} Trader`, email: `${provider}@social.node`,
-          username: provider + Math.floor(Math.random() * 1000), password: 'social-token'
-        });
-        onLogin(newUser as User);
-      }
-    } catch (err) {
-      setError('Social Auth Failed');
     } finally {
       setIsSyncing(false);
     }
@@ -186,20 +264,28 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
             <div className="mt-6 space-y-4 pb-10">
               <div className="relative flex items-center gap-4">
                 <div className="flex-1 h-[1px] bg-neutral-900"></div>
-                <span className="text-[8px] font-black text-neutral-700 uppercase tracking-widest">SSO</span>
+                <span className="text-[8px] font-black text-neutral-700 uppercase tracking-widest">SSO HANDSHAKE</span>
                 <div className="flex-1 h-[1px] bg-neutral-900"></div>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <button onClick={() => handleSocialLogin('google')} className="py-3 rounded-lg font-bold flex items-center justify-center gap-2 border border-neutral-900 text-white hover:bg-neutral-800/50 transition-all text-[9px] uppercase">
+                <button 
+                  onClick={handleGoogleClick} 
+                  disabled={!authConfig?.googleEnabled || isSyncing}
+                  className="py-3 rounded-lg font-bold flex items-center justify-center gap-2 border border-neutral-900 text-white hover:bg-neutral-800/50 transition-all text-[9px] uppercase disabled:opacity-20"
+                >
                   <img src="https://www.google.com/favicon.ico" className="w-3 h-3" /> Google
                 </button>
-                <button onClick={() => handleSocialLogin('facebook')} className="py-3 rounded-lg font-bold flex items-center justify-center gap-2 border border-neutral-900 text-white hover:bg-neutral-800/50 transition-all text-[9px] uppercase">
-                  <ShieldCheck size={14} className="text-[#facc15]" /> Meta
+                <button 
+                  onClick={handleFacebookLogin} 
+                  disabled={!authConfig?.facebookEnabled || isSyncing}
+                  className="py-3 rounded-lg font-bold flex items-center justify-center gap-2 border border-neutral-900 text-white hover:bg-neutral-800/50 transition-all text-[9px] uppercase disabled:opacity-20"
+                >
+                  <Facebook size={14} className="text-[#1877F2]" fill="currentColor" /> Meta
                 </button>
               </div>
               <p className="text-center">
                  <button onClick={onSwitchToSignup} className="text-neutral-600 text-[10px] font-black uppercase tracking-widest hover:text-white transition-colors">
-                   <span className="text-[#facc15] underline">New Node</span>
+                   <span className="text-[#facc15] underline">New Node Registration</span>
                  </button>
               </p>
             </div>

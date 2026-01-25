@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
-import { Zap, Mail, User as UserIcon, Lock, Phone, Globe, Loader2, ShieldCheck } from 'lucide-react';
-import { User } from '../types.ts';
+import React, { useState, useEffect } from 'react';
+import { Zap, Mail, User as UserIcon, Lock, Phone, Globe, Loader2, ShieldCheck, Facebook } from 'lucide-react';
+import { User, OAuthConfig } from '../types.ts';
 import { apiService } from '../services/apiService.ts';
 
 interface SignupProps {
   onSignup: (user: User) => void;
   onSwitchToLogin: () => void;
+  authConfig?: OAuthConfig;
 }
 
-const Signup: React.FC<SignupProps> = ({ onSignup, onSwitchToLogin }) => {
+const Signup: React.FC<SignupProps> = ({ onSignup, onSwitchToLogin, authConfig }) => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -17,6 +18,100 @@ const Signup: React.FC<SignupProps> = ({ onSignup, onSwitchToLogin }) => {
     phone: ''
   });
   const [isSyncing, setIsSyncing] = useState(false);
+
+  useEffect(() => {
+    if (authConfig?.googleEnabled && authConfig.googleClientId) {
+      if (!document.getElementById('google-jssdk')) {
+        const script = document.createElement('script');
+        script.id = 'google-jssdk';
+        script.src = "https://accounts.google.com/gsi/client";
+        script.async = true;
+        script.defer = true;
+        script.onload = () => {
+          (window as any).google?.accounts.id.initialize({
+            client_id: authConfig.googleClientId,
+            callback: handleSocialSync,
+          });
+        };
+        document.head.appendChild(script);
+      } else {
+        (window as any).google?.accounts.id.initialize({
+          client_id: authConfig.googleClientId,
+          callback: handleSocialSync,
+        });
+      }
+    }
+
+    if (authConfig?.facebookEnabled && authConfig.facebookAppId && !(window as any).FB) {
+      if (!document.getElementById('facebook-jssdk')) {
+        const script = document.createElement('script');
+        script.id = 'facebook-jssdk';
+        script.src = "https://connect.facebook.net/en_US/sdk.js";
+        script.async = true;
+        script.defer = true;
+        script.onload = () => {
+          (window as any).FB.init({
+            appId: authConfig.facebookAppId,
+            cookie: true,
+            xfbml: true,
+            version: 'v18.0'
+          });
+        };
+        document.head.appendChild(script);
+      } else {
+        (window as any).FB?.init({
+          appId: authConfig.facebookAppId,
+          cookie: true,
+          xfbml: true,
+          version: 'v18.0'
+        });
+      }
+    }
+  }, [authConfig]);
+
+  const handleSocialSync = async (response: any) => {
+    setIsSyncing(true);
+    try {
+      const base64Url = response.credential.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const payload = JSON.parse(window.atob(base64));
+
+      const syncedUser = await apiService.socialSync({
+        name: payload.name,
+        email: payload.email,
+        profileImage: payload.picture
+      });
+
+      onSignup({ ...syncedUser, deviceInfo: getDeviceInfo() } as User);
+    } catch (err) {
+      alert('Social Handshake Failed');
+      setIsSyncing(false);
+    }
+  };
+
+  const handleFacebookSignup = () => {
+    if (!(window as any).FB) return;
+    setIsSyncing(true);
+    (window as any).FB.login(async (response: any) => {
+      if (response.authResponse) {
+        (window as any).FB.api('/me', { fields: 'name,email,picture' }, async (userData: any) => {
+          try {
+            const syncedUser = await apiService.socialSync({
+              name: userData.name,
+              email: userData.email,
+              profileImage: userData.picture?.data?.url
+            });
+            onSignup({ ...syncedUser, deviceInfo: getDeviceInfo() } as User);
+          } catch (err) {
+            alert('Meta Handshake Failed');
+            setIsSyncing(false);
+          }
+        });
+      } else {
+        setIsSyncing(false);
+      }
+    }, { scope: 'public_profile,email' });
+  };
 
   const fetchIpAddress = async (): Promise<string> => {
     try {
@@ -60,28 +155,6 @@ const Signup: React.FC<SignupProps> = ({ onSignup, onSwitchToLogin }) => {
     }
   };
 
-  const handleSocialSignup = async (provider: 'google' | 'facebook') => {
-    setIsSyncing(true);
-    const ip = await fetchIpAddress();
-
-    try {
-      const newUser = await apiService.registerUser({
-        name: `${provider.charAt(0).toUpperCase() + provider.slice(1)} Explorer`,
-        email: `${provider}@social.net`,
-        username: `${provider}_${Math.random().toString(36).substr(2, 5)}`,
-        password: 'social-auth-token',
-        phone: '+1 555-000-0000',
-        ipAddress: ip,
-        deviceInfo: getDeviceInfo()
-      });
-      onSignup(newUser as User);
-    } catch (error) {
-      alert("Social registration failed.");
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a] p-4 font-sans relative">
       <div className="w-full max-w-md bg-[#121212] rounded-[3rem] border border-neutral-900 shadow-2xl overflow-hidden p-10 animate-in fade-in zoom-in-95 duration-500">
@@ -95,24 +168,26 @@ const Signup: React.FC<SignupProps> = ({ onSignup, onSwitchToLogin }) => {
 
         <div className="grid grid-cols-2 gap-4 mb-8">
           <button 
-            onClick={() => handleSocialSignup('google')}
-            disabled={isSyncing}
-            className="bg-black text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 border border-neutral-800 hover:bg-neutral-900 transition-all text-[10px] uppercase tracking-widest disabled:opacity-50 group"
+            type="button"
+            onClick={() => (window as any).google?.accounts.id.prompt()}
+            disabled={!authConfig?.googleEnabled || isSyncing}
+            className="bg-black text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 border border-neutral-800 hover:bg-neutral-900 transition-all text-[10px] uppercase tracking-widest disabled:opacity-20 group"
           >
             <Globe size={14} className="group-hover:text-[#facc15]" /> Google
           </button>
           <button 
-            onClick={() => handleSocialSignup('facebook')}
-            disabled={isSyncing}
-            className="bg-black text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 border border-neutral-800 hover:bg-neutral-900 transition-all text-[10px] uppercase tracking-widest disabled:opacity-50 group"
+            type="button"
+            onClick={handleFacebookSignup}
+            disabled={!authConfig?.facebookEnabled || isSyncing}
+            className="bg-black text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 border border-neutral-800 hover:bg-neutral-900 transition-all text-[10px] uppercase tracking-widest disabled:opacity-20 group"
           >
-            <ShieldCheck size={14} className="group-hover:text-[#facc15]" /> Facebook
+            <Facebook size={14} className="text-[#1877F2]" fill="currentColor" /> Meta
           </button>
         </div>
 
         <div className="relative flex items-center gap-4 mb-8">
           <div className="flex-1 h-[1px] bg-neutral-800"></div>
-          <span className="text-[9px] font-black text-neutral-600 uppercase tracking-widest">or manual provision</span>
+          <span className="text-[9px] font-black text-neutral-600 uppercase tracking-widest">manual provision</span>
           <div className="flex-1 h-[1px] bg-neutral-800"></div>
         </div>
 

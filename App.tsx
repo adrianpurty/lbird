@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef, useMemo, memo, useDeferredValue } from 'react';
 import { 
   TrendingUp, Settings, ShieldAlert, Package, 
@@ -250,7 +251,7 @@ const App: React.FC = () => {
   );
 
   if (authView === 'login') return <Login onLogin={handleLogin} onSwitchToSignup={() => setAuthView('signup')} authConfig={marketData.authConfig} />;
-  if (authView === 'signup') return <Signup onSignup={handleLogin} onSwitchToLogin={() => setAuthView('login')} />;
+  if (authView === 'signup') return <Signup onSignup={handleLogin} onSwitchToLogin={() => setAuthView('login')} authConfig={marketData.authConfig} />;
   if (!user && authView === 'app') {
      return (
         <div className="h-screen flex items-center justify-center bg-[var(--bg-platform)]">
