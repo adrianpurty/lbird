@@ -25,6 +25,7 @@ import UserManagement from './components/UserManagement.tsx';
 import LeadManagement from './components/LeadManagement.tsx';
 import UserActivityHub from './components/UserActivityHub.tsx';
 import WelcomeModal from './components/WelcomeModal.tsx';
+import PurchaseManifestModal from './components/PurchaseManifestModal.tsx';
 import { Lead, User, PurchaseRequest, Notification, PlatformAnalytics, OAuthConfig, Invoice, GatewayAPI } from './types.ts';
 import { apiService } from './services/apiService.ts';
 import { soundService } from './services/soundService.ts';
@@ -98,6 +99,7 @@ const App: React.FC = () => {
   const [selectedLeadForBid, setSelectedLeadForBid] = useState<Lead | null>(null);
   const [selectedLeadForEdit, setSelectedLeadForEdit] = useState<Lead | null>(null);
   const [selectedLogForInspection, setSelectedLogForInspection] = useState<Notification | null>(null);
+  const [selectedPurchaseForManifest, setSelectedPurchaseForManifest] = useState<PurchaseRequest | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toast, setToast] = useState<{ message: string, type: 'info' } | null>(null);
@@ -473,6 +475,7 @@ const App: React.FC = () => {
                  purchaseRequests={marketData.purchaseRequests} 
                  notifications={marketData.notifications} 
                  leads={marketData.leads} 
+                 onViewManifest={setSelectedPurchaseForManifest}
                />
 
                <div className="pt-8 border-t border-neutral-900">
@@ -534,6 +537,13 @@ const App: React.FC = () => {
         />
       )}
       {selectedLogForInspection && <LogInspectionModal notification={selectedLogForInspection} subjectUser={marketData.users.find(u => u.id === selectedLogForInspection.userId)} onClose={() => setSelectedLogForInspection(null)} />}
+      {selectedPurchaseForManifest && (
+        <PurchaseManifestModal 
+          purchase={selectedPurchaseForManifest} 
+          lead={marketData.leads.find(l => l.id === selectedPurchaseForManifest.leadId)} 
+          onClose={() => setSelectedPurchaseForManifest(null)} 
+        />
+      )}
     </div>
   );
 };
