@@ -3,7 +3,7 @@ import {
   TrendingUp, Settings, ShieldAlert, Package, 
   Inbox, CheckCircle, Activity, User as UserIcon, 
   BarChart3, Target, Info, XCircle, Heart, FileText, Database, Server,
-  Loader2, Gavel, Loader
+  Loader2, Gavel, Loader, Eye, Fingerprint, Terminal
 } from 'lucide-react';
 import Sidebar from './components/Sidebar.tsx';
 import Header from './components/Header.tsx';
@@ -15,13 +15,13 @@ import DashboardStats from './components/DashboardStats.tsx';
 import MobileNav from './components/MobileNav.tsx';
 import Login from './components/Login.tsx';
 import Signup from './components/Signup.tsx';
-// Fix: Import BiddingModal without the non-exported BiddingFormData interface to prevent ESM load failure
 import BiddingModal from './components/BiddingModal.tsx';
 import AdminLeadActionsModal from './components/AdminLeadActionsModal.tsx';
 import AdminOAuthSettings from './components/AdminOAuthSettings.tsx';
 import AdminPaymentSettings from './components/AdminPaymentSettings.tsx';
 import RevenueChart from './components/RevenueChart.tsx';
 import InvoiceLedger from './components/InvoiceLedger.tsx';
+import LogInspectionModal from './components/LogInspectionModal.tsx';
 import { Lead, User, PurchaseRequest, Notification, PlatformAnalytics, OAuthConfig, Invoice, GatewayAPI } from './types.ts';
 import { apiService } from './services/apiService.ts';
 import { soundService } from './services/soundService.ts';
@@ -38,6 +38,7 @@ interface AppMarketData {
   analytics: PlatformAnalytics | null;
   authConfig: OAuthConfig;
   gateways: GatewayAPI[];
+  users: User[];
   lastUpdate?: string;
   db_size?: number;
 }
@@ -79,6 +80,7 @@ const App: React.FC = () => {
     analytics: null,
     authConfig: { googleEnabled: false, googleClientId: '', googleClientSecret: '', facebookEnabled: false, facebookAppId: '', facebookAppSecret: '' },
     gateways: [],
+    users: [],
     lastUpdate: ''
   });
 
@@ -97,6 +99,7 @@ const App: React.FC = () => {
 
   const [selectedLeadForBid, setSelectedLeadForBid] = useState<Lead | null>(null);
   const [selectedLeadForAdminEdit, setSelectedLeadForAdminEdit] = useState<Lead | null>(null);
+  const [selectedLogForInspection, setSelectedLogForInspection] = useState<Notification | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'info' } | null>(null);
@@ -151,6 +154,7 @@ const App: React.FC = () => {
           analytics: data.analytics || null,
           authConfig: data.authConfig || prev.authConfig,
           gateways: data.gateways || prev.gateways,
+          users: data.users || [],
           lastUpdate: data.metadata?.last_updated,
           db_size: data.metadata?.db_size
         };
@@ -380,24 +384,65 @@ const App: React.FC = () => {
             }); 
           }} />}
           {activeTab === 'inbox' && (
-             <div className="space-y-6 animate-in fade-in duration-200 max-w-4xl">
-                <h2 className="text-xl font-black text-neutral-400 italic uppercase flex items-center gap-3"><Inbox className="text-[#facc15]/40" /> System Logs</h2>
-                <div className="bg-[#111111]/40 border border-neutral-800/30 rounded-3xl overflow-hidden shadow-md">
+             <div className="space-y-6 animate-in fade-in duration-200 max-w-5xl">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-xl font-black text-neutral-400 italic uppercase flex items-center gap-3"><Inbox className="text-[#facc15]/40" /> System Audit Ledger</h2>
+                  {user!.role === 'admin' && marketData.notifications.length > 0 && (
+                    <button onClick={() => apiService.clearNotifications().then(fetchAppData)} className="text-[10px] font-black uppercase text-red-500/60 hover:text-red-500 transition-colors tracking-widest px-4 py-2 border border-red-900/20 rounded-xl hover:bg-red-950/10">Purge Logs</button>
+                  )}
+                </div>
+                
+                <div className="bg-[#111111]/40 border border-neutral-800/30 rounded-[2rem] overflow-hidden shadow-2xl backdrop-blur-md">
                    {marketData.notifications.length === 0 ? (
-                      <div className="p-20 text-center"><p className="text-neutral-700 text-xs font-black uppercase tracking-widest">No Incoming Logs</p></div>
+                      <div className="p-32 text-center">
+                        <Terminal className="mx-auto text-neutral-800 mb-6" size={48} />
+                        <p className="text-neutral-700 text-xs font-black uppercase tracking-[0.4em]">Zero Active Logs in Stream</p>
+                      </div>
                    ) : (
-                      marketData.notifications.map(n => (
-                        <div key={n.id} className="p-6 border-b border-neutral-800/10 flex items-center justify-between hover:bg-white/5 transition-colors">
-                           <div className="flex items-center gap-4">
-                              <div className="w-8 h-8 rounded-lg bg-black/40 flex items-center justify-center text-neutral-600"><Database size={14} /></div>
-                              <div>
-                                 <p className="text-xs text-neutral-400 font-bold">{n.message}</p>
-                                 <span className="text-[9px] text-neutral-700 font-black uppercase">{n.timestamp}</span>
-                              </div>
-                           </div>
-                           <span className="text-[8px] px-2 py-0.5 rounded-full bg-neutral-800/40 text-neutral-600 font-black uppercase tracking-widest">{n.type}</span>
-                        </div>
-                      ))
+                      marketData.notifications.map(n => {
+                        const subjectUser = marketData.users.find(u => u.id === n.userId);
+                        return (
+                          <div 
+                            key={n.id} 
+                            onClick={() => user!.role === 'admin' && setSelectedLogForInspection(n)}
+                            className={`p-6 border-b border-neutral-800/20 flex items-center justify-between hover:bg-white/[0.02] transition-all cursor-pointer group ${!n.read ? 'bg-[#facc15]/[0.02]' : ''}`}
+                          >
+                             <div className="flex items-center gap-6">
+                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
+                                  n.type === 'buy' ? 'bg-blue-900/10 text-blue-500' : 
+                                  n.type === 'sell' ? 'bg-yellow-900/10 text-yellow-500' :
+                                  n.type === 'approval' ? 'bg-emerald-900/10 text-emerald-500' : 'bg-neutral-800 text-neutral-600'
+                                } border border-transparent group-hover:border-current/20`}>
+                                   {n.type === 'approval' ? <CheckCircle size={20} /> : <Database size={20} />}
+                                </div>
+                                <div>
+                                   <div className="flex items-center gap-3">
+                                      <p className="text-sm text-neutral-300 font-bold group-hover:text-white transition-colors">{n.message}</p>
+                                      {user!.role === 'admin' && (
+                                        <div className="flex items-center gap-1.5 px-2 py-0.5 bg-black/40 border border-neutral-800 rounded-md">
+                                          <Fingerprint size={10} className="text-[#facc15]/60" />
+                                          <span className="text-[8px] font-mono text-neutral-500">{subjectUser?.username || n.userId.substring(0, 8)}</span>
+                                        </div>
+                                      )}
+                                   </div>
+                                   <div className="flex items-center gap-3 mt-1.5">
+                                      <span className="text-[9px] text-neutral-600 font-black uppercase tracking-widest">{n.timestamp}</span>
+                                      <span className="w-1 h-1 bg-neutral-800 rounded-full" />
+                                      <span className="text-[9px] text-neutral-700 font-black uppercase tracking-tighter">NODE_ID: {n.id}</span>
+                                   </div>
+                                </div>
+                             </div>
+                             <div className="flex items-center gap-4">
+                               <span className={`text-[8px] px-3 py-1 rounded-lg border font-black uppercase tracking-[0.2em] ${
+                                  n.type === 'buy' ? 'border-blue-900/30 text-blue-600' : 
+                                  n.type === 'sell' ? 'border-yellow-900/30 text-yellow-600' :
+                                  n.type === 'approval' ? 'border-emerald-900/30 text-emerald-600' : 'border-neutral-800 text-neutral-600'
+                               }`}>{n.type}</span>
+                               {user!.role === 'admin' && <Eye size={16} className="text-neutral-700 opacity-0 group-hover:opacity-100 transition-opacity" />}
+                             </div>
+                          </div>
+                        );
+                      })
                    )}
                 </div>
              </div>
@@ -410,6 +455,13 @@ const App: React.FC = () => {
 
       {selectedLeadForBid && <BiddingModal lead={selectedLeadForBid} user={user!} onClose={() => setSelectedLeadForBid(null)} onSubmit={(d) => { setIsSubmitting(true); apiService.placeBid({ userId: user!.id, leadId: selectedLeadForBid.id, ...d }).then(() => { fetchAppData(); setSelectedLeadForBid(null); setIsSubmitting(false); showToast("Bid Committed to Ledger"); }); }} onRefill={handleRefillFromModal} />}
       {selectedLeadForAdminEdit && <AdminLeadActionsModal lead={selectedLeadForAdminEdit} onClose={() => setSelectedLeadForAdminEdit(null)} onSave={(u) => apiService.updateLead(u.id!, u).then(fetchAppData)} onDelete={(id) => apiService.deleteLead(id).then(fetchAppData)} />}
+      {selectedLogForInspection && (
+        <LogInspectionModal 
+          notification={selectedLogForInspection} 
+          subjectUser={marketData.users.find(u => u.id === selectedLogForInspection.userId)}
+          onClose={() => setSelectedLogForInspection(null)} 
+        />
+      )}
     </div>
   );
 };
