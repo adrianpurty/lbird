@@ -81,9 +81,10 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, role, onLogou
               {item.label}
             </span>
             
-            {activeTab === item.id && (
+            {/* Replaced undefined variable 'Thompson' with 'item.id' to correctly identify active tab */}
+            {activeTab === item.id ? (
               <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-[#FACC15] rounded-l-full shadow-[0_0_10px_#FACC15]" />
-            )}
+            ) : null}
           </button>
         ))}
       </nav>

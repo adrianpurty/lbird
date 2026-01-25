@@ -82,7 +82,7 @@ const MemoizedLeadCard = memo(({
               <span className="text-[8px] font-black text-neutral-600 uppercase tracking-widest">{isUserEngaged ? 'STREAMS_ACTIVE' : 'NODE_IDLE'}</span>
             </div>
           </div>
-          <h3 className="text-xl md:text-3xl font-futuristic text-white uppercase tracking-tight leading-tight group-hover:text-white transition-colors italic">
+          <h3 className="text-xl md:text-3xl font-futuristic text-white uppercase tracking-tight leading-tight group-hover:text-white transition-colors">
             {lead.title}
           </h3>
         </div>
@@ -129,7 +129,7 @@ const MemoizedLeadCard = memo(({
       <div className="w-full md:w-[240px] p-8 flex flex-col justify-center items-center md:items-end gap-6 bg-white/[0.02]">
         <div className="text-center md:text-right">
           <span className="text-[8px] font-black text-neutral-700 uppercase tracking-[0.4em] block mb-1">CURRENT_BID_VALUATION</span>
-          <div className="text-4xl font-black text-white italic font-tactical leading-none tracking-tighter flex items-baseline gap-1 group-hover:text-white transition-colors">
+          <div className="text-4xl font-black text-white font-tactical leading-none tracking-tighter flex items-baseline gap-1 group-hover:text-white transition-colors">
             <span className={`text-sm opacity-40 ${industry.color}`}>$</span>{lead.currentBid.toLocaleString()}
           </div>
         </div>

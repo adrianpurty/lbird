@@ -23,6 +23,8 @@ import LogInspectionModal from './components/LogInspectionModal.tsx';
 import WorldMarketMap from './components/WorldMarketMap.tsx';
 import UserManagement from './components/UserManagement.tsx';
 import LeadManagement from './components/LeadManagement.tsx';
+import UserActivityHub from './components/UserActivityHub.tsx';
+import WelcomeModal from './components/WelcomeModal.tsx';
 import { Lead, User, PurchaseRequest, Notification, PlatformAnalytics, OAuthConfig, Invoice, GatewayAPI } from './types.ts';
 import { apiService } from './services/apiService.ts';
 import { soundService } from './services/soundService.ts';
@@ -30,6 +32,7 @@ import { soundService } from './services/soundService.ts';
 const SESSION_KEY = 'lb_session_v3';
 const USER_DATA_KEY = 'lb_user_v3';
 const AUTH_VIEW_KEY = 'lb_auth_view_v3';
+const WELCOME_SHOWN_KEY = 'lb_welcome_v1';
 
 const MemoizedSidebar = memo(Sidebar);
 const MemoizedHeader = memo(Header);
@@ -90,6 +93,7 @@ const App: React.FC = () => {
     }
   });
 
+  const [showWelcome, setShowWelcome] = useState(false);
   const [theme] = useState<'light' | 'dark'>('dark');
   const [selectedLeadForBid, setSelectedLeadForBid] = useState<Lead | null>(null);
   const [selectedLeadForEdit, setSelectedLeadForEdit] = useState<Lead | null>(null);
@@ -154,9 +158,18 @@ const App: React.FC = () => {
     localStorage.setItem(SESSION_KEY, loggedUser.id);
     localStorage.setItem(USER_DATA_KEY, JSON.stringify(loggedUser));
     localStorage.setItem(AUTH_VIEW_KEY, 'app');
+    
     setUser(loggedUser);
     setAuthView('app');
     setActiveTab('market');
+    
+    // Check if welcome modal was shown this session
+    const shown = sessionStorage.getItem(WELCOME_SHOWN_KEY);
+    if (!shown) {
+      setShowWelcome(true);
+      sessionStorage.setItem(WELCOME_SHOWN_KEY, 'true');
+    }
+    
     showToast(`ACCESS_GRANTED: ${loggedUser.name.toUpperCase()}`);
   };
 
@@ -164,6 +177,7 @@ const App: React.FC = () => {
     localStorage.removeItem(SESSION_KEY);
     localStorage.removeItem(USER_DATA_KEY);
     localStorage.setItem(AUTH_VIEW_KEY, 'login');
+    sessionStorage.removeItem(WELCOME_SHOWN_KEY);
     setUser(null); 
     setAuthView('login'); 
   }, []);
@@ -250,14 +264,14 @@ const App: React.FC = () => {
                           <div className="px-4 py-1.5 bg-[#FACC15] text-black font-black text-[10px] tracking-[0.3em] rounded-full flex items-center gap-2">
                              <Star size={12} fill="currentColor" /> FEATURED_ASSET
                           </div>
-                          <span className="text-neutral-500 font-black text-[10px] uppercase tracking-widest italic">TIER: LEGENDARY</span>
+                          <span className="text-neutral-500 font-black text-[10px] uppercase tracking-widest">TIER: LEGENDARY</span>
                        </div>
                        
-                       <h1 className="text-5xl md:text-7xl font-futuristic font-black text-white italic uppercase tracking-tighter leading-none">
+                       <h1 className="text-5xl md:text-7xl font-futuristic font-black text-white uppercase tracking-tighter leading-none">
                           {featuredLead.title}
                        </h1>
                        
-                       <p className="text-neutral-400 font-bold text-lg leading-relaxed italic max-w-lg line-clamp-2">
+                       <p className="text-neutral-400 font-bold text-lg leading-relaxed max-w-lg line-clamp-2">
                           {featuredLead.description}
                        </p>
 
@@ -270,7 +284,7 @@ const App: React.FC = () => {
                           </button>
                           <div className="flex flex-col">
                              <span className="text-[8px] font-black text-neutral-600 uppercase tracking-widest">CURRENT_PRICE</span>
-                             <span className="text-2xl font-tactical text-white tracking-widest italic">${featuredLead.currentBid.toLocaleString()}</span>
+                             <span className="text-2xl font-tactical text-white tracking-widest">${featuredLead.currentBid.toLocaleString()}</span>
                           </div>
                        </div>
                     </div>
@@ -286,7 +300,7 @@ const App: React.FC = () => {
                <div className="space-y-10">
                   <div className="flex items-end justify-between px-4">
                      <div>
-                        <h2 className="text-2xl md:text-4xl font-futuristic font-black text-white italic uppercase tracking-tighter leading-none">
+                        <h2 className="text-2xl md:text-4xl font-futuristic font-black text-white uppercase tracking-tighter leading-none">
                            ASSET <span className="text-[#FACC15]">LIBRARY</span>
                         </h2>
                         <p className="text-[10px] text-neutral-600 font-bold uppercase tracking-[0.5em] mt-3">Live Inventory Node // {marketData.leads.length} Assets</p>
@@ -361,10 +375,10 @@ const App: React.FC = () => {
           {activeTab === 'admin' && (
             <div className="max-w-[1400px] mx-auto space-y-12 animate-in fade-in duration-700 pb-20">
                <div className="px-1">
-                  <h2 className="text-3xl md:text-5xl font-futuristic font-black text-white italic uppercase tracking-tighter leading-none">
+                  <h2 className="text-3xl md:text-5xl font-futuristic font-black text-white uppercase tracking-tighter leading-none">
                     ROOT <span className="text-[#2DD4BF]">ACCESS</span>
                   </h2>
-                  <p className="text-[7px] md:text-[10px] text-neutral-600 font-black uppercase tracking-[0.4em] mt-1.5 italic">SYSTEM_OVERRIDE_ENABLED // v4.2</p>
+                  <p className="text-[7px] md:text-[10px] text-neutral-600 font-black uppercase tracking-[0.4em] mt-1.5">SYSTEM_OVERRIDE_ENABLED // v4.2</p>
                </div>
 
                {/* USER REGISTRY SECTION */}
@@ -374,7 +388,7 @@ const App: React.FC = () => {
                        <UserIcon size={20} />
                     </div>
                     <div>
-                       <h3 className="text-xl font-black text-white uppercase tracking-tight italic">Node Registry</h3>
+                       <h3 className="text-xl font-black text-white uppercase tracking-tight">Node Registry</h3>
                        <p className="text-[9px] text-neutral-700 font-black uppercase tracking-widest mt-1">Manage global identity permissions</p>
                     </div>
                   </div>
@@ -389,7 +403,7 @@ const App: React.FC = () => {
                        <Layers size={20} />
                     </div>
                     <div>
-                       <h3 className="text-xl font-black text-white uppercase tracking-tight italic">Asset Registry</h3>
+                       <h3 className="text-xl font-black text-white uppercase tracking-tight">Asset Registry</h3>
                        <p className="text-[9px] text-neutral-700 font-black uppercase tracking-widest mt-1">Manage global marketplace inventory</p>
                     </div>
                   </div>
@@ -446,14 +460,30 @@ const App: React.FC = () => {
           {activeTab === 'payment-config' && <AdminPaymentSettings gateways={marketData.gateways} onGatewaysChange={(gw) => apiService.updateGateways(gw).then(fetchAppData)} onDeploy={() => {}} />}
           {activeTab === 'auth-config' && <AdminOAuthSettings config={marketData.authConfig} onConfigChange={(cfg) => apiService.updateAuthConfig(cfg).then(fetchAppData)} />}
           {activeTab === 'ledger' && (
-            <div className="max-w-[1400px] mx-auto space-y-8 animate-in fade-in duration-700">
+            <div className="max-w-[1400px] mx-auto space-y-12 animate-in fade-in duration-700">
                <div className="px-1">
-                  <h2 className="text-3xl md:text-5xl font-futuristic font-black text-white italic uppercase tracking-tighter leading-none">
+                  <h2 className="text-3xl md:text-5xl font-futuristic font-black text-white uppercase tracking-tighter leading-none">
                     AUDIT <span className="text-[#FACC15]">LEDGER</span>
                   </h2>
-                  <p className="text-[7px] md:text-[10px] text-neutral-600 font-bold uppercase tracking-[0.4em] mt-1.5 italic">IMMUTABLE_LOG // HUB_01</p>
+                  <p className="text-[7px] md:text-[10px] text-neutral-600 font-bold uppercase tracking-[0.4em] mt-1.5">IMMUTABLE_LOG // HUB_01</p>
                </div>
-               <InvoiceLedger invoices={userInvoices} />
+               
+               <UserActivityHub 
+                 userId={user!.id} 
+                 purchaseRequests={marketData.purchaseRequests} 
+                 notifications={marketData.notifications} 
+                 leads={marketData.leads} 
+               />
+
+               <div className="pt-8 border-t border-neutral-900">
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="w-10 h-10 bg-[#FACC15]/10 rounded-xl flex items-center justify-center text-[#FACC15]">
+                       <ShieldCheck size={20} />
+                    </div>
+                    <h3 className="text-xl font-black text-white uppercase tracking-tighter">Settlement Ledger</h3>
+                  </div>
+                  <InvoiceLedger invoices={userInvoices} />
+               </div>
             </div>
           )}
           {activeTab === 'profile' && <ProfileSettings user={user!} onUpdate={(u) => apiService.updateUser(user!.id, u).then(fetchAppData)} />}
@@ -461,7 +491,7 @@ const App: React.FC = () => {
           {activeTab === 'create' && <LeadSubmissionForm onSubmit={(l) => { setIsSubmitting(true); apiService.createLead({...l, ownerId: user!.id}).then(() => { fetchAppData(); setActiveTab('market'); showToast("PROVISIONED"); setIsSubmitting(false); }); }} />}
           {activeTab === 'wishlist' && (
             <div className="max-w-[1400px] mx-auto space-y-8 animate-in fade-in duration-600">
-               <h2 className="text-3xl md:text-5xl font-futuristic text-white italic uppercase tracking-tighter leading-none">
+               <h2 className="text-3xl md:text-5xl font-futuristic text-white uppercase tracking-tighter leading-none">
                  SAVED <span className="text-[#FACC15]">NODES</span>
                </h2>
                <div className="bg-[#000000] rounded-[2rem] border border-[#1A1A1A] p-6 shadow-2xl">
@@ -476,6 +506,10 @@ const App: React.FC = () => {
         </div>
       </div>
 
+      {showWelcome && user && (
+        <WelcomeModal userName={user.name} onClose={() => setShowWelcome(false)} />
+      )}
+
       {selectedLeadForBid && <BiddingModal lead={selectedLeadForBid} user={user!} onClose={() => setSelectedLeadForBid(null)} onSubmit={(d) => { setIsSubmitting(true); apiService.placeBid({ userId: user!.id, leadId: selectedLeadForBid.id, ...d }).then(() => { fetchAppData(); setSelectedLeadForBid(null); setIsSubmitting(false); showToast("BID_REGISTERED"); }); }} onRefill={() => { setSelectedLeadForBid(null); setActiveTab('settings'); }} />}
       {selectedLeadForEdit && (
         <AdminLeadActionsModal 
@@ -486,7 +520,6 @@ const App: React.FC = () => {
             apiService.updateLead(u.id!, u).then(() => {
               fetchAppData();
               setSelectedLeadForEdit(null);
-              // Do not force navigate back to market if we are in admin tab
               showToast("NODE_UPDATED");
             });
           }} 

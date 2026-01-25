@@ -1,6 +1,5 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-/* Added missing 'Zap' import from lucide-react */
 import { Bell, Wallet, UserCircle, X, Info, CheckCircle, AlertTriangle, Sun, Moon, LogOut, User as UserIcon, ChevronDown, Activity, Settings, Shield, Zap } from 'lucide-react';
 import { User, Notification } from '../types.ts';
 
@@ -75,7 +74,7 @@ const Header: React.FC<HeaderProps> = ({
           className="flex items-center gap-2 bg-[#1A1A1A] rounded-full px-3 md:px-5 py-1.5 md:py-2 border border-[#FACC15]/10 hover:border-[#FACC15]/40 transition-all active:scale-95 group"
         >
           <Wallet size={14} className="text-[#FACC15] group-hover:scale-110 transition-transform" />
-          <span className="font-black text-xs md:text-sm text-white italic tracking-tighter">${user.balance.toLocaleString()}</span>
+          <span className="font-black text-xs md:text-sm text-white tracking-tighter">${user.balance.toLocaleString()}</span>
         </button>
         
         <div className="relative" ref={notificationMenuRef}>
@@ -107,7 +106,7 @@ const Header: React.FC<HeaderProps> = ({
                 {notifications.length === 0 ? (
                   <div className="p-16 text-center space-y-4">
                     <Shield size={32} className="mx-auto text-neutral-900" />
-                    <p className="text-neutral-700 text-xs font-black uppercase tracking-widest italic">Hub_Silent</p>
+                    <p className="text-neutral-700 text-xs font-black uppercase tracking-widest">Hub_Silent</p>
                   </div>
                 ) : (
                   notifications.map((n) => (
@@ -142,7 +141,7 @@ const Header: React.FC<HeaderProps> = ({
             className={`flex items-center gap-3 border-l border-[#1A1A1A] pl-4 md:pl-6 group transition-all outline-none ${showProfileMenu ? 'opacity-100' : 'opacity-70 hover:opacity-100'}`}
           >
             <div className="text-right hidden sm:block">
-              <p className="text-sm font-black text-white leading-none group-hover:text-[#FACC15] transition-colors italic tracking-tight">{user.name}</p>
+              <p className="text-sm font-black text-white leading-none group-hover:text-[#FACC15] transition-colors tracking-tight">{user.name}</p>
               <p className="text-[9px] text-neutral-600 uppercase font-black tracking-[0.2em] mt-1.5">{user.role}</p>
             </div>
             <div className={`w-10 h-10 rounded-2xl border-2 transition-all overflow-hidden bg-[#1A1A1A] flex items-center justify-center relative shadow-xl ${showProfileMenu ? 'border-[#FACC15] scale-110' : 'border-[#1A1A1A] group-hover:border-white/20'}`}>
@@ -159,7 +158,7 @@ const Header: React.FC<HeaderProps> = ({
             <div className="absolute right-0 mt-4 w-64 bg-black border border-[#1A1A1A] rounded-[1.5rem] shadow-2xl overflow-hidden z-50 animate-in zoom-in-95 slide-in-from-top-6 duration-300 backdrop-blur-2xl origin-top-right py-2">
               <div className="px-6 py-4 border-b border-[#1A1A1A] mb-2">
                 <p className="text-[9px] font-black text-neutral-600 uppercase tracking-[0.3em] mb-1">Identity_Synced</p>
-                <p className="text-xs font-black text-white truncate italic">{user.email}</p>
+                <p className="text-xs font-black text-white truncate">{user.email}</p>
               </div>
               
               <div className="px-2 space-y-1">

@@ -196,14 +196,14 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
       {/* 1. TOP SECTION: BRANDING & NODE ID */}
       <div className="w-full max-w-[1400px] flex flex-col md:flex-row justify-between items-start md:items-center mb-16">
         <div>
-          <h1 className="text-6xl md:text-8xl font-logo italic text-white flex gap-4 items-baseline">
+          <h1 className="text-6xl md:text-8xl font-logo text-white flex gap-4 items-baseline">
             ACCESS <span className="text-neutral-700">NODE</span>
           </h1>
           <div className="flex flex-wrap items-center gap-4 mt-4">
             <span className="bg-[#2DD4BF]/10 border border-[#2DD4BF]/20 text-[#2DD4BF] text-[10px] font-black uppercase tracking-[0.4em] px-4 py-1.5 rounded-full">
               AUTHENTICATION_TERMINAL_V4
             </span>
-            <span className="text-neutral-600 text-[10px] font-black uppercase tracking-[0.5em] italic">
+            <span className="text-neutral-600 text-[10px] font-black uppercase tracking-[0.5em]">
               STABLE_CONNECTION // 12MS
             </span>
           </div>
@@ -225,19 +225,19 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
         <div className="flex items-center gap-12 overflow-x-auto scrollbar-hide">
           <div className="shrink-0">
             <span className="text-neutral-700 font-black uppercase text-[8px] tracking-[0.3em] block mb-1">ACTIVE SESSIONS</span>
-            <div className="text-2xl font-black text-white italic tracking-tighter flex items-center gap-2">
+            <div className="text-2xl font-black text-white tracking-tighter flex items-center gap-2">
               <span className="text-[#2DD4BF]/40 text-xs">#</span> 14,204
             </div>
           </div>
           <div className="shrink-0">
             <span className="text-neutral-700 font-black uppercase text-[8px] tracking-[0.3em] block mb-1">INTEGRITY</span>
-            <div className="text-2xl font-black text-[#2DD4BF] italic tracking-tighter flex items-center gap-2">
+            <div className="text-2xl font-black text-[#2DD4BF] tracking-tighter flex items-center gap-2">
               <ShieldCheck size={14} className="opacity-50" /> 99.9%
             </div>
           </div>
           <div className="shrink-0">
             <span className="text-neutral-700 font-black uppercase text-[8px] tracking-[0.3em] block mb-1">AUTH NODES</span>
-            <div className="text-2xl font-black text-white italic tracking-tighter">
+            <div className="text-2xl font-black text-white tracking-tighter">
               8 UNITS
             </div>
           </div>
@@ -290,7 +290,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
               <div className="space-y-6">
                 {/* Identity Input */}
                 <div className="space-y-3">
-                  <label className="text-[10px] font-black text-neutral-600 uppercase tracking-[0.3em] px-4 italic flex items-center gap-3">
+                  <label className="text-[10px] font-black text-neutral-600 uppercase tracking-[0.3em] px-4 flex items-center gap-3">
                     <Zap size={12} className="text-[#2DD4BF]" /> IDENTITY_SIGNATURE
                   </label>
                   <div className="relative group">
@@ -309,7 +309,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
 
                 {/* Token Input */}
                 <div className="space-y-3">
-                  <label className="text-[10px] font-black text-neutral-600 uppercase tracking-[0.3em] px-4 italic flex items-center gap-3">
+                  <label className="text-[10px] font-black text-neutral-600 uppercase tracking-[0.3em] px-4 flex items-center gap-3">
                     <Lock size={12} className="text-[#2DD4BF]" /> AUTH_TOKEN
                   </label>
                   <div className="relative group">
@@ -338,7 +338,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
                 <button 
                   type="submit"
                   disabled={isSyncing}
-                  className="w-full bg-black text-white py-7 rounded-[2rem] font-black text-3xl flex items-center justify-center gap-6 hover:bg-[#111] transition-all active:scale-95 shadow-[0_0_30px_rgba(0,0,0,0.5)] border border-neutral-800 group/btn font-futuristic italic tracking-widest"
+                  className="w-full bg-black text-white py-7 rounded-[2rem] font-black text-3xl flex items-center justify-center gap-6 hover:bg-[#111] transition-all active:scale-95 shadow-[0_0_30px_rgba(0,0,0,0.5)] border border-neutral-800 group/btn font-futuristic tracking-widest"
                 >
                   {isSyncing ? <Loader2 className="animate-spin" size={28} /> : (
                     <>
@@ -391,7 +391,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
                   </div>
                   <div className="text-left">
                     <span className="text-[8px] font-black text-neutral-700 uppercase tracking-widest block mb-1">AUTH_PROVIDER_01</span>
-                    <span className="text-lg font-black text-neutral-400 group-hover/item:text-white italic uppercase tracking-tighter">GOOGLE_HANDSHAKE</span>
+                    <span className="text-lg font-black text-neutral-400 group-hover/item:text-white uppercase tracking-tighter">GOOGLE_HANDSHAKE</span>
                   </div>
                 </div>
                 <ChevronRight size={20} className="text-neutral-800 group-hover/item:text-[#2DD4BF]" />
@@ -409,7 +409,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
                   </div>
                   <div className="text-left">
                     <span className="text-[8px] font-black text-neutral-700 uppercase tracking-widest block mb-1">AUTH_PROVIDER_02</span>
-                    <span className="text-lg font-black text-neutral-400 group-hover/item:text-white italic uppercase tracking-tighter">META_IDENTITY</span>
+                    <span className="text-lg font-black text-neutral-400 group-hover/item:text-white uppercase tracking-tighter">META_IDENTITY</span>
                   </div>
                 </div>
                 <ChevronRight size={20} className="text-neutral-800 group-hover/item:text-[#2DD4BF]" />
@@ -427,7 +427,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
             </div>
             <div className="space-y-2">
               <h4 className="text-[10px] font-black text-white uppercase tracking-widest">LEDGER_PROTOCOL_ACTIVE</h4>
-              <p className="text-[9px] text-neutral-600 leading-relaxed font-bold uppercase tracking-widest italic">
+              <p className="text-[9px] text-neutral-600 leading-relaxed font-bold uppercase tracking-widest">
                 Identity authentication is cryptographically verified against the marketplace root ledger. Unauthorized access attempts are automatically logged and routed to system auditing nodes for immediate IP isolation.
               </p>
             </div>
@@ -436,7 +436,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
       </div>
 
       {/* FOOTER METADATA */}
-      <div className="mt-16 w-full max-w-[1400px] flex justify-between items-center px-4 text-[8px] font-black text-neutral-700 uppercase tracking-[0.4em] italic">
+      <div className="mt-16 w-full max-w-[1400px] flex justify-between items-center px-4 text-[8px] font-black text-neutral-700 uppercase tracking-[0.4em]">
         <div className="flex items-center gap-3">
           <Activity size={10} className="text-[#2DD4BF] animate-pulse" />
           <span>LINK_STABLE_V4</span>

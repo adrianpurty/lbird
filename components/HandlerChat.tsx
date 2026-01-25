@@ -61,12 +61,12 @@ const HandlerChat: React.FC<HandlerChatProps> = ({ user }) => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b-2 border-[#1A1A1A] pb-8">
         <div className="relative">
           <div className="absolute -left-4 md:-left-12 top-1/2 -translate-y-1/2 w-4 h-12 md:h-24 bg-[#FACC15] rounded-full blur-xl opacity-10" />
-          <h2 className="text-3xl md:text-5xl font-futuristic font-black text-white italic uppercase tracking-tighter leading-none">
+          <h2 className="text-3xl md:text-5xl font-futuristic font-black text-white uppercase tracking-tighter leading-none">
             HANDLER <span className="text-[#FACC15]">NODE</span>
           </h2>
           <div className="flex flex-wrap items-center gap-3 md:gap-6 mt-4">
             <div className="px-3 py-1.5 bg-[#FACC15]/10 border border-[#FACC15]/30 rounded-full text-[8px] md:text-[10px] font-black text-[#FACC15] uppercase tracking-[0.4em]">PROTO_ASSIST_v2</div>
-            <span className="text-[10px] text-neutral-600 font-black uppercase tracking-[0.4em] italic">OPERATOR: ZEPHYR_CORE</span>
+            <span className="text-[10px] text-neutral-600 font-black uppercase tracking-[0.4em]">OPERATOR: ZEPHYR_CORE</span>
           </div>
         </div>
         
@@ -170,8 +170,8 @@ const HandlerChat: React.FC<HandlerChatProps> = ({ user }) => {
                    <Cpu size={10} className="text-white" />
                    <span className="text-[8px] font-black text-neutral-700 uppercase tracking-widest">Logic: Gemini_v3_Turbo</span>
                 </div>
-             </div>
-             <p className="text-[8px] text-neutral-800 font-black uppercase tracking-widest italic">Node_Sync: Stable // 0.04ms</p>
+              </div>
+             <p className="text-[8px] text-neutral-800 font-black uppercase tracking-widest">Node_Sync: Stable // 0.04ms</p>
           </div>
         </div>
       </div>
