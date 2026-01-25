@@ -196,7 +196,7 @@ const Signup: React.FC<SignupProps> = ({ onSignup, onSwitchToLogin, authConfig }
             <label className="text-[10px] font-black text-neutral-600 uppercase tracking-widest px-1">Full Name</label>
             <input 
               required
-              className="w-full bg-black border border-neutral-800 rounded-xl px-4 py-3 text-white outline-none focus:border-[#facc15] transition-all font-bold"
+              className="w-full bg-black border border-neutral-800 rounded-xl px-4 py-3 text-neutral-400 outline-none focus:border-[#facc15] transition-all font-bold"
               placeholder="John Doe"
               value={formData.name}
               onChange={e => setFormData({...formData, name: e.target.value})}
@@ -209,7 +209,7 @@ const Signup: React.FC<SignupProps> = ({ onSignup, onSwitchToLogin, authConfig }
               <input 
                 required
                 type="email"
-                className="w-full bg-black border border-neutral-800 rounded-xl px-4 py-3 text-white outline-none focus:border-[#facc15] transition-all font-bold"
+                className="w-full bg-black border border-neutral-800 rounded-xl px-4 py-3 text-neutral-400 outline-none focus:border-[#facc15] transition-all font-bold"
                 placeholder="john@example.com"
                 value={formData.email}
                 onChange={e => setFormData({...formData, email: e.target.value})}
@@ -222,7 +222,7 @@ const Signup: React.FC<SignupProps> = ({ onSignup, onSwitchToLogin, authConfig }
                 <input 
                   required
                   type="tel"
-                  className="w-full bg-black border border-neutral-800 rounded-xl pl-9 pr-4 py-3 text-white outline-none focus:border-[#facc15] transition-all font-bold"
+                  className="w-full bg-black border border-neutral-800 rounded-xl pl-9 pr-4 py-3 text-neutral-400 outline-none focus:border-[#facc15] transition-all font-bold"
                   placeholder="+1 234 567"
                   value={formData.phone}
                   onChange={e => setFormData({...formData, phone: e.target.value})}
@@ -236,7 +236,7 @@ const Signup: React.FC<SignupProps> = ({ onSignup, onSwitchToLogin, authConfig }
               <label className="text-[10px] font-black text-neutral-600 uppercase tracking-widest px-1">Username</label>
               <input 
                 required
-                className="w-full bg-black border border-neutral-800 rounded-xl px-4 py-3 text-white outline-none focus:border-[#facc15] transition-all font-bold"
+                className="w-full bg-black border border-neutral-800 rounded-xl px-4 py-3 text-neutral-400 outline-none focus:border-[#facc15] transition-all font-bold"
                 placeholder="johndoe"
                 value={formData.username}
                 onChange={e => setFormData({...formData, username: e.target.value})}
@@ -247,7 +247,7 @@ const Signup: React.FC<SignupProps> = ({ onSignup, onSwitchToLogin, authConfig }
               <input 
                 required
                 type="password"
-                className="w-full bg-black border border-neutral-800 rounded-xl px-4 py-3 text-white outline-none focus:border-[#facc15] transition-all font-bold"
+                className="w-full bg-black border border-neutral-800 rounded-xl px-4 py-3 text-neutral-400 outline-none focus:border-[#facc15] transition-all font-bold"
                 placeholder="••••"
                 value={formData.password}
                 onChange={e => setFormData({...formData, password: e.target.value})}

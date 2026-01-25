@@ -23,7 +23,7 @@ export interface BiddingFormData {
 const HelpTip = ({ text }: { text: string }) => (
   <div className="group relative inline-block ml-1 align-middle">
     <Info size={12} className="text-neutral-500 hover:text-[#facc15] cursor-help transition-colors" />
-    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-3 bg-black border border-white/10 rounded-xl text-[10px] text-white font-medium leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[110] shadow-2xl backdrop-blur-md">
+    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-3 bg-black border border-white/10 rounded-xl text-[10px] text-neutral-400 font-medium leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[110] shadow-2xl backdrop-blur-md">
       {text}
     </div>
   </div>
@@ -81,7 +81,7 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, onClose, onSubm
             <div className="flex-1 bg-[#facc15]/5 p-4 sm:p-5 rounded-2xl border border-[#facc15]/20 flex justify-between items-center">
               <div>
                 <span className="text-[#facc15] text-[10px] font-black uppercase tracking-widest block leading-none mb-1">Your Credits</span>
-                <span className="text-white text-lg font-black italic">${user.balance.toLocaleString()}</span>
+                <span className="text-neutral-300 text-lg font-black italic">${user.balance.toLocaleString()}</span>
               </div>
               <Wallet size={18} className="text-[#facc15] opacity-50" />
             </div>
@@ -96,7 +96,7 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, onClose, onSubm
                 <input 
                   required
                   type="url"
-                  className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-[#facc15] transition-all"
+                  className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-neutral-400 text-sm outline-none focus:border-[#facc15] transition-all"
                   placeholder="https://your-hq.com"
                   value={formData.buyerBusinessUrl}
                   onChange={e => setFormData({...formData, buyerBusinessUrl: e.target.value})}
@@ -109,7 +109,7 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, onClose, onSubm
                 <input 
                   required
                   type="text"
-                  className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-[#facc15] transition-all"
+                  className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-neutral-400 text-sm outline-none focus:border-[#facc15] transition-all"
                   placeholder="e.g. 1-800-LEADS"
                   value={formData.buyerTollFree}
                   onChange={e => setFormData({...formData, buyerTollFree: e.target.value})}
@@ -124,7 +124,7 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, onClose, onSubm
               <input 
                 required
                 type="url"
-                className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-[#facc15] transition-all"
+                className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-neutral-400 text-sm outline-none focus:border-[#facc15] transition-all"
                 placeholder="https://crm.yoursite.com/ingest"
                 value={formData.buyerTargetLeadUrl}
                 onChange={e => setFormData({...formData, buyerTargetLeadUrl: e.target.value})}
@@ -139,7 +139,7 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, onClose, onSubm
                 <HelpTip text="Target number of leads you wish to acquire per 24h cycle. Adjusting this impacts your daily settlement total." />
               </label>
               <div className="text-right">
-                <span className="text-xl sm:text-2xl font-black text-white italic">{formData.leadsPerDay}</span>
+                <span className="text-xl sm:text-2xl font-black text-neutral-300 italic">{formData.leadsPerDay}</span>
                 <span className="text-[9px] font-black text-neutral-600 uppercase tracking-widest ml-1 sm:ml-2 italic">Units/Day</span>
               </div>
             </div>
@@ -168,7 +168,7 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, onClose, onSubm
                 type="number"
                 min={minBid}
                 step="0.01"
-                className={`w-full bg-black border ${isBidTooLow ? 'border-red-500/50' : 'border-[#facc15]/30'} rounded-2xl px-6 py-4 sm:py-5 text-2xl sm:text-3xl font-black outline-none focus:border-[#facc15] transition-all`}
+                className={`w-full bg-black border ${isBidTooLow ? 'border-red-500/50' : 'border-[#facc15]/30'} rounded-2xl px-6 py-4 sm:py-5 text-2xl sm:text-3xl font-black text-neutral-400 outline-none focus:border-[#facc15] transition-all`}
                 value={formData.bidAmount}
                 onChange={e => setFormData({...formData, bidAmount: parseFloat(e.target.value) || 0})}
               />
@@ -182,7 +182,7 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, onClose, onSubm
                 </div>
                 <div>
                   <span className="text-neutral-500 text-[9px] font-black uppercase tracking-[0.3em] block leading-none mb-2">Aggregate Daily Settlement</span>
-                  <span className={`${hasInsufficientFunds ? 'text-red-500' : 'text-white'} text-2xl sm:text-3xl font-black tracking-tighter italic`}>
+                  <span className={`${hasInsufficientFunds ? 'text-red-500' : 'text-neutral-300'} text-2xl sm:text-3xl font-black tracking-tighter italic`}>
                     ${totalDailyCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>

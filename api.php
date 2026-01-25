@@ -62,6 +62,32 @@ switch ($action) {
         ]);
         break;
 
+    case 'social_sync':
+        $email = $input['email'];
+        $user_stmt = $db->prepare("SELECT * FROM users WHERE email = ?");
+        $user_stmt->execute([$email]);
+        $user = $user_stmt->fetch();
+
+        if ($user) {
+            echo json_encode(['status' => 'success', 'user' => $user]);
+        } else {
+            $id = 'u_' . bin2hex(random_bytes(4));
+            $username = explode('@', $email)[0] . rand(100, 999);
+            $stmt = $db->prepare("INSERT INTO users (id, name, email, username, profileImage, balance, role, stripeConnected, wishlist) VALUES (?,?,?,?,?,?,?,?,?)");
+            $stmt->execute([$id, $input['name'], $email, $username, $input['profileImage'], 1000.0, 'user', 0, '[]']);
+            
+            $user_stmt->execute([$email]);
+            $new_user = $user_stmt->fetch();
+            echo json_encode(['status' => 'success', 'user' => $new_user]);
+        }
+        break;
+
+    case 'update_auth_config':
+        $stmt = $db->prepare("UPDATE config SET value = ? WHERE key = 'auth_config'");
+        $stmt->execute([json_encode($input)]);
+        echo json_encode(['status' => 'success']);
+        break;
+
     case 'place_bid':
         $id = 'bid_' . bin2hex(random_bytes(4));
         $stmt = $db->prepare("INSERT INTO bids (id, leadId, userId, bidAmount, leadsPerDay, totalDailyCost, timestamp, status, buyerBusinessUrl, buyerTargetLeadUrl) VALUES (?,?,?,?,?,?,?,?,?,?)");
@@ -113,6 +139,20 @@ switch ($action) {
 
     case 'deposit':
         $db->prepare("UPDATE users SET balance = balance + ? WHERE id = ?")->execute([$input['amount'], $input['userId']]);
+        echo json_encode(['status' => 'success']);
+        break;
+
+    case 'clear_notifications':
+        $db->exec("DELETE FROM notifications");
+        echo json_encode(['status' => 'success']);
+        break;
+
+    case 'update_gateways':
+        $db->prepare("DELETE FROM api_nodes WHERE type='payment'")->execute();
+        foreach($input['gateways'] as $gw) {
+            $stmt = $db->prepare("INSERT INTO api_nodes (id, type, provider, name, publicKey, secretKey, fee, status) VALUES (?,?,?,?,?,?,?,?)");
+            $stmt->execute([$gw['id'], 'payment', $gw['provider'], $gw['name'], $gw['publicKey'], $gw['secretKey'], $gw['fee'], $gw['status']]);
+        }
         echo json_encode(['status' => 'success']);
         break;
 

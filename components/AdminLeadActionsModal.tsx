@@ -82,7 +82,7 @@ const AdminLeadActionsModal: React.FC<AdminLeadActionsModalProps> = ({ lead, onC
               <textarea 
                 rows={2}
                 placeholder="Enter natural language command (e.g. 'Make this sound more professional and double the quality score if verified')"
-                className="w-full bg-black/40 border border-[#facc15]/20 rounded-xl px-4 py-3 text-xs text-neutral-300 outline-none focus:border-[#facc15]/50 transition-all resize-none italic"
+                className="w-full bg-black/40 border border-[#facc15]/20 rounded-xl px-4 py-3 text-xs text-neutral-400 outline-none focus:border-[#facc15]/50 transition-all resize-none italic"
                 value={aiPrompt}
                 onChange={e => setAiPrompt(e.target.value)}
               />
@@ -108,7 +108,7 @@ const AdminLeadActionsModal: React.FC<AdminLeadActionsModalProps> = ({ lead, onC
                 <label className="text-[10px] font-black text-neutral-600 uppercase tracking-widest px-1">Campaign Node Name</label>
                 <input 
                   required
-                  className="w-full bg-black border border-neutral-800 rounded-2xl px-6 py-4 text-white font-bold outline-none focus:border-[#facc15] transition-all"
+                  className="w-full bg-black border border-neutral-800 rounded-2xl px-6 py-4 text-neutral-400 font-bold outline-none focus:border-[#facc15] transition-all"
                   value={formData.title}
                   onChange={e => setFormData({...formData, title: e.target.value})}
                 />
@@ -117,7 +117,7 @@ const AdminLeadActionsModal: React.FC<AdminLeadActionsModalProps> = ({ lead, onC
                 <label className="text-[10px] font-black text-neutral-600 uppercase tracking-widest px-1">Niche Protocol</label>
                 <input 
                   required
-                  className="w-full bg-black border border-neutral-800 rounded-2xl px-6 py-4 text-white font-bold outline-none focus:border-[#facc15] transition-all"
+                  className="w-full bg-black border border-neutral-800 rounded-2xl px-6 py-4 text-neutral-400 font-bold outline-none focus:border-[#facc15] transition-all"
                   value={formData.category}
                   onChange={e => setFormData({...formData, category: e.target.value})}
                 />
@@ -129,7 +129,7 @@ const AdminLeadActionsModal: React.FC<AdminLeadActionsModalProps> = ({ lead, onC
               <textarea 
                 required
                 rows={3}
-                className="w-full bg-black border border-neutral-800 rounded-2xl px-6 py-4 text-white outline-none focus:border-[#facc15] transition-all resize-none italic text-sm leading-relaxed"
+                className="w-full bg-black border border-neutral-800 rounded-2xl px-6 py-4 text-neutral-400 outline-none focus:border-[#facc15] transition-all resize-none italic text-sm leading-relaxed"
                 value={formData.description}
                 onChange={e => setFormData({...formData, description: e.target.value})}
               />
@@ -143,7 +143,7 @@ const AdminLeadActionsModal: React.FC<AdminLeadActionsModalProps> = ({ lead, onC
                 <input 
                   required
                   type="number"
-                  className="w-full bg-black border border-neutral-800 rounded-2xl px-6 py-4 text-[#facc15] font-black outline-none focus:border-[#facc15]"
+                  className="w-full bg-black border border-neutral-800 rounded-2xl px-6 py-4 text-neutral-400 font-black outline-none focus:border-[#facc15]"
                   value={formData.basePrice}
                   onChange={e => setFormData({...formData, basePrice: parseFloat(e.target.value)})}
                 />
@@ -165,7 +165,7 @@ const AdminLeadActionsModal: React.FC<AdminLeadActionsModalProps> = ({ lead, onC
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-neutral-600 uppercase tracking-widest px-1">Node Status</label>
                 <select 
-                  className="w-full bg-black border border-neutral-800 rounded-2xl px-6 py-4 text-white font-black outline-none focus:border-[#facc15] appearance-none cursor-pointer"
+                  className="w-full bg-black border border-neutral-800 rounded-2xl px-6 py-4 text-neutral-400 font-black outline-none focus:border-[#facc15] appearance-none cursor-pointer"
                   value={formData.status}
                   onChange={e => setFormData({...formData, status: e.target.value as any})}
                 >

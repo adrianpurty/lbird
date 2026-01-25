@@ -125,7 +125,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onUpdate }) => 
                 <div className="relative">
                   <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700" size={16} />
                   <input 
-                    className="w-full bg-black/5 dark:bg-black border border-[var(--border-main)] rounded-xl pl-12 pr-4 py-3 text-[var(--text-main)] focus:border-[var(--text-accent)] outline-none transition-all"
+                    className="w-full bg-black/5 dark:bg-black border border-[var(--border-main)] rounded-xl pl-12 pr-4 py-3 text-neutral-400 focus:border-[var(--text-accent)] outline-none transition-all"
                     value={formData.name}
                     onChange={e => setFormData({...formData, name: e.target.value})}
                   />
@@ -137,7 +137,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onUpdate }) => 
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700" size={16} />
                   <input 
                     type="email"
-                    className="w-full bg-black/5 dark:bg-black border border-[var(--border-main)] rounded-xl pl-12 pr-4 py-3 text-[var(--text-main)] focus:border-[var(--text-accent)] outline-none transition-all"
+                    className="w-full bg-black/5 dark:bg-black border border-[var(--border-main)] rounded-xl pl-12 pr-4 py-3 text-neutral-400 focus:border-[var(--text-accent)] outline-none transition-all"
                     value={formData.email}
                     onChange={e => setFormData({...formData, email: e.target.value})}
                   />
@@ -149,7 +149,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onUpdate }) => 
                   <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700" size={16} />
                   <input 
                     type="tel"
-                    className="w-full bg-black/5 dark:bg-black border border-[var(--border-main)] rounded-xl pl-12 pr-4 py-3 text-[var(--text-main)] focus:border-[var(--text-accent)] outline-none transition-all"
+                    className="w-full bg-black/5 dark:bg-black border border-[var(--border-main)] rounded-xl pl-12 pr-4 py-3 text-neutral-400 focus:border-[var(--text-accent)] outline-none transition-all"
                     placeholder="+1 555-000-0000"
                     value={formData.phone}
                     onChange={e => setFormData({...formData, phone: e.target.value})}
@@ -164,7 +164,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onUpdate }) => 
                 <FileText className="absolute left-4 top-4 text-neutral-700" size={16} />
                 <textarea 
                   rows={4}
-                  className="w-full bg-black/5 dark:bg-black border border-[var(--border-main)] rounded-xl pl-12 pr-4 py-3 text-[var(--text-main)] focus:border-[var(--text-accent)] outline-none transition-all resize-none"
+                  className="w-full bg-black/5 dark:bg-black border border-[var(--border-main)] rounded-xl pl-12 pr-4 py-3 text-neutral-400 focus:border-[var(--text-accent)] outline-none transition-all resize-none"
                   placeholder="Describe your market footprint..."
                   value={formData.bio}
                   onChange={e => setFormData({...formData, bio: e.target.value})}
@@ -186,7 +186,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onUpdate }) => 
                   <input 
                     type="url"
                     placeholder="https://company.com"
-                    className="w-full bg-black/5 dark:bg-black border border-[var(--border-main)] rounded-xl pl-12 pr-4 py-3 text-[var(--text-main)] focus:border-[var(--text-accent)] outline-none transition-all"
+                    className="w-full bg-black/5 dark:bg-black border border-[var(--border-main)] rounded-xl pl-12 pr-4 py-3 text-neutral-400 focus:border-[var(--text-accent)] outline-none transition-all"
                     value={formData.companyWebsite}
                     onChange={e => setFormData({...formData, companyWebsite: e.target.value})}
                   />
@@ -197,7 +197,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onUpdate }) => 
                 <div className="relative">
                   <Target className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700" size={16} />
                   <select 
-                    className="w-full bg-black/5 dark:bg-black border border-[var(--border-main)] rounded-xl pl-12 pr-4 py-3.5 text-[var(--text-main)] focus:border-[var(--text-accent)] outline-none transition-all appearance-none"
+                    className="w-full bg-black/5 dark:bg-black border border-[var(--border-main)] rounded-xl pl-12 pr-4 py-3.5 text-neutral-400 focus:border-[var(--text-accent)] outline-none transition-all appearance-none"
                     value={formData.industryFocus}
                     onChange={e => setFormData({...formData, industryFocus: e.target.value})}
                   >
@@ -218,7 +218,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onUpdate }) => 
                   <input 
                     type="url"
                     placeholder="https://your-hq.com"
-                    className="w-full bg-black/5 dark:bg-black border border-[var(--border-main)] rounded-xl pl-12 pr-4 py-3 text-[var(--text-main)] focus:border-[var(--text-accent)] outline-none transition-all"
+                    className="w-full bg-black/5 dark:bg-black border border-[var(--border-main)] rounded-xl pl-12 pr-4 py-3 text-neutral-400 focus:border-[var(--text-accent)] outline-none transition-all"
                     value={formData.defaultBusinessUrl}
                     onChange={e => setFormData({...formData, defaultBusinessUrl: e.target.value})}
                   />
@@ -231,7 +231,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onUpdate }) => 
                   <input 
                     type="url"
                     placeholder="https://crm.yoursite.com/ingest"
-                    className="w-full bg-black/5 dark:bg-black border border-[var(--border-main)] rounded-xl pl-12 pr-4 py-3 text-[var(--text-main)] focus:border-[var(--text-accent)] outline-none transition-all"
+                    className="w-full bg-black/5 dark:bg-black border border-[var(--border-main)] rounded-xl pl-12 pr-4 py-3 text-neutral-400 focus:border-[var(--text-accent)] outline-none transition-all"
                     value={formData.defaultTargetUrl}
                     onChange={e => setFormData({...formData, defaultTargetUrl: e.target.value})}
                   />
@@ -271,7 +271,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onUpdate }) => 
                 <input 
                   type="password"
                   autoComplete="new-password"
-                  className="w-full bg-black/5 dark:bg-black border border-[var(--border-main)] rounded-xl px-4 py-3 text-[var(--text-main)] focus:border-red-500/50 outline-none transition-all"
+                  className="w-full bg-black/5 dark:bg-black border border-[var(--border-main)] rounded-xl px-4 py-3 text-neutral-400 focus:border-red-500/50 outline-none transition-all"
                   placeholder="••••••••"
                   value={formData.newPassword}
                   onChange={e => setFormData({...formData, newPassword: e.target.value})}
@@ -281,7 +281,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onUpdate }) => 
                 <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1">Verify Token</label>
                 <input 
                   type="password"
-                  className="w-full bg-black/5 dark:bg-black border border-[var(--border-main)] rounded-xl px-4 py-3 text-[var(--text-main)] focus:border-red-500/50 outline-none transition-all"
+                  className="w-full bg-black/5 dark:bg-black border border-[var(--border-main)] rounded-xl px-4 py-3 text-neutral-400 focus:border-red-500/50 outline-none transition-all"
                   placeholder="••••••••"
                   value={formData.confirmPassword}
                   onChange={e => setFormData({...formData, confirmPassword: e.target.value})}

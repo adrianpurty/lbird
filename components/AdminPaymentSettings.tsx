@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   ShieldCheck, 
@@ -171,7 +170,7 @@ const AdminPaymentSettings: React.FC<AdminPaymentSettingsProps> = ({ gateways, o
                     </div>
                     <div>
                       <input 
-                        className="bg-transparent border-none text-lg font-black text-neutral-300 uppercase tracking-tight italic focus:ring-0 w-full p-0"
+                        className="bg-transparent border-none text-lg font-black text-neutral-400 uppercase tracking-tight italic focus:ring-0 w-full p-0"
                         value={api.name}
                         onChange={(e) => handleUpdateGateway(api.id, 'name', e.target.value)}
                       />
@@ -213,7 +212,7 @@ const AdminPaymentSettings: React.FC<AdminPaymentSettingsProps> = ({ gateways, o
                   <label className="text-[9px] font-black text-neutral-700 uppercase tracking-widest px-1">{labels.public}</label>
                   <input 
                     type={showKeys ? 'text' : 'password'}
-                    className="w-full bg-black/20 border border-neutral-800/40 rounded-xl px-5 py-3 text-neutral-500 font-mono text-xs focus:border-[#facc15]/40 outline-none"
+                    className="w-full bg-black/20 border border-neutral-800/40 rounded-xl px-5 py-3 text-neutral-400 font-mono text-xs focus:border-[#facc15]/40 outline-none"
                     value={api.publicKey}
                     onChange={(e) => handleUpdateGateway(api.id, 'publicKey', e.target.value)}
                   />
@@ -222,7 +221,7 @@ const AdminPaymentSettings: React.FC<AdminPaymentSettingsProps> = ({ gateways, o
                   <label className="text-[9px] font-black text-neutral-700 uppercase tracking-widest px-1">{labels.secret}</label>
                   <input 
                     type={showKeys ? 'text' : 'password'}
-                    className="w-full bg-black/20 border border-neutral-800/40 rounded-xl px-5 py-3 text-neutral-500 font-mono text-xs focus:border-[#facc15]/40 outline-none"
+                    className="w-full bg-black/20 border border-neutral-800/40 rounded-xl px-5 py-3 text-neutral-400 font-mono text-xs focus:border-[#facc15]/40 outline-none"
                     value={api.secretKey}
                     onChange={(e) => handleUpdateGateway(api.id, 'secretKey', e.target.value)}
                   />
@@ -246,7 +245,7 @@ const AdminPaymentSettings: React.FC<AdminPaymentSettingsProps> = ({ gateways, o
                  <label className="text-[9px] font-black text-neutral-700 uppercase tracking-widest px-1">Friendly Label</label>
                  <input 
                   required
-                  className="w-full bg-black/40 border border-neutral-800/40 rounded-2xl px-6 py-4 text-neutral-300 font-bold outline-none focus:border-[#facc15]/40"
+                  className="w-full bg-black/40 border border-neutral-800/40 rounded-2xl px-6 py-4 text-neutral-400 font-bold outline-none focus:border-[#facc15]/40"
                   placeholder="e.g. Primary Stripe Checkout"
                   value={newGateway.name}
                   onChange={e => setNewGateway({...newGateway, name: e.target.value})}
@@ -256,7 +255,7 @@ const AdminPaymentSettings: React.FC<AdminPaymentSettingsProps> = ({ gateways, o
                 <div className="space-y-2">
                   <label className="text-[9px] font-black text-neutral-700 uppercase tracking-widest px-1">Infrastructure Provider</label>
                   <select 
-                    className="w-full bg-black/40 border border-neutral-800/40 rounded-2xl px-6 py-4 text-neutral-300 font-bold outline-none focus:border-[#facc15]/40 appearance-none"
+                    className="w-full bg-black/40 border border-neutral-800/40 rounded-2xl px-6 py-4 text-neutral-400 font-bold outline-none focus:border-[#facc15]/40 appearance-none"
                     value={newGateway.provider}
                     onChange={e => setNewGateway({...newGateway, provider: e.target.value as any})}
                   >
@@ -273,7 +272,7 @@ const AdminPaymentSettings: React.FC<AdminPaymentSettingsProps> = ({ gateways, o
                     required
                     type="number"
                     step="0.1"
-                    className="w-full bg-black/40 border border-neutral-800/40 rounded-2xl px-6 py-4 text-[#facc15]/50 font-black outline-none focus:border-[#facc15]/40"
+                    className="w-full bg-black/40 border border-neutral-800/40 rounded-2xl px-6 py-4 text-neutral-400 font-black outline-none focus:border-[#facc15]/40"
                     value={newGateway.fee}
                     onChange={e => setNewGateway({...newGateway, fee: e.target.value})}
                   />
@@ -282,11 +281,11 @@ const AdminPaymentSettings: React.FC<AdminPaymentSettingsProps> = ({ gateways, o
               <div className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-[9px] font-black text-neutral-700 uppercase tracking-widest px-1">{getLabels(newGateway.provider).public}</label>
-                  <input required className="w-full bg-black/40 border border-neutral-800/40 rounded-2xl px-6 py-4 text-neutral-500 font-mono text-xs focus:border-[#facc15]/40" value={newGateway.publicKey} onChange={e => setNewGateway({...newGateway, publicKey: e.target.value})} />
+                  <input required className="w-full bg-black/40 border border-neutral-800/40 rounded-2xl px-6 py-4 text-neutral-400 font-mono text-xs focus:border-[#facc15]/40" value={newGateway.publicKey} onChange={e => setNewGateway({...newGateway, publicKey: e.target.value})} />
                 </div>
                 <div className="space-y-2">
                   <label className="text-[9px] font-black text-neutral-700 uppercase tracking-widest px-1">{getLabels(newGateway.provider).secret}</label>
-                  <input required type="password" className="w-full bg-black/40 border border-neutral-800/40 rounded-2xl px-6 py-4 text-neutral-500 font-mono text-xs focus:border-[#facc15]/40" value={newGateway.secretKey} onChange={e => setNewGateway({...newGateway, secretKey: e.target.value})} />
+                  <input required type="password" className="w-full bg-black/40 border border-neutral-800/40 rounded-2xl px-6 py-4 text-neutral-400 font-mono text-xs focus:border-[#facc15]/40" value={newGateway.secretKey} onChange={e => setNewGateway({...newGateway, secretKey: e.target.value})} />
                 </div>
               </div>
               <div className="pt-4 flex flex-col gap-3">

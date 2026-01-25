@@ -4,7 +4,7 @@ import {
   Timer, Zap, Settings2, Heart, ChevronLeft, ChevronRight, 
   BriefcaseBusiness, PlaneTakeoff, Ship, Hotel, Building2, 
   Coins, ListFilter, Stethoscope, Shield, Info, CheckCircle2, XCircle, MousePointer2,
-  Sparkles, ShieldAlert, Database, RefreshCw
+  Sparkles, ShieldAlert, Database, RefreshCw, ChevronDown
 } from 'lucide-react';
 import { soundService } from '../services/soundService.ts';
 
@@ -301,39 +301,44 @@ const LeadGrid: React.FC<LeadGridProps> = ({
 
   return (
     <div className="space-y-8 will-change-transform relative">
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-6 bg-[#0a0a0a]/40 border border-neutral-800/30 p-4 rounded-3xl shadow-sm">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-6 bg-black/60 backdrop-blur-2xl border border-neutral-800/30 p-4 rounded-[2rem] shadow-xl">
         <div className="flex items-center gap-4 w-full sm:w-auto">
           {isAdmin && (
             <button 
               onClick={toggleSelectAll}
-              className={`p-2.5 rounded-xl border transition-all flex items-center gap-2 font-black text-[9px] uppercase tracking-widest ${
+              className={`p-3 rounded-xl border transition-all flex items-center gap-2 font-black text-[9px] uppercase tracking-widest ${
                 selectedIds.size === currentLeads.length && currentLeads.length > 0
                   ? 'bg-[#facc15] text-black border-[#facc15]'
-                  : 'bg-neutral-900/40 text-neutral-500 border-neutral-800/40'
+                  : 'bg-neutral-900/40 text-neutral-500 border-neutral-800/40 hover:text-white'
               }`}
             >
               <MousePointer2 size={16} /> 
-              <span className="hidden md:inline">{selectedIds.size === currentLeads.length ? 'Deselect All' : 'Select Page'}</span>
+              <span className="hidden md:inline">{selectedIds.size === currentLeads.length ? 'Deselect' : 'Select'}</span>
             </button>
           )}
-          <div className="p-2.5 bg-neutral-900/40 rounded-xl text-neutral-700">
-            <ListFilter size={20} />
+          <div className="relative group w-full sm:w-64">
+             <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-600 group-hover:text-[#facc15] transition-colors">
+                <ListFilter size={18} />
+             </div>
+             <select 
+               value={selectedCategory}
+               onChange={(e) => { setSelectedCategory(e.target.value); setCurrentPage(1); }}
+               className="w-full bg-black/40 border border-neutral-800/40 rounded-xl pl-12 pr-10 py-3 text-[11px] font-black uppercase tracking-widest text-neutral-400 outline-none focus:border-[#facc15]/30 transition-all appearance-none cursor-pointer"
+             >
+               <option value="" className="bg-black">Full Spectrum</option>
+               {categories.map(c => <option key={c} value={c} className="bg-black">{c}</option>)}
+             </select>
+             <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-700">
+                <ChevronDown size={14} />
+             </div>
           </div>
-          <select 
-            value={selectedCategory}
-            onChange={(e) => { setSelectedCategory(e.target.value); setCurrentPage(1); }}
-            className="bg-transparent text-sm font-bold text-neutral-400 outline-none cursor-pointer flex-1 sm:w-64"
-          >
-            <option value="" className="bg-black">Full Market Spectrum</option>
-            {categories.map(c => <option key={c} value={c} className="bg-black">{c}</option>)}
-          </select>
         </div>
         <div className="flex items-center gap-3">
-           <div className="text-[11px] font-black text-neutral-700 uppercase tracking-[0.2em]">{filteredLeads.length} Operational Nodes</div>
+           <div className="text-[11px] font-black text-neutral-700 uppercase tracking-[0.2em]">{filteredLeads.length} Node{filteredLeads.length !== 1 ? 's' : ''} Online</div>
            {isAdmin && (
              <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-950/20 border border-emerald-900/20 rounded-lg">
                 <Shield size={10} className="text-emerald-500" />
-                <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest">Admin HUD Active</span>
+                <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest">Operator HUD</span>
              </div>
            )}
         </div>
@@ -370,13 +375,13 @@ const LeadGrid: React.FC<LeadGridProps> = ({
 
       {/* Floating Bulk Action Dock */}
       {isAdmin && selectedIds.size > 0 && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-bottom-8 duration-500 flex items-center gap-4 bg-black/80 backdrop-blur-2xl border border-neutral-700/50 p-4 rounded-[2.5rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.8)] px-8">
-           <div className="flex items-center gap-4 border-r border-neutral-800 pr-6 mr-2">
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-bottom-8 zoom-in-95 duration-500 flex items-center gap-4 bg-black/90 backdrop-blur-2xl border border-neutral-700/50 p-4 rounded-[2.5rem] shadow-[0_40px_100px_-15px_rgba(0,0,0,1)] px-8">
+           <div className="flex items-center gap-4 border-r border-neutral-800/40 pr-6 mr-2">
               <div className="w-10 h-10 bg-[#facc15]/10 rounded-full flex items-center justify-center border border-[#facc15]/20">
                  <span className="text-[#facc15] font-black text-sm">{selectedIds.size}</span>
               </div>
               <div className="hidden md:block">
-                 <p className="text-[9px] font-black text-neutral-500 uppercase tracking-widest leading-none">Selected</p>
+                 <p className="text-[9px] font-black text-neutral-600 uppercase tracking-widest leading-none">Selected Nodes</p>
                  <p className="text-[10px] font-bold text-neutral-300 uppercase mt-1">Batch Operations</p>
               </div>
            </div>
@@ -386,7 +391,7 @@ const LeadGrid: React.FC<LeadGridProps> = ({
                   onBulkApprove?.(Array.from(selectedIds));
                   setSelectedIds(new Set());
                 }}
-                className="bg-emerald-900/60 hover:bg-emerald-800 transition-all text-emerald-500 px-5 py-2.5 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2 border border-emerald-900/40"
+                className="bg-emerald-900/60 hover:bg-emerald-800 transition-all text-emerald-500 px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2 border border-emerald-900/40 active:scale-95"
               >
                 <CheckCircle2 size={16} /> Approve
               </button>
@@ -395,13 +400,13 @@ const LeadGrid: React.FC<LeadGridProps> = ({
                   onBulkReject?.(Array.from(selectedIds));
                   setSelectedIds(new Set());
                 }}
-                className="bg-red-900/60 hover:bg-red-800 transition-all text-red-500 px-5 py-2.5 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2 border border-red-900/40"
+                className="bg-red-900/60 hover:bg-red-800 transition-all text-red-500 px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2 border border-red-900/40 active:scale-95"
               >
                 <XCircle size={16} /> Reject
               </button>
               <button 
                 onClick={() => setSelectedIds(new Set())}
-                className="text-neutral-500 hover:text-neutral-300 font-black text-[9px] uppercase tracking-widest px-4"
+                className="text-neutral-500 hover:text-neutral-300 font-black text-[9px] uppercase tracking-widest px-4 transition-colors"
               >
                 Cancel
               </button>

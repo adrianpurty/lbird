@@ -107,7 +107,7 @@ const LeadSubmissionForm: React.FC<LeadSubmissionFormProps> = ({ onSubmit }) => 
             <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1">Campaign Node Name</label>
             <input 
               required
-              className="w-full bg-black border border-neutral-800 rounded-2xl px-6 py-4 text-white font-bold outline-none focus:border-[#facc15] transition-all placeholder:text-neutral-800"
+              className="w-full bg-black border border-neutral-800 rounded-2xl px-6 py-4 text-neutral-400 font-bold outline-none focus:border-[#facc15] transition-all placeholder:text-neutral-800"
               placeholder="e.g. Premium Solar Inbound SoCal"
               value={formData.title}
               onChange={e => setFormData({...formData, title: e.target.value})}
@@ -119,7 +119,7 @@ const LeadSubmissionForm: React.FC<LeadSubmissionFormProps> = ({ onSubmit }) => 
               <select 
                 required
                 disabled={isLoadingCategories}
-                className="w-full bg-black border border-neutral-800 rounded-2xl px-6 py-4 text-white font-bold outline-none focus:border-[#facc15] transition-all appearance-none cursor-pointer disabled:opacity-50"
+                className="w-full bg-black border border-neutral-800 rounded-2xl px-6 py-4 text-neutral-400 font-bold outline-none focus:border-[#facc15] transition-all appearance-none cursor-pointer disabled:opacity-50"
                 value={formData.category}
                 onChange={e => setFormData({...formData, category: e.target.value})}
               >
@@ -127,7 +127,7 @@ const LeadSubmissionForm: React.FC<LeadSubmissionFormProps> = ({ onSubmit }) => 
                 {Object.entries(categories).map(([group, items]) => (
                   <optgroup key={group} label={group} className="bg-[#0a0a0a] text-[#facc15] font-black uppercase text-[10px] tracking-widest italic py-4">
                     {(items as string[]).map(cat => (
-                      <option key={cat} value={cat} className="bg-black text-white py-2 normal-case font-bold italic not-italic text-sm">
+                      <option key={cat} value={cat} className="bg-black text-neutral-400 py-2 normal-case font-bold italic not-italic text-sm">
                         {cat}
                       </option>
                     ))}
@@ -146,7 +146,7 @@ const LeadSubmissionForm: React.FC<LeadSubmissionFormProps> = ({ onSubmit }) => 
           <textarea 
             required
             rows={4}
-            className="w-full bg-black border border-neutral-800 rounded-2xl px-6 py-4 text-white outline-none focus:border-[#facc15] transition-all resize-none italic placeholder:not-italic placeholder:text-neutral-800"
+            className="w-full bg-black border border-neutral-800 rounded-2xl px-6 py-4 text-neutral-400 outline-none focus:border-[#facc15] transition-all resize-none italic placeholder:not-italic placeholder:text-neutral-800"
             placeholder="Describe lead source, intent triggers, and verification layers..."
             value={formData.description}
             onChange={e => setFormData({...formData, description: e.target.value})}
@@ -161,7 +161,7 @@ const LeadSubmissionForm: React.FC<LeadSubmissionFormProps> = ({ onSubmit }) => 
             <input 
               required
               type="url"
-              className="w-full bg-black border border-neutral-800 rounded-2xl px-6 py-4 text-white font-bold outline-none focus:border-[#facc15] transition-all placeholder:text-neutral-800"
+              className="w-full bg-black border border-neutral-800 rounded-2xl px-6 py-4 text-neutral-400 font-bold outline-none focus:border-[#facc15] transition-all placeholder:text-neutral-800"
               placeholder="https://yourleads-hq.com"
               value={formData.businessUrl}
               onChange={e => setFormData({...formData, businessUrl: e.target.value})}
@@ -174,7 +174,7 @@ const LeadSubmissionForm: React.FC<LeadSubmissionFormProps> = ({ onSubmit }) => 
             <input 
               required
               type="url"
-              className="w-full bg-black border border-neutral-800 rounded-2xl px-6 py-4 text-white font-bold outline-none focus:border-[#facc15] transition-all placeholder:text-neutral-800"
+              className="w-full bg-black border border-neutral-800 rounded-2xl px-6 py-4 text-neutral-400 font-bold outline-none focus:border-[#facc15] transition-all placeholder:text-neutral-800"
               placeholder="Google Ads / FB Ads Destination"
               value={formData.targetLeadUrl}
               onChange={e => setFormData({...formData, targetLeadUrl: e.target.value})}
@@ -188,7 +188,7 @@ const LeadSubmissionForm: React.FC<LeadSubmissionFormProps> = ({ onSubmit }) => 
               <MapPin size={14} className="text-[#facc15]" /> Target Region Lock
             </label>
             <input 
-              className="w-full bg-black border border-neutral-800 rounded-2xl px-6 py-4 text-white font-bold outline-none focus:border-[#facc15] transition-all placeholder:text-neutral-800"
+              className="w-full bg-black border border-neutral-800 rounded-2xl px-6 py-4 text-neutral-400 font-bold outline-none focus:border-[#facc15] transition-all placeholder:text-neutral-800"
               placeholder="e.g. California, US"
               value={formData.region}
               onChange={e => setFormData({...formData, region: e.target.value})}
@@ -197,7 +197,7 @@ const LeadSubmissionForm: React.FC<LeadSubmissionFormProps> = ({ onSubmit }) => 
           <div className="space-y-2">
             <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1">Country ISO Code</label>
             <input 
-              className="w-full bg-black border border-neutral-800 rounded-2xl px-6 py-4 text-white font-bold outline-none focus:border-[#facc15] transition-all placeholder:text-neutral-800"
+              className="w-full bg-black border border-neutral-800 rounded-2xl px-6 py-4 text-neutral-400 font-bold outline-none focus:border-[#facc15] transition-all placeholder:text-neutral-800"
               placeholder="US"
               maxLength={2}
               value={formData.countryCode}
@@ -215,7 +215,7 @@ const LeadSubmissionForm: React.FC<LeadSubmissionFormProps> = ({ onSubmit }) => 
               <input 
                 required
                 type="number"
-                className="w-full bg-black border border-neutral-800 rounded-2xl px-12 py-5 text-2xl font-black text-white outline-none focus:border-[#facc15] transition-all"
+                className="w-full bg-black border border-neutral-800 rounded-2xl px-12 py-5 text-2xl font-black text-neutral-400 outline-none focus:border-[#facc15] transition-all"
                 placeholder="50"
                 value={formData.basePrice}
                 onChange={e => setFormData({...formData, basePrice: parseFloat(e.target.value) || 0})}
@@ -256,11 +256,11 @@ const LeadSubmissionForm: React.FC<LeadSubmissionFormProps> = ({ onSubmit }) => 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-black/60 p-6 rounded-2xl border border-neutral-900 group hover:border-[#facc15]/30 transition-colors">
               <span className="text-[9px] text-neutral-600 font-black uppercase tracking-widest block mb-2">Conversion Probability</span>
-              <p className="text-white text-sm leading-relaxed">{aiInsight.conversionPotential}</p>
+              <p className="text-neutral-400 text-sm leading-relaxed">{aiInsight.conversionPotential}</p>
             </div>
             <div className="bg-black/60 p-6 rounded-2xl border border-neutral-900 group hover:border-[#facc15]/30 transition-colors">
               <span className="text-[9px] text-neutral-600 font-black uppercase tracking-widest block mb-2">Security Compliance Summary</span>
-              <p className="text-white text-sm leading-relaxed">{aiInsight.summary}</p>
+              <p className="text-neutral-400 text-sm leading-relaxed">{aiInsight.summary}</p>
             </div>
           </div>
         </div>

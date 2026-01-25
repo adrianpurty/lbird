@@ -130,6 +130,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
       setError('Google SDK Not Ready');
       return;
     }
+    // Standard trigger for Google Identity Services popup
     (window as any).google.accounts.id.prompt();
   };
 
@@ -237,14 +238,14 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
               <label className="text-[9px] font-black text-neutral-600 uppercase tracking-widest px-1">Identity</label>
               <div className="relative">
                 <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-600" size={14} />
-                <input required className="w-full bg-black/40 border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-sm text-white outline-none focus:border-[#facc15] transition-all font-bold placeholder:text-neutral-800" placeholder="ID" value={username} onChange={e => setUsername(e.target.value)} />
+                <input required className="w-full bg-black/40 border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-sm text-neutral-400 outline-none focus:border-[#facc15] transition-all font-bold placeholder:text-neutral-800" placeholder="ID" value={username} onChange={e => setUsername(e.target.value)} />
               </div>
             </div>
             <div className="space-y-2">
               <label className="text-[9px] font-black text-neutral-600 uppercase tracking-widest px-1">Token</label>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-600" size={14} />
-                <input required type="password" className="w-full bg-black/40 border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-sm text-white outline-none focus:border-[#facc15] transition-all font-bold placeholder:text-neutral-800" placeholder="••••" value={password} onChange={e => setPassword(e.target.value)} />
+                <input required type="password" className="w-full bg-black/40 border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-sm text-neutral-400 outline-none focus:border-[#facc15] transition-all font-bold placeholder:text-neutral-800" placeholder="••••" value={password} onChange={e => setPassword(e.target.value)} />
               </div>
             </div>
 
