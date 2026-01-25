@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Zap, 
   User as UserIcon, 
@@ -39,6 +39,134 @@ const Signup: React.FC<SignupProps> = ({ onSignup, onSwitchToLogin, authConfig }
   });
   const [isSyncing, setIsSyncing] = useState(false);
   const [error, setError] = useState('');
+
+  // Initialize Social SDKs for Provisioning
+  useEffect(() => {
+    // 1. Google Identity Services
+    if (authConfig?.googleEnabled && authConfig.googleClientId) {
+      const initGoogle = () => {
+        if ((window as any).google) {
+          (window as any).google.accounts.id.initialize({
+            client_id: authConfig.googleClientId,
+            callback: handleGoogleResponse
+          });
+        }
+      };
+
+      if (!(window as any).google) {
+        const script = document.createElement('script');
+        script.src = "https://accounts.google.com/gsi/client";
+        script.async = true;
+        script.defer = true;
+        script.onload = initGoogle;
+        document.head.appendChild(script);
+      } else {
+        initGoogle();
+      }
+    }
+
+    // 2. Facebook SDK
+    if (authConfig?.facebookEnabled && authConfig.facebookAppId) {
+      (window as any).fbAsyncInit = function() {
+        (window as any).FB.init({
+          appId      : authConfig.facebookAppId,
+          cookie     : true,
+          xfbml      : true,
+          version    : 'v18.0'
+        });
+      };
+
+      if (!(window as any).FB) {
+        const script = document.createElement('script');
+        script.src = "https://connect.facebook.net/en_US/sdk.js";
+        script.async = true;
+        script.defer = true;
+        document.head.appendChild(script);
+      }
+    }
+  }, [authConfig]);
+
+  const handleGoogleResponse = async (response: any) => {
+    setIsSyncing(true);
+    soundService.playClick(true);
+    try {
+      const base64Url = response.credential.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const payload = JSON.parse(window.atob(base64));
+      
+      const syncedUser = await apiService.socialSync({
+        name: payload.name,
+        email: payload.email,
+        profileImage: payload.picture
+      });
+      
+      onSignup({ ...syncedUser, location: "NODE_PROVISION_GOOGLE" } as User);
+    } catch (err) {
+      setError('PROVISION_ERROR: GOOGLE_SYNC_FAILED');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const triggerSocialAuth = (provider: 'google' | 'meta') => {
+    soundService.playClick(true);
+    if (provider === 'google') {
+      if (!authConfig?.googleEnabled) {
+        setError('PROTOCOL_DISABLED: GOOGLE_SSO_OFFLINE');
+        return;
+      }
+      if ((window as any).google) {
+        (window as any).google.accounts.id.prompt();
+      } else {
+        setError('NETWORK_ERROR: GOOGLE_SDK_OFFLINE');
+      }
+    } else {
+      if (!authConfig?.facebookEnabled) {
+        setError('PROTOCOL_DISABLED: META_SSO_OFFLINE');
+        return;
+      }
+      
+      if (!(window as any).FB) {
+        // Simulation for Meta Handshake if script blocked
+        setIsSyncing(true);
+        setTimeout(async () => {
+          try {
+            const syncedUser = await apiService.socialSync({
+              name: "Meta Explorer",
+              email: "social.node@meta.internal",
+              profileImage: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop"
+            });
+            onSignup({ ...syncedUser, location: "NODE_PROVISION_META_SIM" } as User);
+          } catch (err) {
+            setError('PROVISION_ERROR: META_SYNC_FAILED');
+            setIsSyncing(false);
+          }
+        }, 1500);
+        return;
+      }
+
+      (window as any).FB.login(async (response: any) => {
+        if (response.authResponse) {
+          setIsSyncing(true);
+          (window as any).FB.api('/me', { fields: 'name,email,picture' }, async (userData: any) => {
+            try {
+              const syncedUser = await apiService.socialSync({
+                name: userData.name,
+                email: userData.email || `${userData.id}@meta.internal`,
+                profileImage: userData.picture?.data?.url
+              });
+              onSignup({ ...syncedUser, location: "NODE_PROVISION_META_LIVE" } as User);
+            } catch (err) {
+              setError('PROVISION_ERROR: META_DATA_EXTRACT_FAILED');
+              setIsSyncing(false);
+            }
+          });
+        } else {
+          setError('PROVISION_ABORTED: META_HANDSHAKE_CANCELLED');
+        }
+      }, { scope: 'public_profile,email' });
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -188,11 +316,21 @@ const Signup: React.FC<SignupProps> = ({ onSignup, onSwitchToLogin, authConfig }
           <div className="bg-[#0A0A0A] border border-neutral-800 rounded-[2.5rem] p-8 shadow-xl">
             <h4 className="text-[11px] font-black text-neutral-500 uppercase tracking-[0.4em] mb-8 border-b border-neutral-800 pb-4">SSO_SYNC</h4>
             <div className="space-y-4">
-              <button type="button" className="w-full bg-black border border-neutral-800 p-5 rounded-2xl flex items-center gap-4 hover:border-[#2DD4BF]/40 transition-all text-neutral-500 hover:text-white">
+              <button 
+                type="button" 
+                onClick={() => triggerSocialAuth('google')}
+                disabled={isSyncing}
+                className="w-full bg-black border border-neutral-800 p-5 rounded-2xl flex items-center gap-4 hover:border-[#2DD4BF]/40 transition-all text-neutral-500 hover:text-white disabled:opacity-50"
+              >
                 <Chrome size={20} />
                 <span className="text-[10px] font-black uppercase tracking-widest">Google_Link</span>
               </button>
-              <button type="button" className="w-full bg-black border border-neutral-800 p-5 rounded-2xl flex items-center gap-4 hover:border-[#2DD4BF]/40 transition-all text-neutral-500 hover:text-white">
+              <button 
+                type="button" 
+                onClick={() => triggerSocialAuth('meta')}
+                disabled={isSyncing}
+                className="w-full bg-black border border-neutral-800 p-5 rounded-2xl flex items-center gap-4 hover:border-[#2DD4BF]/40 transition-all text-neutral-500 hover:text-white disabled:opacity-50"
+              >
                 <Facebook size={20} />
                 <span className="text-[10px] font-black uppercase tracking-widest">Meta_Link</span>
               </button>

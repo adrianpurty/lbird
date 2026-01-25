@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react';
 import { 
-  ShieldAlert, Activity, Database, Server, Loader2, Inbox, CheckCircle, BarChart3, Terminal, MapPin, Globe, UserCircle, Activity as ActivityIcon, Monitor, Fingerprint, Eye, FileText, Gavel, Heart, PlusCircle, User as UserIcon, Zap, History, ArrowDownLeft, ArrowUpRight, ShieldCheck, Target, TrendingUp, Cpu, ArrowRight, Star, PlayCircle
+  ShieldAlert, Activity, Database, Server, Loader2, Inbox, CheckCircle, BarChart3, Terminal, MapPin, Globe, UserCircle, Activity as ActivityIcon, Monitor, Fingerprint, Eye, FileText, Gavel, Heart, PlusCircle, User as UserIcon, Zap, History, ArrowDownLeft, ArrowUpRight, ShieldCheck, Target, TrendingUp, Cpu, ArrowRight, Star, PlayCircle, Layers
 } from 'lucide-react';
 import Sidebar from './components/Sidebar.tsx';
 import Header from './components/Header.tsx';
@@ -22,6 +22,7 @@ import InvoiceLedger from './components/InvoiceLedger.tsx';
 import LogInspectionModal from './components/LogInspectionModal.tsx';
 import WorldMarketMap from './components/WorldMarketMap.tsx';
 import UserManagement from './components/UserManagement.tsx';
+import LeadManagement from './components/LeadManagement.tsx';
 import { Lead, User, PurchaseRequest, Notification, PlatformAnalytics, OAuthConfig, Invoice, GatewayAPI } from './types.ts';
 import { apiService } from './services/apiService.ts';
 import { soundService } from './services/soundService.ts';
@@ -358,17 +359,18 @@ const App: React.FC = () => {
           )}
 
           {activeTab === 'admin' && (
-            <div className="max-w-[1400px] mx-auto space-y-8 animate-in fade-in duration-700">
+            <div className="max-w-[1400px] mx-auto space-y-12 animate-in fade-in duration-700 pb-20">
                <div className="px-1">
                   <h2 className="text-3xl md:text-5xl font-futuristic font-black text-white italic uppercase tracking-tighter leading-none">
-                    ROOT <span className="text-[#FACC15]">ACCESS</span>
+                    ROOT <span className="text-[#2DD4BF]">ACCESS</span>
                   </h2>
-                  <p className="text-[7px] md:text-[10px] text-neutral-600 font-bold uppercase tracking-[0.4em] mt-1.5 italic">SYSTEM_OVERRIDE_ENABLED // v4.2</p>
+                  <p className="text-[7px] md:text-[10px] text-neutral-600 font-black uppercase tracking-[0.4em] mt-1.5 italic">SYSTEM_OVERRIDE_ENABLED // v4.2</p>
                </div>
 
+               {/* USER REGISTRY SECTION */}
                <div className="bg-[#000000] border border-[#1A1A1A] rounded-[2rem] p-8 shadow-2xl space-y-8">
                   <div className="flex items-center gap-4 border-b border-[#1A1A1A] pb-6">
-                    <div className="w-10 h-10 bg-[#1A1A1A] rounded-xl flex items-center justify-center text-[#FACC15] border border-[#FACC15]/20">
+                    <div className="w-10 h-10 bg-[#1A1A1A] rounded-xl flex items-center justify-center text-[#2DD4BF] border border-[#2DD4BF]/20">
                        <UserIcon size={20} />
                     </div>
                     <div>
@@ -378,6 +380,25 @@ const App: React.FC = () => {
                   </div>
                   
                   <UserManagement users={marketData.users} onUpdateUser={(id, updates) => apiService.updateUser(id, updates).then(fetchAppData)} />
+               </div>
+
+               {/* ASSET REGISTRY SECTION (LEAD MANAGEMENT) */}
+               <div className="bg-[#000000] border border-[#1A1A1A] rounded-[2rem] p-8 shadow-2xl space-y-8">
+                  <div className="flex items-center gap-4 border-b border-[#1A1A1A] pb-6">
+                    <div className="w-10 h-10 bg-[#1A1A1A] rounded-xl flex items-center justify-center text-[#2DD4BF] border border-[#2DD4BF]/20">
+                       <Layers size={20} />
+                    </div>
+                    <div>
+                       <h3 className="text-xl font-black text-white uppercase tracking-tight italic">Asset Registry</h3>
+                       <p className="text-[9px] text-neutral-700 font-black uppercase tracking-widest mt-1">Manage global marketplace inventory</p>
+                    </div>
+                  </div>
+                  
+                  <LeadManagement 
+                    leads={marketData.leads} 
+                    onEditLead={setSelectedLeadForEdit} 
+                    onDeleteLead={(id) => apiService.deleteLead(id).then(fetchAppData)} 
+                  />
                </div>
 
                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -391,9 +412,9 @@ const App: React.FC = () => {
                      <div className="bg-[#000000] p-8 rounded-[2.5rem] border border-[#1A1A1A] h-full flex flex-col shadow-2xl">
                         <div className="flex justify-between items-center border-b border-[#1A1A1A] pb-6 mb-6">
                            <h4 className="text-[11px] font-black text-neutral-500 uppercase tracking-[0.3em] flex items-center gap-3">
-                              <ShieldAlert size={16} className="text-[#FACC15]" /> MASTER_AUDIT
+                              <ShieldAlert size={16} className="text-[#2DD4BF]" /> MASTER_AUDIT
                            </h4>
-                           <div className="w-2.5 h-2.5 bg-[#FACC15] rounded-full animate-pulse shadow-[0_0_12px_#FACC15]" />
+                           <div className="w-2.5 h-2.5 bg-[#2DD4BF] rounded-full animate-pulse shadow-[0_0_12px_#2DD4BF]" />
                         </div>
                         
                         <div className="flex-1 space-y-4 overflow-y-auto scrollbar-hide">
@@ -401,10 +422,10 @@ const App: React.FC = () => {
                              <div 
                               key={idx} 
                               onClick={() => setSelectedLogForInspection(n)}
-                              className="bg-[#1A1A1A] p-5 rounded-2xl border border-[#1A1A1A] flex items-center justify-between group cursor-pointer hover:border-[#FACC15]/40 transition-all"
+                              className="bg-[#1A1A1A] p-5 rounded-2xl border border-[#1A1A1A] flex items-center justify-between group cursor-pointer hover:border-[#2DD4BF]/40 transition-all"
                              >
                                 <div className="flex items-center gap-4">
-                                   <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-black text-[#FACC15]">
+                                   <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-black text-[#2DD4BF]">
                                       <Zap size={14} />
                                    </div>
                                    <div className="min-w-0">
@@ -412,7 +433,7 @@ const App: React.FC = () => {
                                       <p className="text-[8px] text-neutral-700 font-bold uppercase mt-1">{n.timestamp}</p>
                                    </div>
                                 </div>
-                                <ArrowRight size={14} className="text-neutral-800 group-hover:text-[#FACC15] transition-all" />
+                                <ArrowRight size={14} className="text-neutral-800 group-hover:text-[#2DD4BF] transition-all" />
                              </div>
                            ))}
                         </div>
@@ -465,7 +486,7 @@ const App: React.FC = () => {
             apiService.updateLead(u.id!, u).then(() => {
               fetchAppData();
               setSelectedLeadForEdit(null);
-              setActiveTab('market');
+              // Do not force navigate back to market if we are in admin tab
               showToast("NODE_UPDATED");
             });
           }} 
@@ -473,7 +494,6 @@ const App: React.FC = () => {
             apiService.deleteLead(id).then(() => {
               fetchAppData();
               setSelectedLeadForEdit(null);
-              setActiveTab('market');
               showToast("NODE_PURGED");
             });
           }} 

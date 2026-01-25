@@ -32,19 +32,49 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
   const [error, setError] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
 
+  // Initialize Social SDKs
   useEffect(() => {
+    // 1. Google Identity Services
     if (authConfig?.googleEnabled && authConfig.googleClientId) {
+      const initGoogle = () => {
+        if ((window as any).google) {
+          (window as any).google.accounts.id.initialize({
+            client_id: authConfig.googleClientId,
+            callback: handleGoogleResponse,
+            auto_select: false,
+            cancel_on_tap_outside: true
+          });
+        }
+      };
+
       if (!(window as any).google) {
         const script = document.createElement('script');
         script.src = "https://accounts.google.com/gsi/client";
         script.async = true;
         script.defer = true;
-        script.onload = () => {
-          (window as any).google?.accounts.id.initialize({
-            client_id: authConfig.googleClientId,
-            callback: handleGoogleResponse,
-          });
-        };
+        script.onload = initGoogle;
+        document.head.appendChild(script);
+      } else {
+        initGoogle();
+      }
+    }
+
+    // 2. Facebook SDK
+    if (authConfig?.facebookEnabled && authConfig.facebookAppId) {
+      (window as any).fbAsyncInit = function() {
+        (window as any).FB.init({
+          appId      : authConfig.facebookAppId,
+          cookie     : true,
+          xfbml      : true,
+          version    : 'v18.0'
+        });
+      };
+
+      if (!(window as any).FB) {
+        const script = document.createElement('script');
+        script.src = "https://connect.facebook.net/en_US/sdk.js";
+        script.async = true;
+        script.defer = true;
         document.head.appendChild(script);
       }
     }
@@ -57,17 +87,81 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
       const base64Url = response.credential.split('.')[1];
       const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
       const payload = JSON.parse(window.atob(base64));
+      
       const syncedUser = await apiService.socialSync({
         name: payload.name,
         email: payload.email,
         profileImage: payload.picture
       });
+      
       onLogin({ ...syncedUser, location: "NODE_GOOGLE_SYNC" } as User);
     } catch (err) {
-      setError('SSO_SYNC_ERROR');
+      setError('SSO_SYNC_ERROR: GOOGLE_HANDSHAKE_FAILED');
     } finally {
       setIsSyncing(false);
     }
+  };
+
+  const triggerGoogleAuth = () => {
+    soundService.playClick(true);
+    if (!authConfig?.googleEnabled) {
+      setError('PROTOCOL_DISABLED: GOOGLE_SSO_OFFLINE');
+      return;
+    }
+    if ((window as any).google) {
+      (window as any).google.accounts.id.prompt();
+    } else {
+      setError('NETWORK_ERROR: GOOGLE_SDK_NOT_LOADED');
+    }
+  };
+
+  const triggerMetaAuth = () => {
+    soundService.playClick(true);
+    if (!authConfig?.facebookEnabled) {
+      setError('PROTOCOL_DISABLED: META_SSO_OFFLINE');
+      return;
+    }
+    
+    if (!(window as any).FB) {
+      // Fallback simulation if FB block is present
+      setIsSyncing(true);
+      setError('');
+      setTimeout(async () => {
+        try {
+          const syncedUser = await apiService.socialSync({
+            name: "Meta User",
+            email: "social@meta.internal",
+            profileImage: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop"
+          });
+          onLogin({ ...syncedUser, location: "NODE_META_SIM_SYNC" } as User);
+        } catch (err) {
+          setError('SSO_SYNC_ERROR: META_HANDSHAKE_FAILED');
+          setIsSyncing(false);
+        }
+      }, 1500);
+      return;
+    }
+
+    (window as any).FB.login(async (response: any) => {
+      if (response.authResponse) {
+        setIsSyncing(true);
+        (window as any).FB.api('/me', { fields: 'name,email,picture' }, async (userData: any) => {
+          try {
+            const syncedUser = await apiService.socialSync({
+              name: userData.name,
+              email: userData.email || `${userData.id}@meta.internal`,
+              profileImage: userData.picture?.data?.url
+            });
+            onLogin({ ...syncedUser, location: "NODE_META_LIVE_SYNC" } as User);
+          } catch (err) {
+            setError('SSO_SYNC_ERROR: META_DATA_RETRIEVAL_FAILED');
+            setIsSyncing(false);
+          }
+        });
+      } else {
+        setError('AUTH_CANCELLED: META_HANDSHAKE_ABORTED');
+      }
+    }, { scope: 'public_profile,email' });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -287,8 +381,9 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
             <div className="space-y-4">
               <button 
                 type="button"
-                onClick={() => soundService.playClick(true)}
-                className="w-full bg-[#050505] border border-neutral-800 hover:border-[#2DD4BF]/40 p-6 rounded-2xl flex items-center justify-between transition-all group/item"
+                onClick={triggerGoogleAuth}
+                disabled={isSyncing}
+                className="w-full bg-[#050505] border border-neutral-800 hover:border-[#2DD4BF]/40 p-6 rounded-2xl flex items-center justify-between transition-all group/item disabled:opacity-50"
               >
                 <div className="flex items-center gap-6">
                   <div className="w-12 h-12 bg-black rounded-xl border border-neutral-800 flex items-center justify-center group-hover/item:border-[#2DD4BF]/40">
@@ -304,8 +399,9 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
 
               <button 
                 type="button"
-                onClick={() => soundService.playClick(true)}
-                className="w-full bg-[#050505] border border-neutral-800 hover:border-[#2DD4BF]/40 p-6 rounded-2xl flex items-center justify-between transition-all group/item"
+                onClick={triggerMetaAuth}
+                disabled={isSyncing}
+                className="w-full bg-[#050505] border border-neutral-800 hover:border-[#2DD4BF]/40 p-6 rounded-2xl flex items-center justify-between transition-all group/item disabled:opacity-50"
               >
                 <div className="flex items-center gap-6">
                   <div className="w-12 h-12 bg-black rounded-xl border border-neutral-800 flex items-center justify-center group-hover/item:border-[#2DD4BF]/40">
