@@ -205,7 +205,7 @@ const App: React.FC = () => {
     <div className="h-screen flex items-center justify-center bg-black">
       <div className="flex flex-col items-center gap-10">
         <Server className="text-[#FACC15] animate-pulse" size={100} />
-        <p className="text-[16px] font-futuristic uppercase tracking-[1em] text-[#FACC15] animate-pulse">INIT_BOOT_CORE</p>
+        <p className="text-[14px] font-tactical uppercase tracking-[1em] text-[#FACC15] animate-pulse">INIT_BOOT_CORE</p>
       </div>
     </div>
   );
@@ -219,7 +219,7 @@ const App: React.FC = () => {
         <div className="fixed inset-0 z-[300] bg-black/90 backdrop-blur-3xl flex items-center justify-center">
            <div className="flex flex-col items-center gap-12">
               <Database className="text-[#FACC15] animate-spin" size={120} />
-              <p className="text-[#FACC15] font-futuristic text-[20px] uppercase tracking-[1em]">SYNC_LEDGER</p>
+              <p className="text-[#FACC15] font-tactical text-[18px] uppercase tracking-[0.8em]">SYNC_LEDGER</p>
            </div>
         </div>
       )}
@@ -227,7 +227,7 @@ const App: React.FC = () => {
       {toast && (
         <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[200] px-8 py-4 rounded-xl border-2 bg-black border-[#FACC15]/40 shadow-[0_0_50px_rgba(250,204,21,0.2)] flex items-center gap-4 animate-in slide-in-from-top-12">
           <div className="w-2.5 h-2.5 bg-[#FACC15] rounded-full animate-pulse shadow-[0_0_10px_#FACC15]" />
-          <span className="text-[10px] md:text-[12px] font-black uppercase tracking-[0.3em] text-white">{toast.message}</span>
+          <span className="text-[10px] md:text-[11px] font-tactical uppercase tracking-[0.2em] text-white">{toast.message}</span>
         </div>
       )}
 
@@ -253,38 +253,38 @@ const App: React.FC = () => {
                
                {/* IMMERSIVE HERO STAGE (CONSOLE STYLE) */}
                {featuredLead && (
-                 <div className="relative group rounded-[3rem] overflow-hidden border-2 border-white/5 shadow-2xl h-[400px] flex items-center">
-                    <div className="absolute inset-0 bg-gradient-to-r from-black via-black/40 to-transparent z-10" />
+                 <div className="relative group rounded-[3rem] overflow-hidden border-2 border-white/5 shadow-2xl h-[380px] flex items-center">
+                    <div className="absolute inset-0 bg-gradient-to-r from-black via-black/50 to-transparent z-10" />
                     <div className="absolute inset-0 z-0">
                        <img src="https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=2070&auto=format&fit=crop" className="w-full h-full object-cover grayscale opacity-30 group-hover:scale-105 transition-transform duration-1000" />
                     </div>
                     
-                    <div className="relative z-20 px-12 space-y-6 max-w-2xl">
+                    <div className="relative z-20 px-12 space-y-5 max-w-2xl">
                        <div className="flex items-center gap-4">
-                          <div className="px-4 py-1.5 bg-[#FACC15] text-black font-black text-[10px] tracking-[0.3em] rounded-full flex items-center gap-2">
-                             <Star size={12} fill="currentColor" /> FEATURED_ASSET
+                          <div className="px-3 py-1 bg-[#FACC15] text-black font-tactical text-[9px] tracking-[0.2em] rounded-full flex items-center gap-2">
+                             <Star size={10} fill="currentColor" /> FEATURED_ASSET
                           </div>
-                          <span className="text-neutral-500 font-black text-[10px] uppercase tracking-widest">TIER: LEGENDARY</span>
+                          <span className="text-neutral-500 font-tactical text-[9px] uppercase tracking-widest">TIER: LEGENDARY</span>
                        </div>
                        
-                       <h1 className="text-5xl md:text-7xl font-futuristic font-black text-white uppercase tracking-tighter leading-none">
+                       <h1 className="text-4xl md:text-5xl font-tactical font-black text-white uppercase tracking-tighter leading-none">
                           {featuredLead.title}
                        </h1>
                        
-                       <p className="text-neutral-400 font-bold text-lg leading-relaxed max-w-lg line-clamp-2">
+                       <p className="text-neutral-400 font-medium text-base leading-relaxed max-w-lg line-clamp-2">
                           {featuredLead.description}
                        </p>
 
-                       <div className="flex items-center gap-6 pt-4">
+                       <div className="flex items-center gap-6 pt-2">
                           <button 
                             onClick={() => setSelectedLeadForBid(featuredLead)}
-                            className="px-10 py-5 bg-white text-black rounded-2xl font-black text-xs uppercase tracking-[0.4em] flex items-center gap-4 hover:bg-[#FACC15] transition-all transform active:scale-95 shadow-2xl"
+                            className="px-8 py-4 bg-white text-black rounded-xl font-tactical text-[10px] uppercase tracking-[0.3em] flex items-center gap-3 hover:bg-[#FACC15] transition-all transform active:scale-95 shadow-2xl"
                           >
-                             <PlayCircle size={18} /> ENTER_AUCTION
+                             <PlayCircle size={16} /> ENTER_AUCTION
                           </button>
                           <div className="flex flex-col">
-                             <span className="text-[8px] font-black text-neutral-600 uppercase tracking-widest">CURRENT_PRICE</span>
-                             <span className="text-2xl font-tactical text-white tracking-widest">${featuredLead.currentBid.toLocaleString()}</span>
+                             <span className="text-[7px] font-tactical text-neutral-600 uppercase tracking-widest">CURRENT_PRICE</span>
+                             <span className="text-xl font-tactical text-white tracking-widest">${featuredLead.currentBid.toLocaleString()}</span>
                           </div>
                        </div>
                     </div>
@@ -300,15 +300,15 @@ const App: React.FC = () => {
                <div className="space-y-10">
                   <div className="flex items-end justify-between px-4">
                      <div>
-                        <h2 className="text-2xl md:text-4xl font-futuristic font-black text-white uppercase tracking-tighter leading-none">
+                        <h2 className="text-lg md:text-xl font-tactical font-black text-white uppercase tracking-tighter leading-none">
                            ASSET <span className="text-[#FACC15]">LIBRARY</span>
                         </h2>
-                        <p className="text-[10px] text-neutral-600 font-bold uppercase tracking-[0.5em] mt-3">Live Inventory Node // {marketData.leads.length} Assets</p>
+                        <p className="text-[9px] text-neutral-600 font-tactical uppercase tracking-[0.4em] mt-2">Live Inventory Node // {marketData.leads.length} Assets</p>
                      </div>
                      <div className="flex items-center gap-4 text-neutral-700">
-                        <span className="text-[10px] font-black uppercase tracking-widest">SORT: QUALITY</span>
+                        <span className="text-[9px] font-tactical uppercase tracking-widest">SORT: QUALITY</span>
                         <div className="w-px h-6 bg-neutral-900" />
-                        <TrendingUp size={20} />
+                        <TrendingUp size={16} />
                      </div>
                   </div>
 
@@ -329,7 +329,7 @@ const App: React.FC = () => {
                   <div className="lg:col-span-8">
                      <div className="bg-[#050505] rounded-[3rem] border border-neutral-800/40 p-2 shadow-2xl relative overflow-hidden group">
                         <div className="absolute top-8 left-12 z-20">
-                           <span className="text-[10px] font-black text-[#FACC15] uppercase tracking-[0.5em] bg-black/80 px-4 py-1.5 rounded-full border border-[#FACC15]/20 backdrop-blur-md">GLOBAL_COVERAGE</span>
+                           <span className="text-[9px] font-tactical text-[#FACC15] uppercase tracking-[0.3em] bg-black/80 px-4 py-1.5 rounded-full border border-[#FACC15]/20 backdrop-blur-md">GLOBAL_COVERAGE</span>
                         </div>
                         <WorldMarketMap leads={marketData.leads} users={marketData.users} onSelectCountry={() => {}} selectedCountry={null} />
                      </div>
@@ -338,10 +338,10 @@ const App: React.FC = () => {
                      <div className="bg-[#050505] p-10 rounded-[3rem] border border-neutral-800/40 h-full flex flex-col shadow-2xl relative overflow-hidden group">
                         <div className="absolute -top-10 -right-10 w-40 h-40 bg-[#FACC15]/5 rounded-full blur-[60px]" />
                         <div className="flex justify-between items-center border-b border-neutral-900 pb-6 mb-8 relative z-10">
-                           <h4 className="text-[11px] font-black text-neutral-500 uppercase tracking-[0.4em] flex items-center gap-3 font-futuristic">
-                              <History size={18} className="text-[#FACC15]" /> BROADCAST_LOG
+                           <h4 className="text-[10px] font-tactical text-neutral-500 uppercase tracking-[0.3em] flex items-center gap-3">
+                              <History size={16} className="text-[#FACC15]" /> BROADCAST_LOG
                            </h4>
-                           <div className="w-2.5 h-2.5 bg-[#FACC15] rounded-full animate-pulse shadow-[0_0_12px_#FACC15]" />
+                           <div className="w-2 h-2 bg-[#FACC15] rounded-full animate-pulse shadow-[0_0_12px_#FACC15]" />
                         </div>
                         
                         <div className="flex-1 space-y-4 overflow-y-auto scrollbar-hide max-h-[400px] relative z-10">
@@ -353,16 +353,16 @@ const App: React.FC = () => {
                                         {n.type === 'buy' ? <ArrowDownLeft size={16} /> : <ArrowUpRight size={16} />}
                                      </div>
                                      <div className="min-w-0">
-                                        <p className="text-[11px] text-neutral-200 font-black uppercase tracking-tight truncate max-w-[180px] group-hover/item:text-white">{n.message}</p>
-                                        <p className="text-[8px] text-neutral-700 font-bold uppercase mt-1">{n.timestamp}</p>
+                                        <p className="text-[10px] text-neutral-200 font-tactical uppercase tracking-tight truncate max-w-[180px] group-hover/item:text-white">{n.message}</p>
+                                        <p className="text-[7px] text-neutral-700 font-tactical uppercase mt-1">{n.timestamp}</p>
                                      </div>
                                   </div>
                                </div>
                              ))
                            ) : (
                              <div className="py-24 text-center opacity-20">
-                                <History size={40} className="mx-auto text-neutral-900 mb-4" />
-                                <p className="text-[9px] text-neutral-700 font-black uppercase tracking-[0.5em]">STREAM_OFFLINE</p>
+                                <History size={32} className="mx-auto text-neutral-900 mb-4" />
+                                <p className="text-[8px] text-neutral-700 font-tactical uppercase tracking-[0.4em]">STREAM_OFFLINE</p>
                              </div>
                            )}
                         </div>
@@ -375,10 +375,10 @@ const App: React.FC = () => {
           {activeTab === 'admin' && (
             <div className="max-w-[1400px] mx-auto space-y-12 animate-in fade-in duration-700 pb-20">
                <div className="px-1">
-                  <h2 className="text-3xl md:text-5xl font-futuristic font-black text-white uppercase tracking-tighter leading-none">
+                  <h2 className="text-3xl md:text-5xl font-tactical font-black text-white uppercase tracking-tighter leading-none">
                     ROOT <span className="text-[#2DD4BF]">ACCESS</span>
                   </h2>
-                  <p className="text-[7px] md:text-[10px] text-neutral-600 font-black uppercase tracking-[0.4em] mt-1.5">SYSTEM_OVERRIDE_ENABLED // v4.2</p>
+                  <p className="text-[7px] md:text-[10px] text-neutral-600 font-black uppercase tracking-[0.4em] mt-1.5 font-tactical">SYSTEM_OVERRIDE_ENABLED // v4.2</p>
                </div>
 
                {/* USER REGISTRY SECTION */}
@@ -388,8 +388,8 @@ const App: React.FC = () => {
                        <UserIcon size={20} />
                     </div>
                     <div>
-                       <h3 className="text-xl font-black text-white uppercase tracking-tight">Node Registry</h3>
-                       <p className="text-[9px] text-neutral-700 font-black uppercase tracking-widest mt-1">Manage global identity permissions</p>
+                       <h3 className="text-xl font-black text-white uppercase tracking-tight font-tactical">Node Registry</h3>
+                       <p className="text-[9px] text-neutral-700 font-black uppercase tracking-widest mt-1 font-tactical">Manage global identity permissions</p>
                     </div>
                   </div>
                   
@@ -403,8 +403,8 @@ const App: React.FC = () => {
                        <Layers size={20} />
                     </div>
                     <div>
-                       <h3 className="text-xl font-black text-white uppercase tracking-tight">Asset Registry</h3>
-                       <p className="text-[9px] text-neutral-700 font-black uppercase tracking-widest mt-1">Manage global marketplace inventory</p>
+                       <h3 className="text-xl font-black text-white uppercase tracking-tight font-tactical">Asset Registry</h3>
+                       <p className="text-[9px] text-neutral-700 font-black uppercase tracking-widest mt-1 font-tactical">Manage global marketplace inventory</p>
                     </div>
                   </div>
                   
@@ -425,7 +425,7 @@ const App: React.FC = () => {
                   <div className="lg:col-span-4">
                      <div className="bg-[#000000] p-8 rounded-[2.5rem] border border-[#1A1A1A] h-full flex flex-col shadow-2xl">
                         <div className="flex justify-between items-center border-b border-[#1A1A1A] pb-6 mb-6">
-                           <h4 className="text-[11px] font-black text-neutral-500 uppercase tracking-[0.3em] flex items-center gap-3">
+                           <h4 className="text-[11px] font-black text-neutral-500 uppercase tracking-[0.3em] flex items-center gap-3 font-tactical">
                               <ShieldAlert size={16} className="text-[#2DD4BF]" /> MASTER_AUDIT
                            </h4>
                            <div className="w-2.5 h-2.5 bg-[#2DD4BF] rounded-full animate-pulse shadow-[0_0_12px_#2DD4BF]" />
@@ -443,8 +443,8 @@ const App: React.FC = () => {
                                       <Zap size={14} />
                                    </div>
                                    <div className="min-w-0">
-                                      <p className="text-[11px] text-neutral-200 font-black uppercase tracking-tight truncate max-w-[150px]">{n.message}</p>
-                                      <p className="text-[8px] text-neutral-700 font-bold uppercase mt-1">{n.timestamp}</p>
+                                      <p className="text-[11px] text-neutral-200 font-black uppercase tracking-tight truncate max-w-[150px] font-tactical">{n.message}</p>
+                                      <p className="text-[8px] text-neutral-700 font-bold uppercase mt-1 font-tactical">{n.timestamp}</p>
                                    </div>
                                 </div>
                                 <ArrowRight size={14} className="text-neutral-800 group-hover:text-[#2DD4BF] transition-all" />
@@ -462,10 +462,10 @@ const App: React.FC = () => {
           {activeTab === 'ledger' && (
             <div className="max-w-[1400px] mx-auto space-y-12 animate-in fade-in duration-700">
                <div className="px-1">
-                  <h2 className="text-3xl md:text-5xl font-futuristic font-black text-white uppercase tracking-tighter leading-none">
+                  <h2 className="text-3xl md:text-5xl font-tactical font-black text-white uppercase tracking-tighter leading-none">
                     AUDIT <span className="text-[#FACC15]">LEDGER</span>
                   </h2>
-                  <p className="text-[7px] md:text-[10px] text-neutral-600 font-bold uppercase tracking-[0.4em] mt-1.5">IMMUTABLE_LOG // HUB_01</p>
+                  <p className="text-[7px] md:text-[10px] text-neutral-600 font-bold uppercase tracking-[0.4em] mt-1.5 font-tactical">IMMUTABLE_LOG // HUB_01</p>
                </div>
                
                <UserActivityHub 
@@ -480,7 +480,7 @@ const App: React.FC = () => {
                     <div className="w-10 h-10 bg-[#FACC15]/10 rounded-xl flex items-center justify-center text-[#FACC15]">
                        <ShieldCheck size={20} />
                     </div>
-                    <h3 className="text-xl font-black text-white uppercase tracking-tighter">Settlement Ledger</h3>
+                    <h3 className="text-xl font-black text-white uppercase tracking-tighter font-tactical">Settlement Ledger</h3>
                   </div>
                   <InvoiceLedger invoices={userInvoices} />
                </div>
@@ -491,7 +491,7 @@ const App: React.FC = () => {
           {activeTab === 'create' && <LeadSubmissionForm onSubmit={(l) => { setIsSubmitting(true); apiService.createLead({...l, ownerId: user!.id}).then(() => { fetchAppData(); setActiveTab('market'); showToast("PROVISIONED"); setIsSubmitting(false); }); }} />}
           {activeTab === 'wishlist' && (
             <div className="max-w-[1400px] mx-auto space-y-8 animate-in fade-in duration-600">
-               <h2 className="text-3xl md:text-5xl font-futuristic text-white uppercase tracking-tighter leading-none">
+               <h2 className="text-3xl md:text-5xl font-tactical text-white uppercase tracking-tighter leading-none">
                  SAVED <span className="text-[#FACC15]">NODES</span>
                </h2>
                <div className="bg-[#000000] rounded-[2rem] border border-[#1A1A1A] p-6 shadow-2xl">
@@ -520,6 +520,7 @@ const App: React.FC = () => {
             apiService.updateLead(u.id!, u).then(() => {
               fetchAppData();
               setSelectedLeadForEdit(null);
+              // Do not force navigate back to market if we are in admin tab
               showToast("NODE_UPDATED");
             });
           }} 
