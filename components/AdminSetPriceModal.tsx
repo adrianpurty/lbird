@@ -1,7 +1,6 @@
-
 import React, { useState } from 'react';
 import { X, Save, AlertCircle } from 'lucide-react';
-import { Lead } from '../types';
+import { Lead } from '../types.ts';
 
 interface AdminSetPriceModalProps {
   lead: Lead;

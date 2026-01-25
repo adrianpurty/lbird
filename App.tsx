@@ -15,14 +15,13 @@ import DashboardStats from './components/DashboardStats.tsx';
 import MobileNav from './components/MobileNav.tsx';
 import Login from './components/Login.tsx';
 import Signup from './components/Signup.tsx';
-import BiddingModal, { BiddingFormData } from './components/BiddingModal.tsx';
+// Fix: Import BiddingModal without the non-exported BiddingFormData interface to prevent ESM load failure
+import BiddingModal from './components/BiddingModal.tsx';
 import AdminLeadActionsModal from './components/AdminLeadActionsModal.tsx';
 import AdminOAuthSettings from './components/AdminOAuthSettings.tsx';
-// Fix: Import AdminPaymentSettings without the non-exported GatewayAPI member
 import AdminPaymentSettings from './components/AdminPaymentSettings.tsx';
 import RevenueChart from './components/RevenueChart.tsx';
 import InvoiceLedger from './components/InvoiceLedger.tsx';
-// Fix: Import GatewayAPI from types.ts where it is defined
 import { Lead, User, PurchaseRequest, Notification, PlatformAnalytics, OAuthConfig, Invoice, GatewayAPI } from './types.ts';
 import { apiService } from './services/apiService.ts';
 import { soundService } from './services/soundService.ts';
@@ -48,7 +47,6 @@ const MemoizedHeader = memo(Header);
 const MemoizedLeadGrid = memo(LeadGrid);
 
 const App: React.FC = () => {
-  // Global click sound effect
   useEffect(() => {
     const handleGlobalClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
@@ -60,7 +58,6 @@ const App: React.FC = () => {
     return () => window.removeEventListener('mousedown', handleGlobalClick);
   }, []);
 
-  // Persist Auth View state across refreshes
   const [authView, setAuthView] = useState<'login' | 'signup' | 'app'>(() => {
     try {
       const savedView = localStorage.getItem(AUTH_VIEW_KEY);
@@ -85,7 +82,6 @@ const App: React.FC = () => {
     lastUpdate: ''
   });
 
-  // Persist User object across refreshes for instant load
   const [user, setUser] = useState<User | null>(() => {
     try {
       const savedUser = localStorage.getItem(USER_DATA_KEY);
@@ -169,8 +165,6 @@ const App: React.FC = () => {
             setUser(currentUser);
             if (authView !== 'app') setAuthView('app');
           }
-        } else if (!userRef.current) {
-          // session exists logic
         }
       }
     } catch (error) { 
@@ -183,7 +177,6 @@ const App: React.FC = () => {
 
   useEffect(() => { 
     fetchAppData();
-    // High-frequency polling (10s) for high-stakes coordination
     const interval = setInterval(fetchAppData, 10000);
     return () => clearInterval(interval);
   }, [fetchAppData]);
@@ -221,7 +214,6 @@ const App: React.FC = () => {
     setIsSubmitting(true);
     try {
       await Promise.all(ids.map(id => apiService.updateLead(id, { status: 'approved' })));
-      // Run background sync after clearing overlay for better speed perception
       fetchAppData(); 
       showToast(`Batch Protocol: ${ids.length} nodes approved.`);
     } catch (e) {
@@ -378,7 +370,7 @@ const App: React.FC = () => {
           {activeTab === 'create' && <LeadSubmissionForm onSubmit={(l) => { 
             setIsSubmitting(true); 
             apiService.createLead({...l, ownerId: user!.id}).then(async () => { 
-              await fetchAppData(); // CRITICAL: Ensure fresh data is pulled before switching
+              await fetchAppData(); 
               setActiveTab('market'); 
               showToast("Asset Provisioned Successfully"); 
               setIsSubmitting(false); 
