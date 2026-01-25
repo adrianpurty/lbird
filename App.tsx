@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect, useCallback, useRef, useMemo, memo, useDeferredValue } from 'react';
 import { 
   TrendingUp, Settings, ShieldAlert, Package, 
   Inbox, CheckCircle, Activity, User as UserIcon, 
   BarChart3, Target, Info, XCircle, Heart, FileText, Database, Server,
-  Loader2, Gavel, Loader, Eye, Fingerprint, Terminal
+  Loader2, Gavel, Loader, Eye, Fingerprint, Terminal, UserCircle, Globe, Monitor, MapPin
 } from 'lucide-react';
 import Sidebar from './components/Sidebar.tsx';
 import Header from './components/Header.tsx';
@@ -23,6 +22,7 @@ import AdminPaymentSettings from './components/AdminPaymentSettings.tsx';
 import RevenueChart from './components/RevenueChart.tsx';
 import InvoiceLedger from './components/InvoiceLedger.tsx';
 import LogInspectionModal from './components/LogInspectionModal.tsx';
+import WorldMarketMap from './components/WorldMarketMap.tsx';
 import { Lead, User, PurchaseRequest, Notification, PlatformAnalytics, OAuthConfig, Invoice, GatewayAPI } from './types.ts';
 import { apiService } from './services/apiService.ts';
 import { soundService } from './services/soundService.ts';
@@ -30,6 +30,7 @@ import { soundService } from './services/soundService.ts';
 const SESSION_KEY = 'lb_session_v3';
 const USER_DATA_KEY = 'lb_user_v3';
 const AUTH_VIEW_KEY = 'lb_auth_view_v3';
+const LAST_KNOWN_LOCATION_KEY = 'lb_last_known_loc';
 
 interface AppMarketData {
   leads: Lead[];
@@ -47,6 +48,109 @@ interface AppMarketData {
 const MemoizedSidebar = memo(Sidebar);
 const MemoizedHeader = memo(Header);
 const MemoizedLeadGrid = memo(LeadGrid);
+
+const UserPresenceTable = ({ users, currentUserId }: { users: User[], currentUserId: string }) => {
+  const getTabLabel = (tabId: string) => {
+    const mapping: Record<string, string> = {
+      market: 'Sales Floor',
+      profile: 'Identity Node',
+      wishlist: 'Saved Assets',
+      create: 'Asset Provisioning',
+      bids: 'Active Portfolio',
+      ledger: 'Financial Ledger',
+      inbox: 'Audit Logs',
+      admin: 'Control Room',
+      'payment-config': 'Gateway Config',
+      'auth-config': 'Identity Infrastructure',
+      settings: 'Vault & API'
+    };
+    return mapping[tabId] || tabId;
+  };
+
+  const sortedUsers = useMemo(() => {
+    return [...users].sort((a, b) => {
+        const aTime = a.last_active_at ? new Date(a.last_active_at).getTime() : 0;
+        const bTime = b.last_active_at ? new Date(b.last_active_at).getTime() : 0;
+        return bTime - aTime;
+    });
+  }, [users]);
+
+  return (
+    <div className="bg-[#111111]/40 border border-neutral-800/30 rounded-[2rem] overflow-hidden shadow-2xl backdrop-blur-md">
+       <div className="p-6 border-b border-neutral-800/40 bg-black/20 flex justify-between items-center">
+          <div className="flex items-center gap-3">
+             <Activity className="text-[#facc15]" size={16} />
+             <span className="text-[11px] font-black uppercase tracking-[0.2em] text-neutral-300">Active Node Presence</span>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-1 bg-[#facc15]/5 border border-[#facc15]/20 rounded-lg">
+             <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+             <span className="text-[9px] font-black text-neutral-400 uppercase">{users.length} Sync'd</span>
+          </div>
+       </div>
+       <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+             <thead>
+                <tr className="border-b border-neutral-800/20">
+                   <th className="px-6 py-4 text-[9px] font-black text-neutral-600 uppercase tracking-widest">Trader Identity</th>
+                   <th className="px-6 py-4 text-[9px] font-black text-neutral-600 uppercase tracking-widest">Active Node</th>
+                   <th className="px-6 py-4 text-[9px] font-black text-neutral-600 uppercase tracking-widest">Global Location</th>
+                   <th className="px-6 py-4 text-[9px] font-black text-neutral-600 uppercase tracking-widest">Status / Last Sync</th>
+                </tr>
+             </thead>
+             <tbody className="divide-y divide-neutral-800/10">
+                {sortedUsers.map(u => {
+                   const isOnline = u.last_active_at && (Date.now() - new Date(u.last_active_at).getTime() < 60000);
+                   return (
+                      <tr key={u.id} className={`group hover:bg-white/[0.02] transition-colors ${u.id === currentUserId ? 'bg-[#facc15]/[0.03]' : ''}`}>
+                         <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                               <div className="w-8 h-8 rounded-lg overflow-hidden bg-neutral-900 border border-neutral-800 flex items-center justify-center group-hover:border-[#facc15]/30 transition-all">
+                                  {u.profileImage ? <img src={u.profileImage} className="w-full h-full object-cover" /> : <UserCircle size={16} className="text-neutral-700" />}
+                               </div>
+                               <div>
+                                  <p className="text-xs font-bold text-neutral-300 group-hover:text-white transition-colors">{u.name}</p>
+                                  <p className="text-[9px] text-neutral-600 font-black uppercase tracking-tighter">{u.email}</p>
+                               </div>
+                            </div>
+                         </td>
+                         <td className="px-6 py-4">
+                            <div className="flex items-center gap-2">
+                               <Terminal size={12} className="text-neutral-700" />
+                               <span className="text-[10px] font-black text-[#facc15]/60 uppercase italic tracking-widest">{getTabLabel(u.current_page || 'Unknown')}</span>
+                            </div>
+                         </td>
+                         <td className="px-6 py-4">
+                            <div className="flex flex-col gap-1">
+                               <div className="flex items-center gap-2 text-[9px] text-neutral-400 font-bold uppercase">
+                                  <MapPin size={10} className="text-red-900/60" /> {u.location || 'HIDDEN'}
+                               </div>
+                               <div className="flex items-center gap-2 text-[8px] text-neutral-600 font-black tracking-tighter">
+                                  <Globe size={10} /> {u.ipAddress || '0.0.0.0'}
+                               </div>
+                            </div>
+                         </td>
+                         <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                               <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-neutral-800'}`} />
+                               <div>
+                                  <p className={`text-[10px] font-black uppercase tracking-widest ${isOnline ? 'text-emerald-500/80' : 'text-neutral-700'}`}>
+                                     {isOnline ? 'CONNECTED' : 'DISCONNECTED'}
+                                  </p>
+                                  <p className="text-[8px] text-neutral-700 font-mono italic">
+                                     {u.last_active_at ? new Date(u.last_active_at).toLocaleTimeString() : 'N/A'}
+                                  </p>
+                               </div>
+                            </div>
+                         </td>
+                      </tr>
+                   );
+                })}
+             </tbody>
+          </table>
+       </div>
+    </div>
+  );
+};
 
 const App: React.FC = () => {
   useEffect(() => {
@@ -115,6 +219,33 @@ const App: React.FC = () => {
       localStorage.removeItem(USER_DATA_KEY);
     }
   }, [user]);
+
+  // Presence Tracking (Heartbeat) with location reveal
+  useEffect(() => {
+    if (!user || authView !== 'app') return;
+    
+    const sendHeartbeat = async () => {
+        let ip = '0.0.0.0';
+        try { 
+            const res = await fetch('https://api.ipify.org?format=json');
+            const data = await res.json();
+            ip = data.ip;
+        } catch {}
+
+        const loc = localStorage.getItem(LAST_KNOWN_LOCATION_KEY) || 'Unknown';
+        const device = `${navigator.platform} | ${navigator.userAgent.substring(0, 30)}...`;
+
+        apiService.updateHeartbeat(user.id, activeTab, {
+            location: loc,
+            ipAddress: ip,
+            deviceInfo: device
+        }).catch(() => {});
+    };
+
+    sendHeartbeat();
+    const interval = setInterval(sendHeartbeat, 25000); // Pulse every 25s
+    return () => clearInterval(interval);
+  }, [user, activeTab, authView]);
 
   useEffect(() => {
     localStorage.setItem(AUTH_VIEW_KEY, authView);
@@ -344,7 +475,16 @@ const App: React.FC = () => {
 
           {activeTab === 'admin' && user!.role === 'admin' && (
              <div className="max-w-7xl mx-auto space-y-12 animate-in fade-in duration-200">
-                <h2 className="text-xl font-black text-neutral-400 italic uppercase flex items-center gap-3"><ShieldAlert className="text-[#facc15]/40" /> Control Room</h2>
+                <div className="flex justify-between items-center">
+                   <h2 className="text-xl font-black text-neutral-400 italic uppercase flex items-center gap-3"><ShieldAlert className="text-[#facc15]/40" /> Control Room</h2>
+                   <div className="flex items-center gap-4">
+                      <div className="px-4 py-2 bg-black/40 border border-neutral-800 rounded-xl flex items-center gap-3">
+                         <Activity size={14} className="text-emerald-500 animate-pulse" />
+                         <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Global Telemetry Active</span>
+                      </div>
+                   </div>
+                </div>
+
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   <div className="bg-[#121212]/40 p-6 rounded-2xl border border-neutral-800/30 shadow-sm flex flex-col justify-center">
                       <BarChart3 className="text-emerald-900/40 mb-2" size={20} />
@@ -353,6 +493,28 @@ const App: React.FC = () => {
                   </div>
                   {marketData.analytics && <RevenueChart history={marketData.analytics.revenueHistory} />}
                 </div>
+
+                {/* Live Node Distribution Reveal */}
+                <div className="space-y-6">
+                   <div className="flex items-center gap-4 border-b border-neutral-800/20 pb-2">
+                      <Globe size={14} className="text-[#facc15]/60" />
+                      <h3 className="text-[10px] font-black text-neutral-500 uppercase tracking-widest italic">Live Geographic Node Distribution</h3>
+                   </div>
+                   <WorldMarketMap 
+                     leads={[]} // No leads here, purely for user visual distribution
+                     onSelectCountry={() => {}} 
+                     selectedCountry={null}
+                   />
+                </div>
+
+                <div className="space-y-6">
+                   <div className="flex items-center gap-4 border-b border-neutral-800/20 pb-2">
+                      <UserIcon size={14} className="text-[#facc15]/60" />
+                      <h3 className="text-[10px] font-black text-neutral-500 uppercase tracking-widest italic">User Telemetry Grid</h3>
+                   </div>
+                   <UserPresenceTable users={marketData.users} currentUserId={user!.id} />
+                </div>
+
                 <div className="space-y-6">
                    <h3 className="text-[10px] font-black text-neutral-700 uppercase tracking-widest italic border-b border-neutral-800/20 pb-2">Full Inventory Oversight</h3>
                    <MemoizedLeadGrid 

@@ -75,7 +75,7 @@ class ApiService {
     switch (action) {
       case 'get_data':
         return {
-          metadata: { version: '4.1.0-LOCAL', last_updated: new Date().toISOString(), db_size: JSON.stringify(db).length, status: 'VIRTUAL' },
+          metadata: { version: '4.1.3-LOCAL', last_updated: new Date().toISOString(), db_size: JSON.stringify(db).length, status: 'VIRTUAL' },
           ...db,
           analytics: {
             totalVolume: db.invoices.reduce((acc: number, inv: any) => acc + inv.totalSettlement, 0),
@@ -88,13 +88,34 @@ class ApiService {
       case 'get_categories':
         return NICHE_PROTOCOLS;
 
+      case 'heartbeat':
+        db.users = db.users.map((u: any) => u.id === body.userId ? { 
+          ...u, 
+          last_active_at: new Date().toISOString(), 
+          current_page: body.page,
+          location: body.location || u.location,
+          ipAddress: body.ipAddress || u.ipAddress,
+          deviceInfo: body.deviceInfo || u.deviceInfo
+        } : u);
+        this.saveFallbackDB(db);
+        return { status: 'success' };
+
       case 'authenticate_user':
         const user = db.users.find((u: any) => (u.username === body.username || u.email === body.username) && u.password === body.token);
+        if (user) {
+            user.last_active_at = new Date().toISOString();
+            user.current_page = 'Authentication';
+            this.saveFallbackDB(db);
+        }
         return { status: 'success', user: user || null };
 
       case 'social_sync':
         const existing = db.users.find((u: any) => u.email === body.email);
-        if (existing) return { status: 'success', user: existing };
+        if (existing) {
+            existing.last_active_at = new Date().toISOString();
+            this.saveFallbackDB(db);
+            return { status: 'success', user: existing };
+        }
         
         const socialUser = { 
           id: 'u_' + Math.random().toString(36).substr(2, 5),
@@ -105,14 +126,16 @@ class ApiService {
           balance: 1000, 
           role: 'user', 
           stripeConnected: false, 
-          wishlist: [] 
+          wishlist: [],
+          last_active_at: new Date().toISOString(),
+          current_page: 'Social Marketplace'
         };
         db.users.push(socialUser);
         this.saveFallbackDB(db);
         return { status: 'success', user: socialUser };
 
       case 'register_user':
-        const newUser = { ...body, id: 'u_' + Math.random().toString(36).substr(2, 5), balance: 1000, role: 'user', stripeConnected: false, wishlist: [] };
+        const newUser = { ...body, id: 'u_' + Math.random().toString(36).substr(2, 5), balance: 1000, role: 'user', stripeConnected: false, wishlist: [], last_active_at: new Date().toISOString(), current_page: 'Onboarding' };
         db.users.push(newUser);
         this.saveFallbackDB(db);
         return { status: 'success', user: newUser };
@@ -192,6 +215,10 @@ class ApiService {
   async authenticateUser(username: string, token: string): Promise<User | null> {
     const res = await this.request('authenticate_user', 'POST', { username, token });
     return res.user;
+  }
+
+  async updateHeartbeat(userId: string, page: string, telemetry?: { location?: string, ipAddress?: string, deviceInfo?: string }): Promise<any> {
+    return this.request('heartbeat', 'POST', { userId, page, ...telemetry });
   }
 
   async socialSync(profile: { name: string, email: string, profileImage: string }): Promise<User> {

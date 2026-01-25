@@ -89,6 +89,9 @@ export interface User {
   preferredContact?: 'email' | 'phone' | 'whatsapp' | 'telegram';
   defaultBusinessUrl?: string;
   defaultTargetUrl?: string;
+  // Added properties for presence tracking to fix compilation errors in App.tsx
+  last_active_at?: string;
+  current_page?: string;
 }
 
 export interface OAuthConfig {
