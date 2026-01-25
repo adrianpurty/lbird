@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Invoice } from '../types.ts';
 import { Download, FileText, CheckCircle, Zap, ShieldCheck, Printer } from 'lucide-react';
@@ -96,12 +97,12 @@ const InvoiceLedger: React.FC<InvoiceLedgerProps> = ({ invoices }) => {
                <ShieldCheck className="text-[#facc15]/40" size={20} />
             </div>
             <div>
-               <h3 className="text-neutral-300 font-black text-sm uppercase tracking-widest">Audit Ledger</h3>
-               <p className="text-[10px] text-neutral-700 font-black uppercase tracking-tighter">Verified Daily Settlement History</p>
+               <h3 className="text-neutral-300 font-black text-[10px] md:text-[12px] uppercase tracking-[0.3em]">Transaction_Manifest</h3>
+               <p className="text-[8px] md:text-[9px] text-neutral-700 font-black uppercase tracking-tighter">Verified Daily Settlement History</p>
             </div>
          </div>
          <div className="text-right">
-            <span className="text-[9px] text-neutral-700 font-black uppercase tracking-widest block mb-1">Total Records</span>
+            <span className="text-[8px] text-neutral-700 font-black uppercase tracking-widest block mb-1">Total_Items</span>
             <span className="text-neutral-400 font-black text-xl italic">{invoices.length}</span>
          </div>
       </div>
@@ -110,7 +111,7 @@ const InvoiceLedger: React.FC<InvoiceLedgerProps> = ({ invoices }) => {
         {invoices.length === 0 ? (
           <div className="bg-[#111111]/20 p-20 rounded-[3rem] border border-neutral-800/20 text-center space-y-4">
             <FileText className="text-neutral-900 mx-auto" size={48} />
-            <p className="text-neutral-700 text-xs font-black uppercase tracking-[0.2em]">No financial records found in the current node.</p>
+            <p className="text-neutral-700 text-[10px] font-black uppercase tracking-[0.4em]">ZERO_RECORDS_DETECTED</p>
           </div>
         ) : (
           invoices.map((inv) => (
@@ -126,7 +127,7 @@ const InvoiceLedger: React.FC<InvoiceLedgerProps> = ({ invoices }) => {
                            <CheckCircle size={8} /> Settled
                         </span>
                      </div>
-                     <p className="text-neutral-500 text-[11px] font-bold mt-1">{inv.leadTitle}</p>
+                     <p className="text-neutral-500 text-[11px] font-bold mt-1 uppercase tracking-tight">{inv.leadTitle}</p>
                      <div className="flex items-center gap-2 mt-2">
                         <span className="text-[9px] text-neutral-700 font-black uppercase">{new Date(inv.timestamp).toLocaleDateString()}</span>
                         <span className="text-neutral-800">•</span>
@@ -138,7 +139,7 @@ const InvoiceLedger: React.FC<InvoiceLedgerProps> = ({ invoices }) => {
                <div className="flex items-center gap-8 w-full md:w-auto justify-between md:justify-end">
                   <div className="text-right">
                      <span className="text-[9px] text-neutral-700 font-black uppercase tracking-widest block mb-1">Settlement</span>
-                     <span className="text-neutral-300 font-black text-xl italic">${inv.totalSettlement.toLocaleString()}</span>
+                     <span className="text-neutral-300 font-black text-xl italic font-tactical">${inv.totalSettlement.toLocaleString()}</span>
                   </div>
                   <button 
                     onClick={() => handlePrint(inv)}

@@ -1,36 +1,20 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { X, Globe, Target, Phone, Zap, ChevronRight, Calculator, AlertTriangle, Wallet, Info } from 'lucide-react';
+
+import React, { useState, useMemo } from 'react';
+import { X, Globe, Target, Phone, Zap, ChevronRight, Calculator, AlertTriangle, Wallet, Info, ArrowRight } from 'lucide-react';
 import { Lead, User } from '../types.ts';
 
 interface BiddingModalProps {
   lead: Lead;
   user: User;
   onClose: () => void;
-  onSubmit: (data: BiddingFormData) => void;
+  onSubmit: (data: any) => void;
   onRefill: () => void;
 }
 
-export interface BiddingFormData {
-  buyerBusinessUrl: string;
-  buyerTargetLeadUrl: string;
-  buyerTollFree: string;
-  leadsPerDay: number;
-  bidAmount: number;
-  totalDailyCost: number;
-}
-
-const HelpTip = ({ text }: { text: string }) => (
-  <div className="group relative inline-block ml-1 align-middle">
-    <Info size={14} className="text-neutral-500 hover:text-[#fbbf24] cursor-help transition-colors" />
-    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-56 p-4 bg-black border-2 border-neutral-700 rounded-2xl text-[10px] text-neutral-300 font-bold uppercase tracking-widest leading-relaxed opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-[110] shadow-2xl backdrop-blur-md">
-      {text}
-    </div>
-  </div>
-);
-
 const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, onClose, onSubmit, onRefill }) => {
   const minBid = lead.currentBid + 1;
-  const [formData, setFormData] = useState<Omit<BiddingFormData, 'totalDailyCost'>>({
+  const [purchaseMode, setPurchaseMode] = useState<'bid' | 'buy_now'>('bid');
+  const [formData, setFormData] = useState({
     buyerBusinessUrl: user.defaultBusinessUrl || '',
     buyerTargetLeadUrl: user.defaultTargetUrl || '',
     buyerTollFree: user.phone || '',
@@ -38,180 +22,94 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, onClose, onSubm
     bidAmount: minBid
   });
 
-  const totalDailyCost = useMemo(() => {
-    return formData.bidAmount * formData.leadsPerDay;
-  }, [formData.bidAmount, formData.leadsPerDay]);
+  const activePrice = useMemo(() => {
+    if (purchaseMode === 'buy_now' && lead.buyNowPrice) return lead.buyNowPrice;
+    return formData.bidAmount;
+  }, [purchaseMode, lead.buyNowPrice, formData.bidAmount]);
 
-  const isBidTooLow = formData.bidAmount <= lead.currentBid;
+  const totalDailyCost = activePrice * formData.leadsPerDay;
   const hasInsufficientFunds = totalDailyCost > user.balance;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isBidTooLow) return;
-    if (hasInsufficientFunds) {
-      onRefill();
-      return;
-    }
-    onSubmit({ ...formData, totalDailyCost });
-  };
-
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl overflow-hidden">
-      <div className="w-full max-w-2xl max-h-[95vh] bg-[#1a1a1a] border-4 border-neutral-800 rounded-[3rem] shadow-[0_50px_150px_-20px_rgba(0,0,0,1)] flex flex-col animate-in zoom-in-95 duration-300">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl animate-in fade-in duration-300">
+      <div className="w-full max-w-2xl bg-black border border-[#1A1A1A] rounded-[3rem] shadow-[0_50px_150px_-20px_rgba(0,0,0,1)] overflow-hidden flex flex-col animate-in zoom-in-95 duration-500">
         
-        <div className="flex justify-between items-center p-8 sm:p-10 border-b-2 border-neutral-800 bg-black/40 shrink-0">
-          <div className="flex items-center gap-5">
-            <div className="w-14 h-14 bg-[#fbbf24] rounded-2xl flex items-center justify-center shadow-lg">
-              <Zap className="text-black" size={28} />
+        <div className="flex justify-between items-center p-10 border-b border-[#1A1A1A] bg-[#1A1A1A]/10">
+          <div className="flex items-center gap-6">
+            <div className="w-16 h-16 bg-[#1A1A1A] rounded-2xl flex items-center justify-center text-[#FACC15] shadow-lg border border-[#FACC15]/20">
+              <Zap size={32} />
             </div>
             <div>
-              <h2 className="text-2xl font-black text-white uppercase tracking-tighter leading-none italic">Provision Lead Pipeline</h2>
-              <p className="text-[#fbbf24] text-[10px] font-black uppercase tracking-[0.4em] mt-2">Target Node: {lead.title.toUpperCase()}</p>
+              <h2 className="text-3xl font-black text-white uppercase tracking-tighter italic leading-none">
+                ASSET <span className="text-[#FACC15]">SYNC</span>
+              </h2>
+              <p className="text-[10px] font-black uppercase tracking-[0.4em] mt-3 text-neutral-600">ID: {lead.id}</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-3 hover:bg-neutral-800 rounded-full transition-all text-neutral-500 hover:text-white active:scale-90">
+          <button onClick={onClose} className="p-4 hover:bg-white/5 rounded-full transition-all text-neutral-600 hover:text-white">
             <X size={32} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-8 sm:p-10 space-y-8 overflow-y-auto scrollbar-hide">
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-6">
-            <div className="flex-1 bg-black p-6 rounded-3xl border-2 border-neutral-800 flex justify-between items-center shadow-inner">
-              <div>
-                <span className="text-neutral-500 text-[10px] font-black uppercase tracking-[0.3em] block leading-none mb-2">Protocol Floor</span>
-                <span className="text-emerald-400 text-2xl font-black italic tracking-tighter">${minBid.toLocaleString()} <span className="text-[11px] text-neutral-600 font-black uppercase not-italic ml-1">USD/EA</span></span>
-              </div>
+        <div className="p-10 space-y-10 overflow-y-auto max-h-[70vh] scrollbar-hide">
+          <div className="flex bg-[#1A1A1A] p-1.5 rounded-[2rem] border border-white/5">
+            <button 
+              onClick={() => setPurchaseMode('bid')}
+              className={`flex-1 py-4 rounded-[1.5rem] font-black text-[11px] uppercase tracking-widest transition-all ${purchaseMode === 'bid' ? 'bg-[#FACC15] text-black shadow-lg' : 'text-neutral-500'}`}
+            >
+              BID_AUCTION
+            </button>
+            <button 
+              onClick={() => setPurchaseMode('buy_now')}
+              className={`flex-1 py-4 rounded-[1.5rem] font-black text-[11px] uppercase tracking-widest transition-all ${purchaseMode === 'buy_now' ? 'bg-[#FACC15] text-black shadow-lg' : 'text-neutral-500'}`}
+            >
+              INSTANT_BUY
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-6">
+            <div className="bg-[#1A1A1A] p-6 rounded-3xl border border-white/5">
+              <span className="text-neutral-600 text-[9px] font-black uppercase tracking-[0.4em] block mb-2">TARGET_VAL</span>
+              <span className="text-[#FACC15] text-3xl font-black italic tracking-tighter font-tactical">${activePrice.toLocaleString()}</span>
             </div>
-            <div className="flex-1 bg-[#fbbf24] p-6 rounded-3xl border-2 border-[#ca8a04] flex justify-between items-center shadow-lg">
-              <div>
-                <span className="text-black/60 text-[10px] font-black uppercase tracking-[0.3em] block leading-none mb-2">Node Liquidity</span>
-                <span className="text-black text-2xl font-black italic tracking-tighter">${user.balance.toLocaleString()}</span>
-              </div>
-              <Wallet size={24} className="text-black/60" />
+            <div className="bg-[#1A1A1A] p-6 rounded-3xl border border-white/5">
+              <span className="text-neutral-600 text-[9px] font-black uppercase tracking-[0.4em] block mb-2">VAULT_BALANCE</span>
+              <span className="text-white text-3xl font-black italic tracking-tighter font-tactical">${user.balance.toLocaleString()}</span>
             </div>
           </div>
 
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-3">
-                <label className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.3em] flex items-center gap-2 px-2 italic">
-                  <Globe size={14} className="text-[#fbbf24]" /> Identity Origin
-                </label>
-                <input 
-                  required
-                  type="url"
-                  className="w-full bg-black border-2 border-neutral-800 rounded-2xl px-6 py-4 text-neutral-200 text-sm font-bold outline-none focus:border-[#fbbf24] transition-all shadow-inner"
-                  placeholder="https://official-hq.com"
-                  value={formData.buyerBusinessUrl}
-                  onChange={e => setFormData({...formData, buyerBusinessUrl: e.target.value})}
-                />
-              </div>
-              <div className="space-y-3">
-                <label className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.3em] flex items-center gap-2 px-2 italic">
-                  <Phone size={14} className="text-[#fbbf24]" /> Endpoint ID
-                </label>
-                <input 
-                  required
-                  type="text"
-                  className="w-full bg-black border-2 border-neutral-800 rounded-2xl px-6 py-4 text-neutral-200 text-sm font-bold outline-none focus:border-[#fbbf24] transition-all shadow-inner"
-                  placeholder="e.g. 1-800-PROVISION"
-                  value={formData.buyerTollFree}
-                  onChange={e => setFormData({...formData, buyerTollFree: e.target.value})}
-                />
-              </div>
-            </div>
-
             <div className="space-y-3">
-              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.3em] flex items-center gap-2 px-2 italic">
-                <Target size={14} className="text-[#fbbf24]" /> POST-BACK TERMINAL (WEBHOOK)
-              </label>
+              <label className="text-[10px] font-black text-neutral-600 uppercase tracking-[0.4em] px-2">ENTITY_URL</label>
               <input 
-                required
-                type="url"
-                className="w-full bg-black border-2 border-neutral-800 rounded-2xl px-6 py-4 text-neutral-200 text-sm font-bold outline-none focus:border-[#fbbf24] transition-all shadow-inner"
-                placeholder="https://api.crm.io/v1/ingest"
+                className="w-full bg-black border border-[#1A1A1A] rounded-2xl px-6 py-5 text-[#FACC15] font-mono text-sm outline-none focus:border-[#FACC15]/50 transition-all"
+                value={formData.buyerBusinessUrl}
+                onChange={e => setFormData({...formData, buyerBusinessUrl: e.target.value})}
+              />
+            </div>
+            <div className="space-y-3">
+              <label className="text-[10px] font-black text-neutral-600 uppercase tracking-[0.4em] px-2">POST_BACK_ENDPOINT</label>
+              <input 
+                className="w-full bg-black border border-[#1A1A1A] rounded-2xl px-6 py-5 text-[#FACC15] font-mono text-sm outline-none focus:border-[#FACC15]/50 transition-all"
                 value={formData.buyerTargetLeadUrl}
                 onChange={e => setFormData({...formData, buyerTargetLeadUrl: e.target.value})}
               />
             </div>
           </div>
 
-          <div className="space-y-6 pt-2 bg-black/60 p-8 rounded-[2.5rem] border-2 border-neutral-800 shadow-inner">
-            <div className="flex justify-between items-end mb-4">
-              <label className="text-[11px] font-black text-neutral-400 uppercase tracking-[0.4em] flex items-center gap-2 italic">
-                <Calculator size={18} className="text-[#fbbf24]" /> Daily Batch Protocol
-                <HelpTip text="Target nodes to process per 24h cycle. Adjusting this modifies your total daily clearing amount." />
-              </label>
-              <div className="text-right">
-                <span className="text-3xl font-black text-white italic tracking-tighter">{formData.leadsPerDay}</span>
-                <span className="text-[10px] font-black text-neutral-600 uppercase tracking-[0.2em] ml-3 italic">UNITS/DAY</span>
-              </div>
-            </div>
-            
-            <div className="relative h-12 flex items-center">
-              <input 
-                type="range"
-                min="1"
-                max="1000"
-                step="1"
-                className="w-full h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-[#fbbf24] hover:accent-yellow-500 transition-all"
-                value={formData.leadsPerDay}
-                onChange={e => setFormData({...formData, leadsPerDay: parseInt(e.target.value) || 1})}
-              />
-            </div>
+          <div className="pt-6">
+            <button 
+              onClick={() => onSubmit(formData)}
+              disabled={hasInsufficientFunds}
+              className={`w-full py-8 rounded-[2.5rem] font-black text-2xl uppercase italic tracking-widest transition-all border-b-8 active:border-b-0 active:translate-y-2 shadow-2xl font-tactical ${hasInsufficientFunds ? 'bg-white/5 text-neutral-800 border-black grayscale' : 'bg-[#FACC15] text-black border-yellow-800 hover:bg-white'}`}
+            >
+              {hasInsufficientFunds ? 'LIQUIDITY_ERROR' : 'INITIALIZE_TRANSFER'}
+            </button>
+            {hasInsufficientFunds && (
+              <button onClick={onRefill} className="w-full mt-6 text-[#FACC15] text-[11px] font-black uppercase tracking-[0.4em] hover:underline">RECHARGE_VAULT_NODE</button>
+            )}
           </div>
-
-          <div className="space-y-3">
-            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.3em] px-2 flex items-center gap-2 italic">
-              UNIT SETTLEMENT BID ($)
-              <HelpTip text="Your maximum bid for a single asset. Higher bids receive priority in the automated distribution waterfall." />
-            </label>
-            <div className="relative">
-              <input 
-                required
-                type="number"
-                min={minBid}
-                step="0.01"
-                className={`w-full bg-black border-4 ${isBidTooLow ? 'border-red-600' : 'border-[#fbbf24]'} rounded-3xl px-8 py-6 text-4xl font-black text-white outline-none focus:ring-8 focus:ring-[#fbbf24]/10 transition-all text-center shadow-inner`}
-                value={formData.bidAmount}
-                onChange={e => setFormData({...formData, bidAmount: parseFloat(e.target.value) || 0})}
-              />
-            </div>
-          </div>
-
-          <div className={`${hasInsufficientFunds ? 'bg-red-600' : 'bg-[#222]'} border-4 ${hasInsufficientFunds ? 'border-red-800' : 'border-neutral-700'} rounded-[3rem] p-8 flex flex-col sm:flex-row items-center justify-between gap-6 transition-all duration-500 shadow-2xl`}>
-             <div className="flex items-center gap-6">
-                <div className={`w-16 h-16 rounded-2xl ${hasInsufficientFunds ? 'bg-black/20 text-white' : 'bg-[#fbbf24] text-black'} flex items-center justify-center shrink-0 shadow-lg`}>
-                  <Calculator size={32} />
-                </div>
-                <div>
-                  <span className={`${hasInsufficientFunds ? 'text-white/60' : 'text-neutral-500'} text-[10px] font-black uppercase tracking-[0.4em] block leading-none mb-2 italic`}>AGGREGATE DAILY CLEARING</span>
-                  <span className={`${hasInsufficientFunds ? 'text-white' : 'text-neutral-200'} text-3xl font-black tracking-tighter italic`}>
-                    ${totalDailyCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
-                </div>
-             </div>
-             {hasInsufficientFunds && (
-                <div className="text-white text-[11px] font-black uppercase flex items-center gap-2 animate-pulse bg-black/30 px-6 py-3 rounded-2xl border-2 border-white/20">
-                  <AlertTriangle size={18} /> INSUFFICIENT LIQUIDITY
-                </div>
-             )}
-          </div>
-
-          <button 
-            type="submit"
-            disabled={isBidTooLow}
-            className={`w-full py-8 rounded-[3rem] font-black text-2xl sm:text-3xl transition-all flex items-center justify-center gap-6 shadow-2xl active:scale-[0.98] mt-6 border-b-[10px] ${
-              isBidTooLow 
-              ? 'bg-neutral-800 text-neutral-600 border-neutral-900 cursor-not-allowed' 
-              : hasInsufficientFunds 
-                ? 'bg-red-600 text-white hover:bg-red-500 border-red-900 shadow-red-600/20'
-                : 'bg-[#fbbf24] text-black hover:bg-[#eab308] border-[#ca8a04] shadow-yellow-400/20'
-            }`}
-          >
-            {hasInsufficientFunds ? 'DEPOSIT FUNDS' : 'AUTHORIZE PROTOCOL'} <ChevronRight size={32} />
-          </button>
-        </form>
+        </div>
       </div>
     </div>
   );

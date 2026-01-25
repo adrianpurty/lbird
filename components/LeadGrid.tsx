@@ -1,22 +1,16 @@
 
-import React, { useState, useMemo, memo, useDeferredValue } from 'react';
+import React, { useState, useMemo, memo } from 'react';
 import { Lead, UserRole } from '../types.ts';
 import { 
-  BriefcaseBusiness, PlaneTakeoff, Ship, Hotel, Building2, 
-  Coins, ListFilter, Stethoscope, Shield, CheckCircle2, 
-  Heart, ChevronLeft, ChevronRight, ChevronDown, 
-  Cpu, Target, Database, Activity, MapPin, Gauge, ArrowRight
+  Zap, MapPin, Heart, CheckCircle2, ChevronLeft, ChevronRight, 
+  Search, FilterX, Star, ShieldAlert, Trophy, Target, Cpu
 } from 'lucide-react';
+import { soundService } from '../services/soundService.ts';
 
 interface LeadGridProps {
   leads: Lead[];
   onBid: (id: string) => void;
   onEdit?: (lead: Lead) => void;
-  onAdminApprove?: (id: string) => void;
-  onAdminReject?: (id: string) => void;
-  onBulkApprove?: (ids: string[]) => void;
-  onBulkReject?: (ids: string[]) => void;
-  onDelete?: (id: string) => void;
   onToggleWishlist?: (id: string) => void;
   userRole: UserRole;
   currentUserId: string;
@@ -24,192 +18,146 @@ interface LeadGridProps {
   wishlist?: string[];
 }
 
+const getGrade = (score: number) => {
+  if (score >= 95) return { label: 'S-TIER', color: 'text-rose-500', bg: 'bg-rose-500/10', border: 'border-rose-500/40 shadow-rose-500/20' };
+  if (score >= 85) return { label: 'A-TIER', color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/40 shadow-amber-500/20' };
+  if (score >= 70) return { label: 'B-TIER', color: 'text-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500/40 shadow-blue-500/20' };
+  return { label: 'C-TIER', color: 'text-neutral-500', bg: 'bg-neutral-500/10', border: 'border-neutral-500/40' };
+};
+
 const MemoizedLeadCard = memo(({ 
-  lead, 
-  isUserEngaged, 
-  isInWishlist, 
-  isOwner, 
-  userRole, 
-  onBid, 
-  onEdit, 
-  onToggleWishlist,
-  isSelected,
-  onToggleSelect
+  lead, isUserEngaged, isInWishlist, isOwner, userRole, onBid, onEdit, onToggleWishlist 
 }: any) => {
+  const grade = getGrade(lead.qualityScore);
   const isAdmin = userRole === 'admin';
   const canEdit = isAdmin || isOwner;
 
-  const getIcon = (category: string) => {
-    const cat = category.toLowerCase();
-    if (cat.includes('flight')) return <PlaneTakeoff size={18} />;
-    if (cat.includes('cruise')) return <Ship size={18} />;
-    if (cat.includes('hotel')) return <Hotel size={18} />;
-    if (cat.includes('real estate')) return <Building2 size={18} />;
-    if (cat.includes('crypto')) return <Coins size={18} />;
-    if (cat.includes('insurance')) return <Shield size={18} />;
-    if (cat.includes('medical')) return <Stethoscope size={18} />;
-    return <BriefcaseBusiness size={18} />;
-  };
-
   return (
     <div 
-      className={`group relative bg-[#0c0c0c]/80 rounded-[1rem] md:rounded-[1.2rem] border transition-all duration-300 overflow-hidden cursor-pointer flex flex-col sm:flex-row items-center p-3 md:p-4 gap-3 md:gap-6 scanline-effect ${
-        isSelected ? 'border-white ring-4 ring-white/10' : 
-        isUserEngaged ? 'border-[#00e5ff] active-border-pulse shadow-[0_0_15px_rgba(0,229,255,0.05)]' : 'border-neutral-800/60 hover:border-neutral-600'
+      className={`group relative bg-[#0A0A0A] rounded-[2rem] border-2 transition-all duration-500 cursor-pointer overflow-hidden flex flex-col hover:-translate-y-2 hover:border-white/40 shadow-2xl ${
+        isUserEngaged ? 'border-[#FACC15] active-border-pulse' : 'border-neutral-900'
       }`}
       onClick={() => canEdit ? onEdit?.(lead) : onBid(lead.id)}
     >
-      {/* Visual Accent - Full height on left */}
-      <div className={`absolute left-0 top-0 bottom-0 w-1 transition-all duration-500 ${
-        lead.status === 'approved' ? 'bg-emerald-500 shadow-[2px_0_10px_rgba(16,185,129,0.2)]' :
-        lead.status === 'rejected' ? 'bg-red-500 shadow-[2px_0_10px_rgba(239,68,68,0.2)]' :
-        'bg-neutral-800'
-      }`} />
+      {/* Grade Badge */}
+      <div className={`absolute top-6 left-6 z-20 px-4 py-1.5 rounded-xl border-2 backdrop-blur-md font-black text-[10px] tracking-[0.2em] flex items-center gap-2 ${grade.bg} ${grade.color} ${grade.border}`}>
+        <Trophy size={12} /> {grade.label}
+      </div>
 
-      {/* Identity Row - Icon + Text (Always row on mobile) */}
-      <div className="flex items-center gap-3 w-full sm:w-auto sm:flex-1 min-w-0">
-        <div className="shrink-0 w-10 h-10 md:w-12 md:h-12 rounded-xl bg-black/40 border border-neutral-800/40 flex items-center justify-center text-neutral-500 group-hover:text-[#00e5ff] transition-colors">
-          {getIcon(lead.category)}
+      {/* Hero Image Area (Console Style) */}
+      <div className="h-48 w-full bg-[#111] relative overflow-hidden flex items-center justify-center">
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent z-10" />
+        <div className="absolute inset-0 flex items-center justify-center opacity-10 group-hover:opacity-20 transition-opacity">
+           <Zap size={140} className={grade.color} />
         </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-0.5">
-            <span className="text-[7px] md:text-[8px] font-black text-neutral-600 uppercase tracking-widest truncate max-w-[80px]">{lead.category}</span>
-            <span className="text-neutral-800">•</span>
-            <div className="flex items-center gap-1">
-              <MapPin size={8} className="text-neutral-700" />
-              <span className="text-[7px] md:text-[8px] font-black text-neutral-600 uppercase tracking-widest">{lead.countryCode}</span>
-            </div>
-          </div>
-          <h3 className="text-xs md:text-sm font-futuristic text-white uppercase tracking-tight truncate group-hover:text-[#00e5ff] transition-colors leading-none">
+        <div className="z-20 text-center px-6 mt-12">
+          <span className="text-[9px] font-black text-[#FACC15] uppercase tracking-[0.4em] mb-2 block">{lead.category}</span>
+          <h3 className="text-xl font-futuristic text-white uppercase tracking-tighter leading-tight group-hover:scale-105 transition-transform truncate w-full">
             {lead.title}
           </h3>
         </div>
-        
-        {/* Status indicator for mobile only */}
-        <div className="sm:hidden flex items-center gap-1.5">
-           <div className={`w-1.5 h-1.5 rounded-full ${lead.status === 'approved' ? 'bg-emerald-500 shadow-[0_0_5px_#10b981]' : 'bg-neutral-800'}`} />
+      </div>
+
+      {/* Stats HUD Area */}
+      <div className="p-8 space-y-6 bg-black relative">
+        <div className="grid grid-cols-2 gap-4">
+           <div className="bg-[#111] p-3 rounded-2xl border border-white/5">
+              <span className="text-[8px] font-black text-neutral-600 uppercase tracking-widest block mb-1">Integrity</span>
+              <div className="flex items-center gap-2">
+                 <div className="h-1.5 flex-1 bg-neutral-800 rounded-full overflow-hidden">
+                    <div className={`h-full ${grade.color.replace('text', 'bg')}`} style={{ width: `${lead.qualityScore}%` }} />
+                 </div>
+                 <span className={`text-[10px] font-black ${grade.color}`}>{lead.qualityScore}%</span>
+              </div>
+           </div>
+           <div className="bg-[#111] p-3 rounded-2xl border border-white/5">
+              <span className="text-[8px] font-black text-neutral-600 uppercase tracking-widest block mb-1">Location</span>
+              <div className="flex items-center gap-2 text-white font-black text-[10px]">
+                 <MapPin size={12} className="text-[#FACC15]" /> {lead.countryCode}
+              </div>
+           </div>
+        </div>
+
+        <div className="flex items-end justify-between">
+           <div>
+              <span className="text-[8px] font-black text-neutral-700 uppercase tracking-[0.4em] block mb-1">VALUATION</span>
+              <div className="text-3xl font-black text-white italic font-tactical leading-none tracking-widest group-hover:text-[#FACC15] transition-colors">
+                ${lead.currentBid.toLocaleString()}
+              </div>
+           </div>
+           <div className="flex gap-2">
+              <button
+                onClick={(e) => { e.stopPropagation(); onToggleWishlist?.(lead.id); }}
+                className={`w-12 h-12 rounded-2xl border flex items-center justify-center transition-all ${isInWishlist ? 'bg-[#FACC15] border-[#FACC15] text-black shadow-lg' : 'bg-[#111] border-white/5 text-neutral-700 hover:text-white'}`}
+              >
+                <Heart size={20} fill={isInWishlist ? "currentColor" : "none"} />
+              </button>
+           </div>
         </div>
       </div>
 
-      {/* Mid Telemetry - Hidden on smallest mobile, flex row on tablet+ */}
-      <div className="hidden md:flex items-center gap-6 px-6 border-x border-neutral-800/30">
-        <div className="text-center">
-          <span className="text-[7px] font-black text-neutral-700 uppercase tracking-widest block mb-0.5">Q_Score</span>
-          <div className="flex items-center gap-1 text-[10px] font-black text-emerald-500 italic font-tactical leading-none">
-            <Gauge size={10} /> {lead.qualityScore}%
-          </div>
-        </div>
-        <div className="text-center">
-          <span className="text-[7px] font-black text-neutral-700 uppercase tracking-widest block mb-0.5">Nodes</span>
-          <span className="text-[10px] font-black text-neutral-400 italic font-tactical leading-none">{lead.bidCount}</span>
-        </div>
-      </div>
-
-      {/* Financial Node - Aligns right on mobile, next to actions */}
-      <div className="flex items-center justify-between sm:justify-end gap-4 md:gap-6 w-full sm:w-auto border-t sm:border-t-0 border-neutral-900/50 pt-3 sm:pt-0">
-        <div className="text-left sm:text-right">
-          <span className="text-[7px] font-black text-neutral-700 uppercase tracking-widest block mb-0.5 sm:mb-1">Valuation</span>
-          <div className="text-xl md:text-2xl font-black text-white italic tracking-widest font-tactical group-hover:text-glow-neon transition-all leading-none">
-            ${lead.currentBid.toLocaleString()}
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-2">
-           <button
-            onClick={(e) => { e.stopPropagation(); onToggleWishlist?.(lead.id); }}
-            className={`p-2 rounded-lg bg-black/40 border border-neutral-800 transition-all ${isInWishlist ? 'text-red-500 border-red-900/20' : 'text-neutral-600 hover:text-white'}`}
-          >
-            <Heart size={14} fill={isInWishlist ? "currentColor" : "none"} />
-          </button>
-          {isAdmin && (
-             <button 
-                onClick={(e) => { e.stopPropagation(); onToggleSelect?.(lead.id); }}
-                className={`w-8 h-8 rounded-lg border-2 transition-all flex items-center justify-center ${
-                  isSelected ? 'bg-white border-white text-black' : 'border-neutral-800 bg-black/40'
-                }`}
-             >
-               {isSelected && <CheckCircle2 size={14} strokeWidth={4} />}
-             </button>
-          )}
-          <div className="p-2 sm:hidden text-neutral-500">
-             <ArrowRight size={16} className="group-hover:translate-x-1 group-hover:text-white transition-all" />
-          </div>
-        </div>
+      {/* Hover Overlay Button */}
+      <div className="absolute inset-x-0 bottom-0 p-8 translate-y-full group-hover:translate-y-0 transition-transform bg-gradient-to-t from-black to-transparent z-30 pointer-events-none">
+         <div className="w-full bg-[#FACC15] text-black py-4 rounded-2xl font-black text-xs uppercase tracking-[0.3em] flex items-center justify-center gap-3 shadow-2xl">
+            {canEdit ? 'ENTER_COMMAND' : 'INITIALIZE_BID'} <Zap size={14} />
+         </div>
       </div>
     </div>
   );
 });
 
 const LeadGrid: React.FC<LeadGridProps> = ({ 
-  leads, onBid, onEdit, onAdminApprove, onAdminReject, onBulkApprove, onBulkReject, onDelete, onToggleWishlist, userRole, currentUserId, activeBids = [], wishlist = []
+  leads, onBid, onEdit, onToggleWishlist, userRole, currentUserId, activeBids = [], wishlist = []
 }) => {
+  const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  
-  const deferredCategory = useDeferredValue(selectedCategory);
-  const ITEMS_PER_PAGE = 10;
-
-  const categories = useMemo(() => Array.from(new Set(leads.map(l => l.category))).sort(), [leads]);
+  const ITEMS_PER_PAGE = 8;
   
   const filteredLeads = useMemo(() => {
-    let result = userRole === 'admin' ? leads : leads.filter(l => l.status === 'approved' || l.ownerId === currentUserId);
-    if (deferredCategory) result = result.filter(l => l.category === deferredCategory);
-    return result;
-  }, [leads, userRole, currentUserId, deferredCategory]);
+    return leads.filter(l => 
+      l.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      l.category.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [leads, searchTerm]);
 
+  const currentLeads = useMemo(() => filteredLeads.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE), [filteredLeads, currentPage]);
   const totalPages = Math.ceil(filteredLeads.length / ITEMS_PER_PAGE);
-  const currentLeads = filteredLeads.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
-
-  const toggleSelect = (id: string) => {
-    const next = new Set(selectedIds);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setSelectedIds(next);
-  };
-
-  const isAdmin = userRole === 'admin';
 
   return (
-    <div className="space-y-4">
-      {/* Compact HUD Controls */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-1">
-        <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
-          <div className="relative group w-full sm:w-auto">
-             <ListFilter className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-600 group-hover:text-[#00e5ff] transition-colors" size={12} />
-             <select 
-               value={selectedCategory}
-               onChange={(e) => { setSelectedCategory(e.target.value); setCurrentPage(1); }}
-               className="w-full sm:w-auto bg-[#0f0f0f] border border-neutral-800/60 rounded-xl pl-9 pr-10 py-2 text-[9px] font-black uppercase tracking-[0.2em] text-neutral-400 outline-none focus:border-[#00e5ff]/40 transition-all appearance-none cursor-pointer"
-             >
-               <option value="">ALL_SECTORS</option>
-               {categories.map(c => <option key={c} value={c}>{c.toUpperCase()}</option>)}
-             </select>
-             <ChevronDown size={10} className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-700 pointer-events-none" />
+    <div className="space-y-12">
+      {/* CONSOLE HUD CONTROLS */}
+      <div className="flex flex-col lg:flex-row items-center justify-between gap-8 bg-black/40 p-6 rounded-[2.5rem] border border-[#1A1A1A]">
+        <div className="flex items-center gap-6 w-full lg:w-auto">
+          <div className="relative group flex-1 lg:w-96">
+            <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-neutral-600 group-focus-within:text-[#FACC15] transition-colors" size={18} />
+            <input 
+              type="text"
+              placeholder="Filter leads..."
+              className="w-full bg-[#0C0C0C] border-2 border-neutral-800 rounded-[1.5rem] pl-16 pr-8 py-4 text-sm font-black uppercase tracking-widest text-neutral-200 outline-none focus:border-[#FACC15]/40 transition-all placeholder:text-neutral-800"
+              value={searchTerm}
+              onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+            />
           </div>
           
-          {isAdmin && (
-            <button 
-              onClick={() => setSelectedIds(selectedIds.size === currentLeads.length ? new Set() : new Set(currentLeads.map(l => l.id)))}
-              className="w-full sm:w-auto px-4 py-2 bg-[#0f0f0f] border border-neutral-800/60 rounded-xl text-[9px] font-black text-neutral-500 hover:text-white transition-all uppercase tracking-widest"
-            >
-              BATCH_SYNC
-            </button>
-          )}
+          <div className="hidden sm:flex bg-neutral-900/40 p-1.5 rounded-[1.5rem] border border-neutral-800">
+             <button className="px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-[#FACC15] text-black shadow-lg">Library</button>
+             <button className="px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-neutral-500 hover:text-white transition-all">Collections</button>
+          </div>
         </div>
-        
-        <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
-           <span className="text-[9px] font-black text-neutral-700 uppercase tracking-widest">{filteredLeads.length} ASSETS</span>
-           <div className="h-4 w-px bg-neutral-800 hidden sm:block" />
-           <div className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 bg-[#00e5ff] rounded-full animate-pulse shadow-[0_0_8px_#00e5ff]" />
-              <span className="text-[8px] font-black text-[#00e5ff] uppercase tracking-widest">LIVE_FEED</span>
+
+        <div className="flex items-center gap-8">
+           <div className="flex items-center gap-3">
+             <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_12px_#10b981]" />
+             <span className="text-[11px] font-black text-neutral-400 uppercase tracking-[0.3em] font-tactical">{filteredLeads.length} ITEMS FOUND</span>
            </div>
+           <button onClick={() => { soundService.playClick(); setSearchTerm(''); }} className="w-12 h-12 flex items-center justify-center bg-neutral-900 rounded-2xl text-neutral-600 hover:text-white transition-colors border border-neutral-800">
+              <FilterX size={20} />
+           </button>
         </div>
       </div>
 
-      {/* List Feed - Optimized Card Container */}
-      <div className="space-y-3">
+      {/* CONSOLE GRID */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-8">
         {currentLeads.length > 0 ? (
           currentLeads.map((lead) => (
             <MemoizedLeadCard 
@@ -221,62 +169,51 @@ const LeadGrid: React.FC<LeadGridProps> = ({
               userRole={userRole}
               onBid={onBid}
               onEdit={onEdit}
-              onAdminApprove={onAdminApprove}
-              onAdminReject={onAdminReject}
-              onDelete={onDelete}
               onToggleWishlist={onToggleWishlist}
-              isSelected={selectedIds.has(lead.id)}
-              onToggleSelect={toggleSelect}
             />
           ))
         ) : (
-          <div className="py-16 md:py-20 text-center bg-[#050505] border border-neutral-800/40 border-dashed rounded-[1.5rem] md:rounded-[2rem]">
-            <Database className="mx-auto text-neutral-900 mb-4 md:mb-6" size={40} md:size={60} />
-            <h4 className="text-neutral-600 font-futuristic text-sm md:text-lg uppercase tracking-[0.4em]">NO_NODES_DETACHED</h4>
+          <div className="col-span-full py-40 text-center bg-[#050505] border-2 border-neutral-800/40 border-dashed rounded-[4rem]">
+             <ShieldAlert size={80} className="mx-auto text-neutral-900 mb-8 opacity-20" />
+             <h4 className="text-neutral-700 font-futuristic text-2xl uppercase tracking-[0.5em]">Inventory Empty</h4>
+             <p className="text-neutral-800 text-[10px] font-black uppercase tracking-widest mt-4">Try adjusting your node parameters</p>
           </div>
         )}
       </div>
 
-      {/* Pagination - Scaled for Mobile */}
+      {/* CONSOLE STYLE PAGINATION */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-3 sm:gap-6 pt-6">
+        <div className="flex items-center justify-center gap-12 pt-12 pb-8 border-t border-neutral-900/50">
           <button 
             disabled={currentPage === 1} 
-            onClick={() => setCurrentPage(currentPage - 1)} 
-            className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-neutral-800/60 text-neutral-600 hover:text-[#00e5ff] transition-all disabled:opacity-20 flex items-center justify-center"
+            onClick={() => { soundService.playClick(); setCurrentPage(prev => prev - 1); }}
+            className="flex items-center gap-4 text-neutral-600 hover:text-[#FACC15] disabled:opacity-20 transition-all font-black text-[10px] uppercase tracking-[0.4em]"
           >
-            <ChevronLeft size={16} md:size={20} />
+            <div className="w-12 h-12 rounded-full border-2 border-neutral-800 flex items-center justify-center group-hover:border-[#FACC15]/40">
+              <ChevronLeft size={24} />
+            </div>
+            <span>Prev_Node</span>
           </button>
-          
-          <div className="flex items-center gap-1.5">
-            {[...Array(totalPages)].map((_, i) => {
-                // Show limited pages on mobile
-                if (totalPages > 5 && Math.abs(i + 1 - currentPage) > 1 && i !== 0 && i !== totalPages - 1) {
-                  if (i + 1 === 2 || i + 1 === totalPages - 1) return <span key={i} className="text-neutral-800">.</span>;
-                  return null;
-                }
-                return (
-                  <button
-                    key={i}
-                    onClick={() => setCurrentPage(i + 1)}
-                    className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-[8px] md:text-[9px] font-black transition-all border ${
-                      currentPage === i + 1 
-                        ? 'bg-[#00e5ff] text-black border-[#00e5ff] shadow-[0_0_15px_rgba(0,229,255,0.3)]' 
-                        : 'bg-transparent text-neutral-600 border-neutral-800/60 hover:border-neutral-700'
-                    }`}
-                  >
-                    {i + 1}
-                  </button>
-                );
-            })}
+
+          <div className="flex items-center gap-4">
+            {[...Array(totalPages)].map((_, i) => (
+              <button
+                key={i}
+                onClick={() => { soundService.playClick(); setCurrentPage(i + 1); }}
+                className={`w-4 h-4 rounded-full transition-all border-2 ${currentPage === i + 1 ? 'bg-[#FACC15] border-[#FACC15] scale-150 shadow-[0_0_15px_rgba(250,204,21,0.4)]' : 'bg-transparent border-neutral-800 hover:border-white/40'}`}
+              />
+            ))}
           </div>
-          
+
           <button 
             disabled={currentPage === totalPages} 
-            onClick={() => setCurrentPage(currentPage + 1)} 
-            className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-neutral-800/60 text-neutral-600 hover:text-[#00e5ff] transition-all disabled:opacity-20 flex items-center justify-center"
+            onClick={() => { soundService.playClick(); setCurrentPage(prev => prev + 1); }}
+            className="flex items-center gap-4 text-neutral-600 hover:text-[#FACC15] disabled:opacity-20 transition-all font-black text-[10px] uppercase tracking-[0.4em]"
           >
-            <ChevronRight size={16} md:size={20} />
+            <span>Next_Node</span>
+            <div className="w-12 h-12 rounded-full border-2 border-neutral-800 flex items-center justify-center group-hover:border-[#FACC15]/40">
+              <ChevronRight size={24} />
+            </div>
           </button>
         </div>
       )}

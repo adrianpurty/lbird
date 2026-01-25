@@ -109,11 +109,11 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
       if (!selectedGateway) return null;
       if (selectedGateway.provider === 'binance') {
         return (
-          <div className="flex flex-col items-center gap-6 p-4 md:p-8 bg-black/60 rounded-[1.5rem] md:rounded-[2rem] border-2 border-neutral-800/40 animate-in zoom-in-95 duration-300">
-             <QrCode size={120} md:size={160} className="text-white opacity-90" />
+          <div className="flex flex-col items-center gap-6 p-4 md:p-8 bg-black border-2 border-neutral-800/40 rounded-[1.5rem] md:rounded-[2rem] animate-in zoom-in-95 duration-300">
+             <QrCode size={120} md:size={160} className="text-[#FACC15] opacity-90" />
              <div className="text-center">
                 <p className="text-[8px] md:text-[10px] text-neutral-600 font-black uppercase tracking-[0.4em] mb-2">MASTER_PAY_NODE</p>
-                <p className="text-xs md:text-sm font-mono font-bold text-[#F3BA2F] bg-black/40 px-3 md:px-4 py-1.5 md:py-2 rounded-lg border border-[#F3BA2F]/20 break-all">{selectedGateway.publicKey || '0x_NULL_NODE'}</p>
+                <p className="text-xs md:text-sm font-mono font-bold text-[#FACC15] bg-black px-3 md:px-4 py-1.5 md:py-2 rounded-lg border border-[#FACC15]/20 break-all">{selectedGateway.publicKey || '0x_NULL_NODE'}</p>
              </div>
           </div>
         );
@@ -122,20 +122,20 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
         <div className="space-y-4 md:space-y-6 animate-in slide-in-from-top-2 duration-300">
           <div className="space-y-2">
             <label className="text-[9px] md:text-[10px] font-black text-neutral-600 uppercase tracking-[0.3em] px-2 italic">IDENTIFIER_LEGAL</label>
-            <input className="w-full bg-black/40 border-2 border-neutral-800 rounded-xl md:rounded-2xl px-4 md:px-6 py-3 md:py-4 text-sm text-white font-bold outline-none focus:border-[#facc15]/60 transition-all placeholder:text-neutral-800" placeholder="LEGAL CARDHOLDER IDENTITY" value={cardInfo.name} onChange={e => setCardInfo({...cardInfo, name: e.target.value.toUpperCase()})} />
+            <input className="w-full bg-black border-2 border-neutral-800 rounded-xl md:rounded-2xl px-4 md:px-6 py-3 md:py-4 text-sm text-white font-bold outline-none focus:border-[#FACC15]/60 transition-all placeholder:text-neutral-800" placeholder="LEGAL CARDHOLDER IDENTITY" value={cardInfo.name} onChange={e => setCardInfo({...cardInfo, name: e.target.value.toUpperCase()})} />
           </div>
           <div className="space-y-2">
             <label className="text-[9px] md:text-[10px] font-black text-neutral-600 uppercase tracking-[0.3em] px-2 italic">DATA_STRING_NODE</label>
-            <input className="w-full bg-black/40 border-2 border-neutral-800 rounded-xl md:rounded-2xl px-4 md:px-6 py-3 md:py-4 text-sm text-neutral-400 font-mono outline-none focus:border-[#facc15]/60 transition-all placeholder:text-neutral-800" placeholder="0000 0000 0000 0000" maxLength={19} value={cardInfo.number} onChange={e => setCardInfo({...cardInfo, number: e.target.value})} />
+            <input className="w-full bg-black border-2 border-neutral-800 rounded-xl md:rounded-2xl px-4 md:px-6 py-3 md:py-4 text-sm text-neutral-400 font-mono outline-none focus:border-[#FACC15]/60 transition-all placeholder:text-neutral-800" placeholder="0000 0000 0000 0000" maxLength={19} value={cardInfo.number} onChange={e => setCardInfo({...cardInfo, number: e.target.value})} />
           </div>
           <div className="grid grid-cols-2 gap-4 md:gap-6">
              <div className="space-y-2">
                 <label className="text-[9px] md:text-[10px] font-black text-neutral-600 uppercase tracking-[0.3em] px-2 italic">TERMINATION</label>
-                <input className="w-full bg-black/40 border-2 border-neutral-800 rounded-xl md:rounded-2xl px-4 md:px-6 py-3 md:py-4 text-sm text-neutral-400 font-mono outline-none focus:border-[#facc15]/60" placeholder="MM/YY" maxLength={5} value={cardInfo.expiry} onChange={e => setCardInfo({...cardInfo, expiry: e.target.value})} />
+                <input className="w-full bg-black border-2 border-neutral-800 rounded-xl md:rounded-2xl px-4 md:px-6 py-3 md:py-4 text-sm text-neutral-400 font-mono outline-none focus:border-[#FACC15]/60" placeholder="MM/YY" maxLength={5} value={cardInfo.expiry} onChange={e => setCardInfo({...cardInfo, expiry: e.target.value})} />
              </div>
              <div className="space-y-2">
                 <label className="text-[9px] md:text-[10px] font-black text-neutral-600 uppercase tracking-[0.3em] px-2 italic">CVV_TOKEN</label>
-                <input className="w-full bg-black/40 border-2 border-neutral-800 rounded-xl md:rounded-2xl px-4 md:px-6 py-3 md:py-4 text-sm text-neutral-400 font-mono outline-none focus:border-[#facc15]/60" placeholder="•••" maxLength={4} value={cardInfo.cvv} onChange={e => setCardInfo({...cardInfo, cvv: e.target.value})} />
+                <input className="w-full bg-black border-2 border-neutral-800 rounded-xl md:rounded-2xl px-4 md:px-6 py-3 md:py-4 text-sm text-neutral-400 font-mono outline-none focus:border-[#FACC15]/60" placeholder="•••" maxLength={4} value={cardInfo.cvv} onChange={e => setCardInfo({...cardInfo, cvv: e.target.value})} />
              </div>
           </div>
         </div>
@@ -145,11 +145,11 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
         <div className="space-y-4 md:space-y-6 animate-in slide-in-from-top-2 duration-300">
            <div className="space-y-2">
               <label className="text-[9px] md:text-[10px] font-black text-neutral-600 uppercase tracking-[0.3em] px-2 italic">RECIPIENT_PROTOCOL</label>
-              <input className="w-full bg-black/40 border-2 border-neutral-800 rounded-xl md:rounded-2xl px-4 md:px-6 py-3 md:py-4 text-sm text-white font-bold outline-none focus:border-emerald-500/60 transition-all" placeholder="MASTER ACCOUNT IDENTITY" value={withdrawDetails.accountName} onChange={e => setWithdrawDetails({...withdrawDetails, accountName: e.target.value})} />
+              <input className="w-full bg-black border-2 border-neutral-800 rounded-xl md:rounded-2xl px-4 md:px-6 py-3 md:py-4 text-sm text-white font-bold outline-none focus:border-[#FACC15]/60 transition-all" placeholder="MASTER ACCOUNT IDENTITY" value={withdrawDetails.accountName} onChange={e => setWithdrawDetails({...withdrawDetails, accountName: e.target.value})} />
            </div>
            <div className="space-y-2">
               <label className="text-[9px] md:text-[10px] font-black text-neutral-600 uppercase tracking-[0.3em] px-2 italic">ENDPOINT_IBAN_SWIFT</label>
-              <input className="w-full bg-black/40 border-2 border-neutral-800 rounded-xl md:rounded-2xl px-4 md:px-6 py-3 md:py-4 text-sm text-neutral-400 font-mono outline-none focus:border-emerald-500/60 transition-all" placeholder="ROUTING_TOKEN_STRING" value={withdrawDetails.iban} onChange={e => setWithdrawDetails({...withdrawDetails, iban: e.target.value})} />
+              <input className="w-full bg-black border-2 border-neutral-800 rounded-xl md:rounded-2xl px-4 md:px-6 py-3 md:py-4 text-sm text-neutral-400 font-mono outline-none focus:border-[#FACC15]/60 transition-all" placeholder="ROUTING_TOKEN_STRING" value={withdrawDetails.iban} onChange={e => setWithdrawDetails({...withdrawDetails, iban: e.target.value})} />
            </div>
         </div>
       );
@@ -162,43 +162,43 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
       {/* LANDSCAPE HEADER - HUD STYLE */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 md:gap-10 border-b-2 border-neutral-900 pb-8 md:pb-12">
         <div className="relative">
-          <div className="absolute -left-4 md:-left-12 top-1/2 -translate-y-1/2 w-4 h-12 md:h-24 bg-cyan-400 rounded-full blur-xl opacity-20" />
-          <h2 className="text-4xl sm:text-7xl lg:text-8xl font-futuristic font-black text-white italic uppercase tracking-tighter leading-none flex flex-wrap items-center gap-4 md:gap-10 text-glow">
-            VAULT <span className="text-neutral-600">API</span>
+          <div className="absolute -left-4 md:-left-12 top-1/2 -translate-y-1/2 w-4 h-12 md:h-24 bg-[#FACC15] rounded-full blur-xl opacity-10" />
+          <h2 className="text-3xl md:text-5xl font-futuristic font-black text-white italic uppercase tracking-tighter leading-none flex flex-wrap items-center gap-4 md:gap-10">
+            VAULT <span className="text-[#FACC15]">API</span>
           </h2>
           <div className="flex flex-wrap items-center gap-3 md:gap-6 mt-4 md:mt-6">
-            <div className="px-3 md:px-4 py-1.5 bg-cyan-400/10 border border-cyan-400/30 rounded-full text-[8px] md:text-[10px] font-black text-cyan-400 uppercase tracking-[0.3em] md:tracking-[0.4em]">FINANCE_TERMINAL_V4</div>
+            <div className="px-3 md:px-4 py-1.5 bg-[#FACC15]/10 border border-[#FACC15]/30 rounded-full text-[8px] md:text-[10px] font-black text-[#FACC15] uppercase tracking-[0.3em] md:tracking-[0.4em]">FINANCE_TERMINAL_V4</div>
             <span className="text-[10px] md:text-[12px] text-neutral-600 font-bold uppercase tracking-[0.4em] md:tracking-[0.6em] italic">LIQUIDITY_POOL_ACTIVE</span>
           </div>
         </div>
         <div className="flex items-center gap-4 md:gap-6 w-full md:w-auto">
-          <div className="flex-1 md:flex-none p-4 md:p-6 bg-[#0f0f0f] border-2 border-neutral-900 rounded-[1.5rem] md:rounded-3xl shadow-2xl flex items-center gap-4 md:gap-6 group hover:border-cyan-400/50 transition-all cursor-default overflow-hidden">
-            <div className="w-10 md:w-14 h-10 md:h-14 bg-cyan-400/10 rounded-xl md:rounded-2xl flex items-center justify-center text-cyan-400 group-hover:scale-110 transition-transform shrink-0">
+          <div className="flex-1 md:flex-none p-4 md:p-6 bg-black border-2 border-neutral-900 rounded-[1.5rem] md:rounded-3xl shadow-2xl flex items-center gap-4 md:gap-6 group hover:border-[#FACC15]/50 transition-all cursor-default overflow-hidden">
+            <div className="w-10 md:w-14 h-10 md:h-14 bg-[#FACC15]/10 rounded-xl md:rounded-2xl flex items-center justify-center text-[#FACC15] group-hover:scale-110 transition-transform shrink-0">
               <RefreshCw size={24} className="animate-spin-slow md:w-7 md:h-7" />
             </div>
             <div>
               <span className="text-[8px] md:text-[10px] font-black text-neutral-600 uppercase tracking-widest block mb-1">THROUGHPUT</span>
-              <span className="text-xl md:text-3xl font-tactical text-white tracking-widest leading-none text-glow">14.2ms</span>
+              <span className="text-xl md:text-3xl font-tactical text-white tracking-widest leading-none">14.2ms</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* COMPACT TELEMETRY BAR */}
-      <div className="bg-[#0f0f0f] border border-neutral-800/60 rounded-[1.5rem] p-4 md:p-6 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl">
+      <div className="bg-black border border-[#1A1A1A] rounded-[1.5rem] p-4 md:p-6 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl">
         <div className="flex items-center gap-8 md:gap-12 overflow-x-auto scrollbar-hide w-full">
           <div className="flex flex-col shrink-0">
             <span className="text-neutral-700 font-black uppercase text-[8px] tracking-[0.3em] mb-1">Liquidity</span>
             <div className="text-3xl md:text-4xl font-black text-white italic tracking-tighter flex items-baseline gap-2 font-tactical">
-              <span className="text-sm text-cyan-400 opacity-40">$</span>{balance.toLocaleString()}
+              <span className="text-sm text-[#FACC15] opacity-40">$</span>{balance.toLocaleString()}
             </div>
           </div>
           <div className="hidden md:block h-10 w-px bg-neutral-800" />
           <div className="flex items-center gap-6 md:gap-8 shrink-0">
             <div>
               <span className="text-neutral-700 font-black uppercase text-[8px] tracking-[0.3em] mb-1">Efficiency</span>
-              <div className="text-base md:text-lg font-black text-emerald-500/80 italic flex items-center gap-2 md:gap-3 font-tactical tracking-widest">
-                <Activity size={12} md:size={14} className="animate-pulse" /> 99.9%
+              <div className="text-base md:text-lg font-black text-white italic flex items-center gap-2 md:gap-3 font-tactical tracking-widest">
+                <Activity size={12} md:size={14} className="text-[#FACC15] animate-pulse" /> 99.9%
               </div>
             </div>
             <div className="hidden sm:block">
@@ -208,16 +208,16 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
           </div>
         </div>
 
-        <div className="flex items-center gap-2 md:gap-3 bg-black/40 p-2 rounded-2xl border border-neutral-800/40 w-full md:w-auto">
+        <div className="flex items-center gap-2 md:gap-3 bg-[#1A1A1A] p-2 rounded-2xl border border-white/5 w-full md:w-auto">
            <button 
             onClick={() => { soundService.playClick(); setFlowMode('deposit'); setShowCheckout(false); }} 
-            className={`flex-1 md:flex-none px-4 md:px-8 py-2 md:py-3 rounded-xl text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] md:tracking-[0.3em] transition-all flex items-center justify-center gap-2 md:gap-3 ${flowMode === 'deposit' ? 'bg-[#facc15] text-black shadow-lg shadow-yellow-400/10' : 'text-neutral-600 hover:text-neutral-400'}`}
+            className={`flex-1 md:flex-none px-4 md:px-8 py-2 md:py-3 rounded-xl text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] md:tracking-[0.3em] transition-all flex items-center justify-center gap-2 md:gap-3 ${flowMode === 'deposit' ? 'bg-[#FACC15] text-black shadow-lg shadow-yellow-400/10' : 'text-neutral-600 hover:text-neutral-400'}`}
            >
              <ArrowDownLeft size={14} md:size={16} /> Asset_In
            </button>
            <button 
             onClick={() => { soundService.playClick(); setFlowMode('withdraw'); setShowCheckout(false); }} 
-            className={`flex-1 md:flex-none px-4 md:px-8 py-2 md:py-3 rounded-xl text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] md:tracking-[0.3em] transition-all flex items-center justify-center gap-2 md:gap-3 ${flowMode === 'withdraw' ? 'bg-emerald-900/60 text-emerald-300 shadow-lg shadow-emerald-400/10' : 'text-neutral-600 hover:text-neutral-400'}`}
+            className={`flex-1 md:flex-none px-4 md:px-8 py-2 md:py-3 rounded-xl text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] md:tracking-[0.3em] transition-all flex items-center justify-center gap-2 md:gap-3 ${flowMode === 'withdraw' ? 'bg-[#FACC15] text-black shadow-lg shadow-yellow-400/10' : 'text-neutral-600 hover:text-neutral-400'}`}
            >
              <ArrowUpRight size={14} md:size={16} /> Asset_Out
            </button>
@@ -228,7 +228,7 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
         
         {/* LEFT: MASTER HANDSHAKE TERMINAL (Col 8) */}
         <div className="lg:col-span-8 space-y-6 md:space-y-8 order-2 lg:order-1">
-          <div className="bg-[#0c0c0c]/90 rounded-[2rem] md:rounded-[3rem] border-2 border-neutral-900 p-6 md:p-10 shadow-2xl relative overflow-hidden scanline-effect group">
+          <div className="bg-black rounded-[2rem] md:rounded-[3rem] border-2 border-[#1A1A1A] p-6 md:p-10 shadow-2xl relative overflow-hidden scanline-effect group">
             <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity">
               <Database size={120} />
             </div>
@@ -238,14 +238,14 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-10">
                   <div className="space-y-4">
                      <label className="text-[10px] md:text-[11px] font-black text-neutral-600 uppercase tracking-[0.3em] md:tracking-[0.4em] px-2 italic flex items-center gap-3">
-                       <DollarSign size={16} className="text-cyan-400" /> UNIT_SETTLEMENT (USD)
+                       <DollarSign size={16} className="text-[#FACC15]" /> UNIT_SETTLEMENT (USD)
                      </label>
                      <div className="relative">
                         <input 
                           type="number" 
                           value={amount} 
                           onChange={(e) => setAmount(e.target.value)} 
-                          className="w-full bg-black border-4 border-neutral-800 rounded-2xl md:rounded-[2.5rem] px-10 md:px-16 py-6 md:py-8 text-3xl md:text-5xl font-black text-white outline-none focus:border-cyan-400 transition-all font-tactical tracking-widest" 
+                          className="w-full bg-black border-4 border-neutral-800 rounded-2xl md:rounded-[2.5rem] px-10 md:px-16 py-6 md:py-8 text-3xl md:text-5xl font-black text-white outline-none focus:border-[#FACC15] transition-all font-tactical tracking-widest" 
                         />
                         <span className="absolute left-6 md:left-10 top-1/2 -translate-y-1/2 text-neutral-700 font-black text-2xl md:text-3xl italic font-tactical">$</span>
                      </div>
@@ -253,7 +253,7 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
                   
                   <div className="space-y-4">
                      <label className="text-[10px] md:text-[11px] font-black text-neutral-600 uppercase tracking-[0.3em] md:tracking-[0.4em] px-2 italic flex items-center gap-3">
-                       <Cpu size={16} className="text-cyan-400" /> GATEWAY_SECTOR
+                       <Cpu size={16} className="text-[#FACC15]" /> GATEWAY_SECTOR
                      </label>
                      <div className="grid grid-cols-2 gap-3 md:gap-4">
                        {(flowMode === 'deposit' ? activeGateways : [
@@ -270,8 +270,8 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
                              onClick={() => { soundService.playClick(true); flowMode === 'deposit' ? setSelectedGatewayId(item.id) : setWithdrawMethod(item.id); }}
                              className={`p-4 md:p-6 rounded-2xl md:rounded-3xl border-2 flex flex-col items-center justify-center gap-2 md:gap-3 transition-all ${
                                isSelected 
-                                 ? (flowMode === 'deposit' ? 'bg-[#facc15] text-black border-[#facc15] shadow-xl' : 'bg-emerald-500 text-black border-emerald-500 shadow-xl') 
-                                 : 'bg-black/40 border-neutral-800/60 text-neutral-600 hover:border-neutral-600 hover:text-neutral-400'
+                                 ? 'bg-[#FACC15] text-black border-[#FACC15] shadow-xl' 
+                                 : 'bg-[#1A1A1A] border-white/5 text-neutral-600 hover:text-neutral-400'
                              }`}
                            >
                              <Icon size={20} md:size={24} />
@@ -286,9 +286,7 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
                 <div className="pt-2 md:pt-6">
                   <button 
                     onClick={() => { soundService.playClick(true); setShowCheckout(true); }} 
-                    className={`w-full py-6 md:py-8 rounded-2xl md:rounded-[3rem] font-black text-xl md:text-2xl uppercase italic tracking-[0.3em] md:tracking-[0.4em] transition-all border-b-8 md:border-b-[10px] active:scale-[0.98] font-tactical ${
-                      flowMode === 'withdraw' ? 'bg-emerald-600 text-white border-emerald-900 hover:bg-emerald-500' : 'bg-cyan-500 text-black border-cyan-800 hover:bg-cyan-400'
-                    }`}
+                    className="w-full py-6 md:py-8 rounded-2xl md:rounded-[3rem] font-black text-xl md:text-2xl uppercase italic tracking-[0.3em] md:tracking-[0.4em] transition-all border-b-8 md:border-b-[10px] active:scale-[0.98] font-tactical bg-[#FACC15] text-black border-yellow-700 hover:bg-white"
                   >
                     START_{flowMode.toUpperCase()}_SYNC
                   </button>
@@ -296,7 +294,7 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
               </div>
             ) : (
               <div className="space-y-8 md:space-y-10 animate-in zoom-in-95 duration-500">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-neutral-800 pb-6">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-[#1A1A1A] pb-6">
                   <div>
                     <h3 className="text-2xl md:text-3xl font-black text-white italic uppercase tracking-tighter font-futuristic">PROTOCOL_AUTH</h3>
                     <p className="text-[8px] md:text-[10px] text-neutral-600 font-black uppercase tracking-widest mt-1">ESTABLISHING TUNNEL TO {flowMode.toUpperCase()}</p>
@@ -310,7 +308,7 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
                 
                 {isProcessing ? (
                    <div className="py-12 md:py-16 text-center space-y-6 md:space-y-8 bg-black/20 rounded-2xl md:rounded-[3rem] border border-neutral-800/40 border-dashed">
-                      <Loader2 className={`animate-spin mx-auto w-12 h-12 md:w-16 md:h-16 ${flowMode === 'withdraw' ? 'text-emerald-500/40' : 'text-cyan-400/40'}`} />
+                      <Loader2 className="animate-spin mx-auto w-12 h-12 md:w-16 md:h-16 text-[#FACC15]/40" />
                       <div className="space-y-2 px-4">
                         <p className="font-black text-lg md:text-xl text-neutral-200 uppercase tracking-[0.3em] md:tracking-[0.4em] animate-pulse font-tactical italic">{processingStatus}</p>
                         <p className="text-[8px] md:text-[10px] text-neutral-700 font-black uppercase tracking-widest">TRANSACTION_HASHING_IN_PROGRESS</p>
@@ -319,9 +317,7 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
                 ) : (
                   <button 
                     onClick={handleProcessTransaction} 
-                    className={`w-full py-6 md:py-8 rounded-2xl md:rounded-[3rem] font-black text-xl md:text-2xl border-b-8 md:border-b-[10px] active:scale-95 italic tracking-[0.3em] md:tracking-[0.4em] uppercase font-tactical ${
-                      flowMode === 'withdraw' ? 'bg-emerald-600 text-white border-emerald-900' : 'bg-cyan-500 text-black border-cyan-800'
-                    }`}
+                    className="w-full py-6 md:py-8 rounded-2xl md:rounded-[3rem] font-black text-xl md:text-2xl border-b-8 md:border-b-[10px] active:scale-95 italic tracking-[0.3em] md:tracking-[0.4em] uppercase font-tactical bg-[#FACC15] text-black border-yellow-700 hover:bg-white"
                   >
                     AUTHORIZE_MASTER_TRANSFER
                   </button>
@@ -330,8 +326,8 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
             )}
           </div>
 
-          <div className="bg-[#0f0f0f] border-2 border-neutral-900 p-6 md:p-8 rounded-2xl md:rounded-[2.5rem] flex items-start gap-4 md:gap-6 shadow-xl">
-            <ShieldCheck className="text-emerald-500 shrink-0" size={20} md:size={24} />
+          <div className="bg-[#1A1A1A] border border-white/5 p-6 md:p-8 rounded-2xl md:rounded-[2.5rem] flex items-start gap-4 md:gap-6 shadow-xl">
+            <ShieldCheck className="text-[#FACC15] shrink-0" size={20} md:size={24} />
             <div>
                <h4 className="text-[9px] md:text-[11px] font-black text-neutral-400 uppercase tracking-widest mb-1">LEDGER_INTEGRITY</h4>
                <p className="text-[8px] md:text-[10px] text-neutral-600 font-medium leading-relaxed uppercase italic tracking-tighter">
@@ -343,16 +339,16 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
 
         {/* RIGHT: MASTER LEDGER FEED (Col 4) */}
         <div className="lg:col-span-4 h-full order-1 lg:order-2">
-           <div className="bg-[#0f0f0f] p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] border-2 border-neutral-900 h-full flex flex-col shadow-2xl relative overflow-hidden group">
+           <div className="bg-black p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] border border-[#1A1A1A] h-full flex flex-col shadow-2xl relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity">
                 <History size={120} />
               </div>
 
-              <div className="flex justify-between items-center border-b border-neutral-800/40 pb-4 md:pb-6 mb-6 md:mb-8 relative z-10">
+              <div className="flex justify-between items-center border-b border-[#1A1A1A] pb-4 md:pb-6 mb-6 md:mb-8 relative z-10">
                  <h4 className="text-[10px] md:text-[11px] font-black text-neutral-500 uppercase tracking-[0.3em] md:tracking-[0.4em] flex items-center gap-3 font-futuristic">
-                    <History size={16} className="text-cyan-400" /> MASTER_LEDGER
+                    <History size={16} className="text-[#FACC15]" /> MASTER_LEDGER
                  </h4>
-                 <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_12px_#10b981]" />
+                 <div className="w-2 h-2 bg-[#FACC15] rounded-full animate-pulse shadow-[0_0_12px_#FACC15]" />
               </div>
               
               <div className="flex-1 space-y-3 md:space-y-4 overflow-y-auto pr-1 md:pr-2 scrollbar-hide relative z-10 max-h-[300px] lg:max-h-[700px]">
@@ -363,10 +359,10 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
                    { type: 'dep', amt: '+ $8,000.00', hub: 'ROOT_SYNC', date: '1d' },
                    { type: 'wit', amt: '- $300.00', hub: 'PAYPAL_HUB', date: '2d' },
                  ].map((tx, idx) => (
-                   <div key={idx} className="bg-black/40 p-4 md:p-5 rounded-xl md:rounded-2xl border border-neutral-800/30 flex items-center justify-between group/tx hover:border-cyan-400/30 transition-all cursor-default">
+                   <div key={idx} className="bg-[#1A1A1A]/40 p-4 md:p-5 rounded-xl md:rounded-2xl border border-white/5 flex items-center justify-between group/tx hover:border-[#FACC15]/30 transition-all cursor-default">
                       <div className="flex items-center gap-4 md:gap-5">
-                         <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl flex items-center justify-center ${tx.type === 'dep' ? 'bg-emerald-900/10 text-emerald-500' : 'bg-red-900/10 text-red-500'}`}>
-                            {tx.type === 'dep' ? <ArrowDownLeft size={14} md:size={16} /> : <ArrowUpRight size={14} md:size={16} />}
+                         <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl flex items-center justify-center bg-black border border-[#1A1A1A] group-hover/tx:border-[#FACC15]/20`}>
+                            {tx.type === 'dep' ? <ArrowDownLeft size={14} md:size={16} className="text-[#FACC15]" /> : <ArrowUpRight size={14} md:size={16} className="text-neutral-500" />}
                          </div>
                          <div>
                             <p className="text-[10px] md:text-[11px] text-neutral-200 font-black uppercase tracking-tight font-futuristic truncate max-w-[80px] sm:max-w-none">{tx.hub}</p>
@@ -374,14 +370,14 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
                          </div>
                       </div>
                       <div className="text-right shrink-0">
-                        <span className={`text-base md:text-lg font-black italic font-tactical tracking-wider md:tracking-widest ${tx.type === 'dep' ? 'text-emerald-500' : 'text-neutral-500'}`}>{tx.amt}</span>
+                        <span className={`text-base md:text-lg font-black italic font-tactical tracking-wider md:tracking-widest ${tx.type === 'dep' ? 'text-[#FACC15]' : 'text-neutral-500'}`}>{tx.amt}</span>
                       </div>
                    </div>
                  ))}
               </div>
 
-              <div className="mt-6 md:mt-8 pt-6 md:pt-8 border-t border-neutral-800/40 relative z-10">
-                 <button className="w-full bg-neutral-900 text-neutral-500 hover:text-white py-3 md:py-4 rounded-xl md:rounded-2xl font-black text-[8px] md:text-[10px] uppercase tracking-[0.3em] md:tracking-[0.4em] border-b-4 border-neutral-950 transition-all flex items-center justify-center gap-3 active:translate-y-1 active:border-b-0">
+              <div className="mt-6 md:mt-8 pt-6 md:pt-8 border-t border-[#1A1A1A] relative z-10">
+                 <button className="w-full bg-[#1A1A1A] text-neutral-500 hover:text-white py-3 md:py-4 rounded-xl md:rounded-2xl font-black text-[8px] md:text-[10px] uppercase tracking-[0.3em] md:tracking-[0.4em] border-b-4 border-black transition-all flex items-center justify-center gap-3 active:translate-y-1 active:border-b-0">
                    <Shield size={14} /> EXPORT_AUDIT
                  </button>
               </div>
