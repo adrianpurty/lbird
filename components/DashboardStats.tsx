@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { Lead, User } from '../types.ts';
-import { TrendingUp, Users, Target, Zap } from 'lucide-react';
+import { TrendingUp, Activity, ShieldCheck, Gauge, Database } from 'lucide-react';
 
 interface StatsProps {
   leads: Lead[];
@@ -11,29 +12,57 @@ const DashboardStats: React.FC<StatsProps> = ({ leads, user }) => {
   const totalVolume = leads.reduce((acc, lead) => acc + lead.currentBid, 0);
   const activeLeads = leads.length;
 
-  const stats = [
-    { label: 'Market Vol', value: `$${totalVolume.toLocaleString()}`, icon: TrendingUp, color: 'text-emerald-800/80', trend: '+12%' },
-    { label: 'Live Leads', value: activeLeads.toString(), icon: Target, color: 'text-[#facc15]/60', trend: '+4' },
-    { label: 'Avg Quality', value: '91%', icon: Zap, color: 'text-purple-800/60', trend: 'STABLE' },
-    { label: 'Bidders', value: '1.2K', icon: Users, color: 'text-blue-800/60', trend: '+104' },
-  ];
-
   return (
-    <div className="flex overflow-x-auto snap-x snap-mandatory md:grid md:grid-cols-4 gap-4 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
-      {stats.map((stat) => (
-        <div key={stat.label} className="min-w-[260px] sm:min-w-0 snap-center bg-[#111111]/40 p-5 rounded-2xl border border-neutral-800/30 group hover:border-[#facc15]/20 transition-all flex flex-col justify-between shadow-sm">
-          <div className="flex items-center justify-between mb-6">
-            <div className={`p-2.5 rounded-xl bg-black/20 border border-neutral-800/40 ${stat.color} group-hover:scale-105 transition-transform`}>
-              <stat.icon size={20} />
-            </div>
-            <span className="text-[9px] font-black text-emerald-800/80 bg-emerald-900/10 px-1.5 py-0.5 rounded uppercase tracking-tighter">{stat.trend}</span>
-          </div>
-          <div>
-            <p className="text-neutral-700 text-[9px] sm:text-[10px] font-black uppercase tracking-widest">{stat.label}</p>
-            <p className="text-xl sm:text-2xl font-black text-neutral-300 mt-0.5 tracking-tight">{stat.value}</p>
+    <div className="bg-[#0f0f0f] border border-neutral-800/60 rounded-[1.5rem] md:rounded-[2rem] p-4 md:p-6 shadow-xl animate-in fade-in duration-500">
+      <div className="grid grid-cols-2 md:flex md:flex-row items-center justify-between gap-4 md:gap-8">
+        
+        {/* Market Volume - Spans 2 columns on mobile */}
+        <div className="col-span-2 md:col-span-1 flex flex-col md:border-r md:border-neutral-800 md:pr-8">
+          <span className="text-neutral-700 font-black uppercase text-[7px] md:text-[8px] tracking-[0.3em] mb-1">Market Volume</span>
+          <div className="text-2xl md:text-3xl lg:text-4xl font-black text-white italic tracking-tighter flex items-baseline gap-1.5 font-tactical leading-none">
+            <span className="text-xs md:text-sm text-[#00e5ff]/50 opacity-40">$</span>
+            {totalVolume.toLocaleString()}
           </div>
         </div>
-      ))}
+        
+        {/* Active Nodes */}
+        <div className="flex flex-col">
+          <span className="text-neutral-700 font-black uppercase text-[7px] md:text-[8px] tracking-[0.3em] mb-1">Nodes</span>
+          <div className="text-lg md:text-xl font-black text-white italic flex items-center gap-2 font-tactical tracking-widest leading-none">
+            <Activity size={12} className="text-[#00e5ff] animate-pulse" /> {activeLeads}
+          </div>
+        </div>
+
+        {/* Network Reliability */}
+        <div className="flex flex-col">
+          <span className="text-neutral-700 font-black uppercase text-[7px] md:text-[8px] tracking-[0.3em] mb-1">Uptime</span>
+          <div className="text-lg md:text-xl font-black text-emerald-500/80 italic flex items-center gap-2 font-tactical tracking-widest leading-none">
+            <ShieldCheck size={12} /> 99.9%
+          </div>
+        </div>
+
+        {/* Avg Throughput - Hidden on smallest mobile screens if needed, or compact */}
+        <div className="hidden xs:flex flex-col">
+          <span className="text-neutral-700 font-black uppercase text-[7px] md:text-[8px] tracking-[0.3em] mb-1">Latency</span>
+          <div className="text-lg md:text-xl font-black text-cyan-400 italic flex items-center gap-2 font-tactical tracking-widest leading-none">
+            <Gauge size={12} /> 14.2ms
+          </div>
+        </div>
+
+        {/* Live HUD Indicator - Right aligned on desktop, bottom on mobile grid */}
+        <div className="col-span-2 md:col-span-1 md:ml-auto flex items-center gap-3 bg-black/40 p-2 rounded-xl border border-neutral-800/40 mt-2 md:mt-0">
+           <div className="flex flex-col items-end px-2 hidden sm:flex">
+             <span className="text-[6px] font-black text-neutral-600 uppercase tracking-widest">Protocol</span>
+             <span className="text-[8px] font-bold text-neutral-400 font-mono uppercase tracking-widest leading-none">V4.2.0</span>
+           </div>
+           <div className="h-6 w-px bg-neutral-800/60 hidden sm:block" />
+           <div className="px-2 flex items-center gap-2 flex-1 md:flex-none justify-center">
+              <Database size={12} className="text-[#00e5ff]/40" />
+              <span className="text-[9px] font-black text-[#00e5ff] uppercase tracking-widest font-tactical">Node_HQ_01</span>
+           </div>
+        </div>
+
+      </div>
     </div>
   );
 };

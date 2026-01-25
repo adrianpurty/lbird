@@ -28,69 +28,79 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, role, onLogout, hasInbox }) => {
   const menuItems = [
-    { id: 'market', icon: LayoutDashboard, label: 'Sales Floor', roles: ['admin', 'user'] },
-    { id: 'profile', icon: UserIcon, label: 'My Identity', roles: ['admin', 'user'] },
-    { id: 'wishlist', icon: Heart, label: 'Saved Assets', roles: ['admin', 'user'] },
-    { id: 'create', icon: PlusCircle, label: 'Sell Assets', roles: ['admin', 'user'] },
-    { id: 'bids', icon: Gavel, label: 'Portfolio', roles: ['admin', 'user'] },
-    { id: 'ledger', icon: FileText, label: 'Ledger', roles: ['admin', 'user'] },
-    { id: 'inbox', icon: Inbox, label: 'Admin Inbox', roles: ['admin'], indicator: hasInbox },
-    { id: 'admin', icon: ShieldCheck, label: 'Control Room', roles: ['admin'] },
-    { id: 'payment-config', icon: CreditCard, label: 'Gateways', roles: ['admin'] },
-    { id: 'auth-config', icon: Lock, label: 'OAuth Setup', roles: ['admin'] },
-    { id: 'settings', icon: Wallet, label: 'Wallet', roles: ['admin', 'user'] },
+    { id: 'market', icon: LayoutDashboard, label: 'SALES_FLOOR', roles: ['admin', 'user'] },
+    { id: 'profile', icon: UserIcon, label: 'IDENTITY_NODE', roles: ['admin', 'user'] },
+    { id: 'wishlist', icon: Heart, label: 'SAVED_ASSETS', roles: ['admin', 'user'] },
+    { id: 'create', icon: PlusCircle, label: 'ASSET_PROVISION', roles: ['admin', 'user'] },
+    { id: 'bids', icon: Gavel, label: 'PORTFOLIO_NODE', roles: ['admin', 'user'] },
+    { id: 'ledger', icon: FileText, label: 'FINANCE_LEDGER', roles: ['admin', 'user'] },
+    { id: 'inbox', icon: Inbox, label: 'AUDIT_LEDGER', roles: ['admin'], indicator: hasInbox },
+    { id: 'admin', icon: ShieldCheck, label: 'CONTROL_CENTER', roles: ['admin'] },
+    { id: 'payment-config', icon: CreditCard, label: 'GATEWAY_CONFIG', roles: ['admin'] },
+    { id: 'auth-config', icon: Lock, label: 'AUTH_INFRA', roles: ['admin'] },
+    { id: 'settings', icon: Wallet, label: 'VAULT_API', roles: ['admin', 'user'] },
   ];
 
   const visibleItems = menuItems.filter(item => item.roles.includes(role));
 
   return (
-    <aside className="w-64 bg-[#0a0a0a]/40 border-r border-neutral-800/30 flex flex-col theme-transition backdrop-blur-md">
-      <div className="p-8 flex items-center gap-3 opacity-80 hover:opacity-100 transition-opacity">
-        <div className="w-10 h-10 bg-[#facc15]/10 rounded-xl flex items-center justify-center border border-[#facc15]/20 shadow-sm">
-          <Zap className="text-[#facc15]/60 fill-[#facc15]/20" size={20} />
+    <aside className="w-60 bg-[#050505] border-r-2 border-neutral-900 flex flex-col h-screen theme-transition backdrop-blur-3xl overflow-hidden">
+      {/* Brand Area - Compacted */}
+      <div className="p-6 flex items-center gap-4 group cursor-default border-b-2 border-neutral-900/50">
+        <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center border-2 border-white/10 shadow-2xl group-hover:border-white/50 transition-all group-hover:scale-105 shrink-0">
+          <Zap className="text-white fill-white/10" size={20} />
         </div>
-        <div className="flex flex-col">
-          <span className="text-xl font-black tracking-tighter text-neutral-300 leading-none">
-            LEAD<span className="text-[#facc15]/50">BID</span>
+        <div className="flex flex-col overflow-hidden">
+          <span className="text-xl font-futuristic text-white leading-none text-glow tracking-tighter truncate">
+            LEAD<span className="text-neutral-500">BID</span>
           </span>
-          <span className="text-[9px] text-neutral-600 font-black uppercase tracking-widest mt-1">
-            {role === 'admin' ? 'SYSTEM OPERATOR' : 'PREMIUM TRADER'}
+          <span className="text-[8px] text-neutral-600 font-bold uppercase tracking-[0.4em] mt-1.5 truncate">
+            {role === 'admin' ? 'ROOT_ACCESS' : 'TRADER_NODE'}
           </span>
         </div>
       </div>
 
-      <nav className="flex-1 px-4 space-y-1 py-6">
+      {/* Navigation - Ultra Compact for Single-View */}
+      <nav className="flex-1 px-3 space-y-1 py-4 overflow-y-auto scrollbar-hide">
         {visibleItems.map((item) => (
           <button
             key={item.id}
             onClick={() => onTabChange(item.id)}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group relative border ${
+            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 group relative border-2 ${
               activeTab === item.id 
-                ? 'bg-[#facc15]/50 text-neutral-100 border-[#facc15]/30 shadow-md' 
-                : 'text-neutral-600 border-transparent hover:text-neutral-400 hover:bg-white/5 hover:border-neutral-800/20'
+                ? 'bg-white/10 text-white border-white/30 shadow-[0_0_15px_rgba(255,255,255,0.05)] translate-x-1' 
+                : 'text-neutral-500 border-transparent hover:text-white hover:bg-white/[0.02] hover:border-neutral-800'
             }`}
           >
             <item.icon 
               size={18} 
-              className={`transition-colors ${
-                activeTab === item.id ? 'text-white' : 'text-neutral-700 group-hover:text-[#facc15]/40'
+              className={`transition-colors shrink-0 ${
+                activeTab === item.id ? 'text-white' : 'text-neutral-700 group-hover:text-white'
               }`} 
             />
-            <span className="font-bold text-xs tracking-tight uppercase tracking-widest">{item.label}</span>
+            <span className={`text-[10px] tracking-[0.15em] uppercase font-bold truncate ${activeTab === item.id ? 'text-glow' : ''}`}>
+              {item.label}
+            </span>
             {item.indicator && (
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-red-900/60 rounded-full animate-pulse shadow-[0_0_8px_rgba(127,29,29,0.4)]" />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 w-2 h-2 bg-red-500 rounded-full animate-pulse shadow-[0_0_12px_rgba(239,68,68,0.8)]" />
+            )}
+            
+            {/* Visual indicator for active item */}
+            {activeTab === item.id && (
+              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-white rounded-r-full shadow-[0_0_8px_#fff]" />
             )}
           </button>
         ))}
       </nav>
 
-      <div className="p-4 border-t border-neutral-800/30">
+      {/* Logout Area - Compacted */}
+      <div className="p-3 border-t-2 border-neutral-900 mt-auto">
         <button 
           onClick={onLogout}
-          className="w-full flex items-center gap-3 px-4 py-3 text-neutral-700 hover:text-red-900/70 hover:bg-red-950/10 rounded-xl transition-all border border-transparent hover:border-red-900/20"
+          className="w-full flex items-center gap-3 px-4 py-3 text-neutral-600 hover:text-red-500 hover:bg-red-950/10 rounded-lg transition-all border-2 border-transparent hover:border-red-900/40"
         >
-          <LogOut size={18} />
-          <span className="font-black text-[10px] uppercase tracking-widest">Sign Out Session</span>
+          <LogOut size={18} className="shrink-0" />
+          <span className="font-bold text-[9px] uppercase tracking-[0.3em]">SECURE_EXIT</span>
         </button>
       </div>
     </aside>

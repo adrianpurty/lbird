@@ -1,5 +1,21 @@
+
 import React, { useState, useEffect } from 'react';
-import { Zap, ShieldCheck, Lock, User as UserIcon, Loader2, Cpu, Globe, AlertTriangle, Facebook } from 'lucide-react';
+import { 
+  Zap, 
+  ShieldCheck, 
+  Lock, 
+  User as UserIcon, 
+  Loader2, 
+  Cpu, 
+  Globe, 
+  AlertTriangle, 
+  Facebook, 
+  Activity, 
+  Terminal, 
+  Fingerprint,
+  TrendingUp,
+  Shield
+} from 'lucide-react';
 import { User, OAuthConfig } from '../types.ts';
 import { apiService } from '../services/apiService.ts';
 
@@ -20,7 +36,6 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
   const [isSyncing, setIsSyncing] = useState(false);
   const [isSdkLoaded, setIsSdkLoaded] = useState({ google: false, facebook: false });
 
-  // Dynamically load Social SDKs
   useEffect(() => {
     if (authConfig?.googleEnabled && authConfig.googleClientId) {
       if (!document.getElementById('google-jssdk')) {
@@ -37,11 +52,6 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
           });
         };
         document.head.appendChild(script);
-      } else {
-        (window as any).google?.accounts.id.initialize({
-          client_id: authConfig.googleClientId,
-          callback: handleGoogleResponse,
-        });
       }
     }
 
@@ -62,13 +72,6 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
           });
         };
         document.head.appendChild(script);
-      } else {
-        (window as any).FB?.init({
-          appId: authConfig.facebookAppId,
-          cookie: true,
-          xfbml: true,
-          version: 'v18.0'
-        });
       }
     }
   }, [authConfig]);
@@ -130,7 +133,6 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
       setError('Google SDK Not Ready');
       return;
     }
-    // Standard trigger for Google Identity Services popup
     (window as any).google.accounts.id.prompt();
   };
 
@@ -138,13 +140,10 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
     return new Promise((resolve) => {
       const hasRequested = localStorage.getItem(LOCATION_REQUESTED_KEY);
       const cachedLoc = localStorage.getItem(LAST_KNOWN_LOCATION_KEY);
-      
       if (hasRequested && cachedLoc) return resolve(cachedLoc);
       if (!("geolocation" in navigator)) return resolve("N/A");
-      
       localStorage.setItem(LOCATION_REQUESTED_KEY, 'true');
       const timeout = setTimeout(() => resolve(cachedLoc || "Timeout"), 1000);
-      
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           clearTimeout(timeout);
@@ -176,14 +175,12 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
     
     try {
       const user = await apiService.authenticateUser(username, password);
-      
       if (user) {
         if (activeMode === 'admin' && user.role !== 'admin') {
           setError('Access Denied');
           setIsSyncing(false);
           return;
         }
-
         const location = await requestLocation();
         const deviceInfo = getDeviceInfo();
         onLogin({ ...user, location, deviceInfo } as User);
@@ -198,99 +195,225 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black p-4 font-sans relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center bg-black p-4 md:p-12 relative overflow-hidden theme-transition">
+      {/* Background Ambience */}
       <div className="absolute inset-0 z-0">
-        <div className="absolute inset-0 bg-black/60 z-10" />
-        <video 
-          autoPlay 
-          muted 
-          loop 
-          playsInline 
-          className="w-full h-full object-cover filter blur-[10px] scale-105 opacity-40"
-        >
-          <source src="https://assets.mixkit.co/videos/preview/mixkit-financial-data-on-a-monitor-screen-in-close-up-1738-large.mp4" type="video/mp4" />
-        </video>
+        <div className="absolute inset-0 bg-[#000] z-10 opacity-60" />
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-cyan-500/10 rounded-full blur-[120px] animate-pulse" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-orange-500/5 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '2s' }} />
       </div>
 
-      <div className="absolute top-0 left-0 w-full h-full opacity-20 pointer-events-none z-1">
-        <div className="absolute top-1/4 left-1/4 w-[22rem] h-[22rem] bg-[#facc15] rounded-full blur-[100px] opacity-20" />
-      </div>
-
-      <div className="w-full max-w-[21rem] bg-[#0a0a0a]/80 backdrop-blur-2xl rounded-[2.5rem] border border-white/10 shadow-[0_35px_60px_-15px_rgba(0,0,0,0.9)] overflow-hidden relative z-10 animate-in fade-in zoom-in-95 duration-700">
-        <div className="p-8 pb-4 text-center">
-          <div className="inline-flex p-3 bg-[#facc15]/10 rounded-2xl border border-[#facc15]/20 mb-4 group hover:scale-110 transition-transform duration-500">
-            <Zap className="text-[#facc15] fill-[#facc15] w-6 h-6" />
+      <div className="w-full max-w-[1100px] mx-auto z-10 flex flex-col gap-6 md:gap-10 animate-in fade-in zoom-in-95 duration-700">
+        
+        {/* LANDSCAPE HEADER - SALES FLOOR STYLE */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 md:gap-10 border-b-2 border-neutral-900 pb-8 md:pb-12">
+          <div className="relative">
+            <div className="absolute -left-4 md:-left-12 top-1/2 -translate-y-1/2 w-4 h-12 md:h-24 bg-cyan-400 rounded-full blur-xl opacity-20" />
+            <h2 className="text-4xl sm:text-7xl lg:text-8xl font-futuristic font-black text-white italic uppercase tracking-tighter leading-none text-glow">
+              ACCESS <span className="text-neutral-600">NODE</span>
+            </h2>
+            <div className="flex flex-wrap items-center gap-3 md:gap-6 mt-4 md:mt-6">
+              <div className="px-3 md:px-4 py-1.5 bg-cyan-400/10 border border-cyan-400/30 rounded-full text-[8px] md:text-[10px] font-black text-cyan-400 uppercase tracking-[0.3em] md:tracking-[0.4em]">AUTHENTICATION_TERMINAL_V4</div>
+              <span className="text-[10px] md:text-[12px] text-neutral-600 font-bold uppercase tracking-[0.4em] md:tracking-[0.6em] italic shrink-0">STABLE_CONNECTION // 12ms</span>
+            </div>
           </div>
-          <h1 className="text-2xl font-black text-white tracking-tighter uppercase italic leading-none">
-            LEAD<span className="text-[#facc15]">BID</span>
-          </h1>
-          <p className="text-neutral-500 text-[9px] mt-2 font-black uppercase tracking-[0.3em] italic opacity-60">Identity Node Required</p>
+          
+          <div className="flex items-center gap-4 md:gap-6 w-full md:w-auto">
+            <div className="flex-1 md:flex-none p-4 md:p-6 bg-[#0f0f0f] border-2 border-neutral-900 rounded-[1.5rem] md:rounded-3xl shadow-2xl flex items-center gap-4 md:gap-6 group transition-all cursor-default overflow-hidden">
+              <div className="w-10 md:w-14 h-10 md:h-14 bg-cyan-400/10 rounded-xl md:rounded-2xl flex items-center justify-center text-cyan-400 group-hover:scale-110 transition-transform shrink-0">
+                <Terminal size={24} className="md:w-7 md:h-7" />
+              </div>
+              <div>
+                <span className="text-[8px] md:text-[10px] font-black text-neutral-600 uppercase tracking-widest block mb-1">NODE_ID</span>
+                <span className="text-xl md:text-3xl font-tactical text-white tracking-widest leading-none text-glow">AUTH_HQ_01</span>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div className="px-8">
-          <div className="flex bg-black/40 border border-neutral-900 rounded-xl p-1 mb-6">
-            <button type="button" onClick={() => setActiveMode('trader')} className={`flex-1 py-2 rounded-lg font-black text-[9px] uppercase tracking-wider transition-all ${activeMode === 'trader' ? 'bg-[#facc15] text-black shadow-lg' : 'text-neutral-500 hover:text-white'}`}>Trader</button>
-            <button type="button" onClick={() => setActiveMode('admin')} className={`flex-1 py-2 rounded-lg font-black text-[9px] uppercase tracking-wider transition-all ${activeMode === 'admin' ? 'bg-white text-black shadow-lg' : 'text-neutral-500 hover:text-white'}`}>Admin</button>
+        {/* TELEMETRY BAR - DASHBOARD STATS STYLE */}
+        <div className="bg-[#0f0f0f] border border-neutral-800/60 rounded-[1.5rem] p-4 md:p-6 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl">
+          <div className="flex items-center gap-8 md:gap-12 overflow-x-auto scrollbar-hide w-full">
+            <div className="flex flex-col shrink-0">
+              <span className="text-neutral-700 font-black uppercase text-[8px] tracking-[0.3em] mb-1">Active Sessions</span>
+              <div className="text-3xl md:text-4xl font-black text-white italic tracking-tighter flex items-baseline gap-2 font-tactical">
+                <span className="text-sm text-cyan-400 opacity-40">#</span>14,204
+              </div>
+            </div>
+            <div className="hidden md:block h-10 w-px bg-neutral-800" />
+            <div className="flex items-center gap-6 md:gap-8 shrink-0">
+              <div>
+                <span className="text-neutral-700 font-black uppercase text-[8px] tracking-[0.3em] mb-1">Integrity</span>
+                <div className="text-base md:text-lg font-black text-emerald-500/80 italic flex items-center gap-2 md:gap-3 font-tactical tracking-widest">
+                  <Shield size={12} md:size={14} className="animate-pulse" /> 99.9%
+                </div>
+              </div>
+              <div className="hidden sm:block">
+                <span className="text-neutral-700 font-black uppercase text-[8px] tracking-[0.3em] mb-1">Auth Nodes</span>
+                <div className="text-base md:text-lg font-black text-neutral-400 italic font-tactical tracking-widest uppercase">8 Units</div>
+              </div>
+            </div>
+          </div>
+          <div className="hidden lg:flex items-center gap-4 bg-black/40 p-1.5 rounded-xl border border-neutral-800/40 shrink-0">
+            <div className="flex flex-col items-end px-3">
+              <span className="text-[7px] font-black text-neutral-600 uppercase tracking-widest">System Protocol</span>
+              <span className="text-[10px] font-bold text-neutral-400 font-mono uppercase tracking-widest">V4.2.0_SECURE</span>
+            </div>
+            <div className="h-6 w-px bg-neutral-800/60" />
+            <div className="px-3 flex items-center gap-2">
+               <Cpu size={14} className="text-cyan-400/40" />
+               <span className="text-[10px] font-black text-cyan-400 uppercase tracking-widest font-tactical">HANDSHAKE_READY</span>
+            </div>
+          </div>
+        </div>
+
+        {/* MAIN ACCESS CARD */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          
+          {/* LOGIN FORM (Col 7) */}
+          <div className="lg:col-span-7 space-y-6">
+            <div className="bg-[#0c0c0c]/90 rounded-[2.5rem] border-2 border-neutral-900 p-8 md:p-12 shadow-2xl relative overflow-hidden scanline-effect group">
+              <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity">
+                <Fingerprint size={120} />
+              </div>
+
+              <div className="flex bg-black/40 border border-neutral-900 rounded-2xl p-1 mb-10 w-full sm:w-[320px] mx-auto">
+                <button 
+                  type="button" 
+                  onClick={() => setActiveMode('trader')} 
+                  className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 ${activeMode === 'trader' ? 'bg-white text-black shadow-lg' : 'text-neutral-500 hover:text-white'}`}
+                >
+                  <UserIcon size={14} /> Trader
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => setActiveMode('admin')} 
+                  className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 ${activeMode === 'admin' ? 'bg-neutral-800 text-white shadow-lg' : 'text-neutral-500 hover:text-white'}`}
+                >
+                  <ShieldCheck size={14} /> Admin
+                </button>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-8">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] md:text-[11px] font-black text-neutral-600 uppercase tracking-[0.4em] px-2 italic flex items-center gap-2">
+                      <Fingerprint size={14} className="text-cyan-400" /> Identity_Signature
+                    </label>
+                    <div className="relative group">
+                      <UserIcon className="absolute left-6 top-1/2 -translate-y-1/2 text-neutral-700 group-focus-within:text-cyan-400 transition-colors" size={20} />
+                      <input 
+                        required 
+                        className="w-full bg-black border-2 border-neutral-800 rounded-2xl md:rounded-[2rem] pl-16 pr-8 py-5 md:py-6 text-xl md:text-2xl font-bold text-white outline-none focus:border-cyan-400 transition-all font-tactical tracking-widest placeholder:text-neutral-900" 
+                        placeholder="USERNAME_ID" 
+                        value={username} 
+                        onChange={e => setUsername(e.target.value)} 
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-[10px] md:text-[11px] font-black text-neutral-600 uppercase tracking-[0.4em] px-2 italic flex items-center gap-2">
+                      <Lock size={14} className="text-cyan-400" /> Auth_Token
+                    </label>
+                    <div className="relative group">
+                      <Lock className="absolute left-6 top-1/2 -translate-y-1/2 text-neutral-700 group-focus-within:text-cyan-400 transition-colors" size={20} />
+                      <input 
+                        required 
+                        type="password" 
+                        className="w-full bg-black border-2 border-neutral-800 rounded-2xl md:rounded-[2rem] pl-16 pr-8 py-5 md:py-6 text-xl md:text-2xl font-bold text-white outline-none focus:border-cyan-400 transition-all font-tactical tracking-widest placeholder:text-neutral-900" 
+                        placeholder="••••••••" 
+                        value={password} 
+                        onChange={e => setPassword(e.target.value)} 
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="bg-red-500/10 p-4 rounded-2xl flex items-center gap-4 border border-red-500/20 animate-shake">
+                    <AlertTriangle size={18} className="text-red-500" />
+                    <p className="text-red-600 text-[10px] font-black uppercase tracking-widest">{error}</p>
+                  </div>
+                )}
+
+                <button 
+                  type="submit" 
+                  disabled={isSyncing} 
+                  className={`w-full py-6 md:py-8 rounded-2xl md:rounded-[2.5rem] font-black text-xl md:text-3xl transition-all transform active:scale-[0.98] disabled:opacity-50 border-b-8 md:border-b-[12px] font-tactical italic tracking-widest
+                    ${activeMode === 'admin' 
+                      ? 'bg-neutral-800 text-white border-neutral-900 hover:bg-neutral-700 shadow-neutral-900/50' 
+                      : 'bg-black text-white border-neutral-800 hover:bg-neutral-900 shadow-[0_15px_60px_-10px_rgba(251,146,60,0.4),_0_10px_30px_-5px_rgba(239,68,68,0.3),_0_5px_15px_-2px_rgba(236,72,153,0.2)] hover:shadow-[0_20px_80px_-10px_rgba(251,146,60,0.6),_0_15px_40px_-5px_rgba(239,68,68,0.5),_0_10px_20px_-2px_rgba(236,72,153,0.4)]'
+                    }`}
+                >
+                  {isSyncing ? <Loader2 className="animate-spin mx-auto text-white" size={28} /> : 'INITIALIZE_AUTH'}
+                </button>
+              </form>
+
+              <div className="mt-12 text-center">
+                 <button onClick={onSwitchToSignup} className="group text-neutral-600 text-[10px] md:text-[11px] font-black uppercase tracking-[0.4em] hover:text-white transition-all">
+                   NOT_PROVISIONED? <span className="text-white group-hover:underline">OPEN_NEW_NODE</span>
+                 </button>
+              </div>
+            </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4 pb-2">
-            <div className="space-y-2">
-              <label className="text-[9px] font-black text-neutral-600 uppercase tracking-widest px-1">Identity</label>
-              <div className="relative">
-                <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-600" size={14} />
-                <input required className="w-full bg-black/40 border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-sm text-neutral-400 outline-none focus:border-[#facc15] transition-all font-bold placeholder:text-neutral-800" placeholder="ID" value={username} onChange={e => setUsername(e.target.value)} />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-[9px] font-black text-neutral-600 uppercase tracking-widest px-1">Token</label>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-600" size={14} />
-                <input required type="password" className="w-full bg-black/40 border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-sm text-neutral-400 outline-none focus:border-[#facc15] transition-all font-bold placeholder:text-neutral-800" placeholder="••••" value={password} onChange={e => setPassword(e.target.value)} />
-              </div>
+          {/* SECONDARY COMMANDS (Col 5) */}
+          <div className="lg:col-span-5 space-y-8">
+            {/* SOCIAL AUTH NODES */}
+            <div className="bg-[#0f0f0f] border-2 border-neutral-900 rounded-[2.5rem] p-8 space-y-8 shadow-2xl relative overflow-hidden">
+               <div className="flex justify-between items-center border-b border-neutral-800/40 pb-6 mb-2">
+                 <h4 className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.3em] flex items-center gap-3 font-futuristic">
+                    <Globe size={16} className="text-cyan-400" /> SSO_PROTOCOLS
+                 </h4>
+                 <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_12px_#10b981]" />
+               </div>
+
+               <div className="grid grid-cols-1 gap-4">
+                  <button 
+                    onClick={handleGoogleClick} 
+                    disabled={!authConfig?.googleEnabled || isSyncing}
+                    className="w-full group bg-black/40 border-2 border-neutral-800 hover:border-blue-500/40 rounded-2xl md:rounded-3xl p-6 flex items-center gap-6 transition-all active:scale-[0.98] disabled:opacity-20"
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-black flex items-center justify-center border border-neutral-800 group-hover:border-blue-500/20 shrink-0">
+                      <img src="https://www.google.com/favicon.ico" className="w-5 h-5" />
+                    </div>
+                    <div className="text-left">
+                       <span className="text-[8px] font-black text-neutral-600 uppercase tracking-widest block mb-1">AUTH_PROVIDER_01</span>
+                       <span className="text-lg font-black text-white italic font-tactical tracking-widest">GOOGLE_HANDSHAKE</span>
+                    </div>
+                  </button>
+
+                  <button 
+                    onClick={handleFacebookLogin} 
+                    disabled={!authConfig?.facebookEnabled || isSyncing}
+                    className="w-full group bg-black/40 border-2 border-neutral-800 hover:border-[#1877F2]/40 rounded-2xl md:rounded-3xl p-6 flex items-center gap-6 transition-all active:scale-[0.98] disabled:opacity-20"
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-black flex items-center justify-center border border-neutral-800 group-hover:border-[#1877F2]/20 shrink-0">
+                      <Facebook size={20} className="text-[#1877F2]" fill="currentColor" />
+                    </div>
+                    <div className="text-left">
+                       <span className="text-[8px] font-black text-neutral-600 uppercase tracking-widest block mb-1">AUTH_PROVIDER_02</span>
+                       <span className="text-lg font-black text-white italic font-tactical tracking-widest">META_IDENTITY</span>
+                    </div>
+                  </button>
+               </div>
             </div>
 
-            {error && (
-              <div className="bg-red-500/10 p-2 rounded-lg flex items-center gap-2 border border-red-500/20 animate-shake">
-                <AlertTriangle size={12} className="text-red-500" />
-                <p className="text-red-600 text-[8px] font-black uppercase tracking-wide">{error}</p>
+            {/* SYSTEM INTEGRITY */}
+            <div className="bg-[#0f0f0f] border-2 border-neutral-900 p-8 rounded-[2.5rem] flex items-start gap-6 shadow-xl relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity">
+                <Activity size={80} />
               </div>
-            )}
-
-            <button type="submit" disabled={isSyncing} className={`w-full py-4 rounded-xl font-black text-xs transition-all transform active:scale-[0.98] shadow-xl disabled:opacity-50 border-b-4 mt-2 ${activeMode === 'admin' ? 'bg-white text-black border-neutral-300' : 'bg-[#facc15] text-black border-yellow-700'}`}>
-              {isSyncing ? <Loader2 className="animate-spin mx-auto text-black" size={16} /> : 'INITIALIZE'}
-            </button>
-          </form>
-
-          {activeMode === 'trader' && (
-            <div className="mt-6 space-y-4 pb-10">
-              <div className="relative flex items-center gap-4">
-                <div className="flex-1 h-[1px] bg-neutral-900"></div>
-                <span className="text-[8px] font-black text-neutral-700 uppercase tracking-widest">SSO HANDSHAKE</span>
-                <div className="flex-1 h-[1px] bg-neutral-900"></div>
+              <ShieldCheck className="text-emerald-500 shrink-0" size={28} />
+              <div className="relative z-10">
+                 <h4 className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-2 font-futuristic">LEDGER_PROTOCOL_ACTIVE</h4>
+                 <p className="text-[9px] text-neutral-600 font-medium leading-relaxed uppercase italic tracking-tighter">
+                   Identity authentication is cryptographically verified against the marketplace root ledger. Unauthorized access attempts are automatically logged and routed to system auditing nodes for immediate IP isolation.
+                 </p>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <button 
-                  onClick={handleGoogleClick} 
-                  disabled={!authConfig?.googleEnabled || isSyncing}
-                  className="py-3 rounded-lg font-bold flex items-center justify-center gap-2 border border-neutral-900 text-white hover:bg-neutral-800/50 transition-all text-[9px] uppercase disabled:opacity-20"
-                >
-                  <img src="https://www.google.com/favicon.ico" className="w-3 h-3" /> Google
-                </button>
-                <button 
-                  onClick={handleFacebookLogin} 
-                  disabled={!authConfig?.facebookEnabled || isSyncing}
-                  className="py-3 rounded-lg font-bold flex items-center justify-center gap-2 border border-neutral-900 text-white hover:bg-neutral-800/50 transition-all text-[9px] uppercase disabled:opacity-20"
-                >
-                  <Facebook size={14} className="text-[#1877F2]" fill="currentColor" /> Meta
-                </button>
-              </div>
-              <p className="text-center">
-                 <button onClick={onSwitchToSignup} className="text-neutral-600 text-[10px] font-black uppercase tracking-widest hover:text-white transition-colors">
-                   <span className="text-[#facc15] underline">New Node Registration</span>
-                 </button>
-              </p>
             </div>
-          )}
+          </div>
         </div>
       </div>
       

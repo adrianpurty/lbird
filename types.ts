@@ -1,5 +1,4 @@
 
-
 export interface Lead {
   id: string;
   title: string;
@@ -75,6 +74,8 @@ export interface User {
   balance: number;
   stripeConnected: boolean;
   role: UserRole;
+  status: 'active' | 'restricted'; // Added for Control Center management
+  totalSpend?: number; // Added for administrative telemetry
   username?: string;
   bio?: string;
   profileImage?: string;
@@ -89,7 +90,6 @@ export interface User {
   preferredContact?: 'email' | 'phone' | 'whatsapp' | 'telegram';
   defaultBusinessUrl?: string;
   defaultTargetUrl?: string;
-  // Added properties for presence tracking to fix compilation errors in App.tsx
   last_active_at?: string;
   current_page?: string;
 }
@@ -110,7 +110,6 @@ export interface AIInsight {
   summary: string;
 }
 
-// Added GatewayAPI interface to shared types to fix cross-module compilation errors
 export interface GatewayAPI {
   id: string;
   name: string;

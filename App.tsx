@@ -1,9 +1,7 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo, memo, useDeferredValue } from 'react';
+
+import React, { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react';
 import { 
-  TrendingUp, Settings, ShieldAlert, Package, 
-  Inbox, CheckCircle, Activity, User as UserIcon, 
-  BarChart3, Target, Info, XCircle, Heart, FileText, Database, Server,
-  Loader2, Gavel, Loader, Eye, Fingerprint, Terminal, UserCircle, Globe, Monitor, MapPin
+  ShieldAlert, Activity, Database, Server, Loader2, Inbox, CheckCircle, BarChart3, Terminal, MapPin, Globe, UserCircle, Activity as ActivityIcon, Monitor, Fingerprint, Eye, FileText, Gavel, Heart, PlusCircle, User as UserIcon, Zap, History, ArrowDownLeft, ArrowUpRight, ShieldCheck, Target, TrendingUp, Cpu, ArrowRight
 } from 'lucide-react';
 import Sidebar from './components/Sidebar.tsx';
 import Header from './components/Header.tsx';
@@ -23,6 +21,7 @@ import RevenueChart from './components/RevenueChart.tsx';
 import InvoiceLedger from './components/InvoiceLedger.tsx';
 import LogInspectionModal from './components/LogInspectionModal.tsx';
 import WorldMarketMap from './components/WorldMarketMap.tsx';
+import UserManagement from './components/UserManagement.tsx';
 import { Lead, User, PurchaseRequest, Notification, PlatformAnalytics, OAuthConfig, Invoice, GatewayAPI } from './types.ts';
 import { apiService } from './services/apiService.ts';
 import { soundService } from './services/soundService.ts';
@@ -32,125 +31,9 @@ const USER_DATA_KEY = 'lb_user_v3';
 const AUTH_VIEW_KEY = 'lb_auth_view_v3';
 const LAST_KNOWN_LOCATION_KEY = 'lb_last_known_loc';
 
-interface AppMarketData {
-  leads: Lead[];
-  purchaseRequests: PurchaseRequest[];
-  invoices: Invoice[];
-  notifications: Notification[];
-  analytics: PlatformAnalytics | null;
-  authConfig: OAuthConfig;
-  gateways: GatewayAPI[];
-  users: User[];
-  lastUpdate?: string;
-  db_size?: number;
-}
-
 const MemoizedSidebar = memo(Sidebar);
 const MemoizedHeader = memo(Header);
 const MemoizedLeadGrid = memo(LeadGrid);
-
-const UserPresenceTable = ({ users, currentUserId }: { users: User[], currentUserId: string }) => {
-  const getTabLabel = (tabId: string) => {
-    const mapping: Record<string, string> = {
-      market: 'Sales Floor',
-      profile: 'Identity Node',
-      wishlist: 'Saved Assets',
-      create: 'Asset Provisioning',
-      bids: 'Active Portfolio',
-      ledger: 'Financial Ledger',
-      inbox: 'Audit Logs',
-      admin: 'Control Room',
-      'payment-config': 'Gateway Config',
-      'auth-config': 'Identity Infrastructure',
-      settings: 'Vault & API'
-    };
-    return mapping[tabId] || tabId;
-  };
-
-  const sortedUsers = useMemo(() => {
-    return [...users].sort((a, b) => {
-        const aTime = a.last_active_at ? new Date(a.last_active_at).getTime() : 0;
-        const bTime = b.last_active_at ? new Date(b.last_active_at).getTime() : 0;
-        return bTime - aTime;
-    });
-  }, [users]);
-
-  return (
-    <div className="bg-[#111111]/40 border border-neutral-800/30 rounded-[2rem] overflow-hidden shadow-2xl backdrop-blur-md">
-       <div className="p-6 border-b border-neutral-800/40 bg-black/20 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-             <Activity className="text-[#facc15]" size={16} />
-             <span className="text-[11px] font-black uppercase tracking-[0.2em] text-neutral-300">Active Node Presence</span>
-          </div>
-          <div className="flex items-center gap-2 px-3 py-1 bg-[#facc15]/5 border border-[#facc15]/20 rounded-lg">
-             <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-             <span className="text-[9px] font-black text-neutral-400 uppercase">{users.length} Sync'd</span>
-          </div>
-       </div>
-       <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-             <thead>
-                <tr className="border-b border-neutral-800/20">
-                   <th className="px-6 py-4 text-[9px] font-black text-neutral-600 uppercase tracking-widest">Trader Identity</th>
-                   <th className="px-6 py-4 text-[9px] font-black text-neutral-600 uppercase tracking-widest">Active Node</th>
-                   <th className="px-6 py-4 text-[9px] font-black text-neutral-600 uppercase tracking-widest">Global Location</th>
-                   <th className="px-6 py-4 text-[9px] font-black text-neutral-600 uppercase tracking-widest">Status / Last Sync</th>
-                </tr>
-             </thead>
-             <tbody className="divide-y divide-neutral-800/10">
-                {sortedUsers.map(u => {
-                   const isOnline = u.last_active_at && (Date.now() - new Date(u.last_active_at).getTime() < 60000);
-                   return (
-                      <tr key={u.id} className={`group hover:bg-white/[0.02] transition-colors ${u.id === currentUserId ? 'bg-[#facc15]/[0.03]' : ''}`}>
-                         <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                               <div className="w-8 h-8 rounded-lg overflow-hidden bg-neutral-900 border border-neutral-800 flex items-center justify-center group-hover:border-[#facc15]/30 transition-all">
-                                  {u.profileImage ? <img src={u.profileImage} className="w-full h-full object-cover" /> : <UserCircle size={16} className="text-neutral-700" />}
-                               </div>
-                               <div>
-                                  <p className="text-xs font-bold text-neutral-300 group-hover:text-white transition-colors">{u.name}</p>
-                                  <p className="text-[9px] text-neutral-600 font-black uppercase tracking-tighter">{u.email}</p>
-                               </div>
-                            </div>
-                         </td>
-                         <td className="px-6 py-4">
-                            <div className="flex items-center gap-2">
-                               <Terminal size={12} className="text-neutral-700" />
-                               <span className="text-[10px] font-black text-[#facc15]/60 uppercase italic tracking-widest">{getTabLabel(u.current_page || 'Unknown')}</span>
-                            </div>
-                         </td>
-                         <td className="px-6 py-4">
-                            <div className="flex flex-col gap-1">
-                               <div className="flex items-center gap-2 text-[9px] text-neutral-400 font-bold uppercase">
-                                  <MapPin size={10} className="text-red-900/60" /> {u.location || 'HIDDEN'}
-                               </div>
-                               <div className="flex items-center gap-2 text-[8px] text-neutral-600 font-black tracking-tighter">
-                                  <Globe size={10} /> {u.ipAddress || '0.0.0.0'}
-                               </div>
-                            </div>
-                         </td>
-                         <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                               <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-neutral-800'}`} />
-                               <div>
-                                  <p className={`text-[10px] font-black uppercase tracking-widest ${isOnline ? 'text-emerald-500/80' : 'text-neutral-700'}`}>
-                                     {isOnline ? 'CONNECTED' : 'DISCONNECTED'}
-                                  </p>
-                                  <p className="text-[8px] text-neutral-700 font-mono italic">
-                                     {u.last_active_at ? new Date(u.last_active_at).toLocaleTimeString() : 'N/A'}
-                                  </p>
-                               </div>
-                            </div>
-                         </td>
-                      </tr>
-                   );
-                })}
-             </tbody>
-          </table>
-       </div>
-    </div>
-  );
-};
 
 const App: React.FC = () => {
   useEffect(() => {
@@ -177,7 +60,18 @@ const App: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<'market' | 'profile' | 'create' | 'settings' | 'bids' | 'admin' | 'inbox' | 'auth-config' | 'payment-config' | 'wishlist' | 'ledger'>('market');
   
-  const [marketData, setMarketData] = useState<AppMarketData>({
+  const [marketData, setMarketData] = useState<{
+    leads: Lead[];
+    purchaseRequests: PurchaseRequest[];
+    invoices: Invoice[];
+    notifications: Notification[];
+    analytics: PlatformAnalytics | null;
+    authConfig: OAuthConfig;
+    gateways: GatewayAPI[];
+    users: User[];
+    lastUpdate?: string;
+    db_size?: number;
+  }>({
     leads: [],
     purchaseRequests: [],
     invoices: [],
@@ -203,7 +97,7 @@ const App: React.FC = () => {
   });
 
   const [selectedLeadForBid, setSelectedLeadForBid] = useState<Lead | null>(null);
-  const [selectedLeadForAdminEdit, setSelectedLeadForAdminEdit] = useState<Lead | null>(null);
+  const [selectedLeadForEdit, setSelectedLeadForEdit] = useState<Lead | null>(null);
   const [selectedLogForInspection, setSelectedLogForInspection] = useState<Notification | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -220,88 +114,28 @@ const App: React.FC = () => {
     }
   }, [user]);
 
-  // Presence Tracking (Heartbeat) with location reveal
-  useEffect(() => {
-    if (!user || authView !== 'app') return;
-    
-    const sendHeartbeat = async () => {
-        let ip = '0.0.0.0';
-        try { 
-            const res = await fetch('https://api.ipify.org?format=json');
-            const data = await res.json();
-            ip = data.ip;
-        } catch {}
-
-        const loc = localStorage.getItem(LAST_KNOWN_LOCATION_KEY) || 'Unknown';
-        const device = `${navigator.platform} | ${navigator.userAgent.substring(0, 30)}...`;
-
-        apiService.updateHeartbeat(user.id, activeTab, {
-            location: loc,
-            ipAddress: ip,
-            deviceInfo: device
-        }).catch(() => {});
-    };
-
-    sendHeartbeat();
-    const interval = setInterval(sendHeartbeat, 25000); // Pulse every 25s
-    return () => clearInterval(interval);
-  }, [user, activeTab, authView]);
-
-  useEffect(() => {
-    localStorage.setItem(AUTH_VIEW_KEY, authView);
-  }, [authView]);
-
-  const [isTabVisible, setIsTabVisible] = useState(true);
-  useEffect(() => {
-    const handleVisibility = () => setIsTabVisible(document.visibilityState === 'visible');
-    document.addEventListener('visibilitychange', handleVisibility);
-    return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, []);
-
-  useEffect(() => {
-    document.body.classList.toggle('dark-theme', theme === 'dark');
-    try { localStorage.setItem('lb-theme', theme); } catch {}
-  }, [theme]);
-
-  const toggleTheme = useCallback(() => setTheme(prev => prev === 'dark' ? 'light' : 'dark'), []);
-
-  const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
-  }, []);
-
   const fetchAppData = useCallback(async () => {
-    if (isSyncing.current || !isTabVisible) return;
+    if (isSyncing.current) return;
     isSyncing.current = true;
     try {
       const data = await apiService.getData();
-      
-      setMarketData(prev => {
-        if (prev.lastUpdate === data.metadata?.last_updated) return prev;
-        return {
-          leads: data.leads || [],
-          purchaseRequests: data.purchaseRequests || [],
-          invoices: data.invoices || [],
-          notifications: data.notifications || [],
-          analytics: data.analytics || null,
-          authConfig: data.authConfig || prev.authConfig,
-          gateways: data.gateways || prev.gateways,
-          users: data.users || [],
-          lastUpdate: data.metadata?.last_updated,
-          db_size: data.metadata?.db_size
-        };
-      });
+      setMarketData(prev => ({
+        leads: data.leads || [],
+        purchaseRequests: data.purchaseRequests || [],
+        invoices: data.invoices || [],
+        notifications: data.notifications || [],
+        analytics: data.analytics || null,
+        authConfig: data.authConfig || prev.authConfig,
+        gateways: data.gateways || prev.gateways,
+        users: data.users || [],
+        lastUpdate: data.metadata?.last_updated,
+        db_size: data.metadata?.db_size
+      }));
 
       const activeId = localStorage.getItem(SESSION_KEY) || userRef.current?.id;
       if (activeId) {
         const currentUser = data.users?.find((u: User) => u.id === activeId);
-        if (currentUser) {
-          const hasChanged = JSON.stringify(userRef.current) !== JSON.stringify(currentUser);
-          if (hasChanged) {
-            setUser(currentUser);
-            if (authView !== 'app') setAuthView('app');
-          }
-        }
+        if (currentUser) setUser(currentUser);
       }
     } catch (error) { 
       console.warn('Sync Failed'); 
@@ -309,18 +143,19 @@ const App: React.FC = () => {
       isSyncing.current = false; 
       setIsLoading(false); 
     }
-  }, [isTabVisible, authView]);
+  }, []);
 
   useEffect(() => { 
     fetchAppData();
-    const interval = setInterval(fetchAppData, 10000);
+    const interval = setInterval(fetchAppData, 15000);
     return () => clearInterval(interval);
   }, [fetchAppData]);
 
-  const wishlistLeads = useMemo(() => marketData.leads.filter(l => user?.wishlist?.includes(l.id)), [marketData.leads, user?.wishlist]);
-  const activeBidIds = useMemo(() => marketData.purchaseRequests.filter(pr => pr.userId === user?.id).map(pr => pr.leadId), [marketData.purchaseRequests, user?.id]);
-  const portfolioLeads = useMemo(() => marketData.leads.filter(l => activeBidIds.includes(l.id)), [marketData.leads, activeBidIds]);
-  const userInvoices = useMemo(() => user?.role === 'admin' ? marketData.invoices : marketData.invoices.filter(inv => inv.userId === user?.id), [marketData.invoices, user?.id, user?.role]);
+  const toggleTheme = useCallback(() => setTheme(prev => prev === 'dark' ? 'light' : 'dark'), []);
+  const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  }, []);
 
   const handleLogin = (loggedUser: User) => {
     localStorage.setItem(SESSION_KEY, loggedUser.id);
@@ -329,7 +164,7 @@ const App: React.FC = () => {
     setUser(loggedUser);
     setAuthView('app');
     setActiveTab('market');
-    showToast(`Session Active: ${loggedUser.name}`);
+    showToast(`SESSION_AUTHORIZED: ${loggedUser.name.toUpperCase()}`);
   };
 
   const handleLogout = useCallback(() => { 
@@ -338,85 +173,65 @@ const App: React.FC = () => {
     localStorage.setItem(AUTH_VIEW_KEY, 'login');
     setUser(null); 
     setAuthView('login'); 
-    showToast("Session closed.", "info");
-  }, [showToast]);
-
-  const handleRefillFromModal = useCallback(() => {
-    setSelectedLeadForBid(null);
-    setActiveTab('settings');
   }, []);
 
-  const handleBulkApprove = useCallback(async (ids: string[]) => {
-    setIsSubmitting(true);
-    try {
-      await Promise.all(ids.map(id => apiService.updateLead(id, { status: 'approved' })));
-      fetchAppData(); 
-      showToast(`Batch Protocol: ${ids.length} nodes approved.`);
-    } catch (e) {
-      showToast("Batch Error: Signal Interrupted.", "error");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [fetchAppData, showToast]);
+  const activeBidIds = useMemo(() => 
+    marketData.purchaseRequests
+      .filter(pr => pr.userId === user?.id)
+      .map(pr => pr.leadId),
+    [marketData.purchaseRequests, user?.id]
+  );
 
-  const handleBulkReject = useCallback(async (ids: string[]) => {
-    setIsSubmitting(true);
-    try {
-      await Promise.all(ids.map(id => apiService.updateLead(id, { status: 'rejected' })));
-      fetchAppData();
-      showToast(`Batch Protocol: ${ids.length} nodes rejected.`);
-    } catch (e) {
-      showToast("Batch Error: Signal Interrupted.", "error");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [fetchAppData, showToast]);
+  const wishlistLeads = useMemo(() => 
+    marketData.leads.filter(l => user?.wishlist?.includes(l.id)),
+    [marketData.leads, user?.wishlist]
+  );
+
+  const portfolioLeads = useMemo(() => 
+    marketData.leads.filter(l => activeBidIds.includes(l.id)),
+    [marketData.leads, activeBidIds]
+  );
+
+  const userInvoices = useMemo(() => 
+    marketData.invoices.filter(inv => inv.userId === user?.id),
+    [marketData.invoices, user?.id]
+  );
 
   if (isLoading && !user) return (
-    <div className="h-screen flex items-center justify-center bg-[var(--bg-platform)]">
-      <div className="flex flex-col items-center gap-4">
-        <Server className="text-neutral-800 animate-pulse" size={32} />
-        <p className="text-[9px] font-black uppercase tracking-widest text-neutral-700 italic">Syncing AI Database Node...</p>
+    <div className="h-screen flex items-center justify-center bg-black">
+      <div className="flex flex-col items-center gap-10">
+        <Server className="text-cyan-500 animate-pulse" size={100} />
+        <p className="text-[16px] font-futuristic uppercase tracking-[1em] text-cyan-400 text-glow animate-pulse">BOOTING_CORE...</p>
       </div>
     </div>
   );
 
   if (authView === 'login') return <Login onLogin={handleLogin} onSwitchToSignup={() => setAuthView('signup')} authConfig={marketData.authConfig} />;
   if (authView === 'signup') return <Signup onSignup={handleLogin} onSwitchToLogin={() => setAuthView('login')} authConfig={marketData.authConfig} />;
-  if (!user && authView === 'app') {
-     return (
-        <div className="h-screen flex items-center justify-center bg-[var(--bg-platform)]">
-          <div className="flex flex-col items-center gap-4">
-            <Loader2 className="animate-spin text-neutral-800" size={32} />
-            <p className="text-[9px] font-black uppercase tracking-widest text-neutral-700 italic">Restoring Session...</p>
-          </div>
-        </div>
-     );
-  }
 
   return (
-    <div className="flex flex-col lg:flex-row h-screen bg-[var(--bg-platform)] text-[var(--text-main)] overflow-hidden theme-transition optimize-gpu contain-strict">
+    <div className="flex flex-col lg:flex-row h-screen bg-black text-white overflow-hidden theme-transition">
       {isSubmitting && (
-        <div className="fixed inset-0 z-[300] bg-black/60 backdrop-blur-sm flex items-center justify-center animate-in fade-in duration-150">
-           <div className="flex flex-col items-center gap-4">
-              <Database className="text-[#facc15]/60 animate-pulse" size={48} />
-              <p className="text-neutral-400 font-black text-[10px] uppercase tracking-[0.4em] italic">COMMITTING NODE...</p>
+        <div className="fixed inset-0 z-[300] bg-black/90 backdrop-blur-3xl flex items-center justify-center">
+           <div className="flex flex-col items-center gap-12">
+              <Database className="text-[#00e5ff] animate-spin" size={120} />
+              <p className="text-[#00e5ff] font-futuristic text-[20px] uppercase tracking-[1em] text-glow">REPLICATING_LEDGER...</p>
            </div>
         </div>
       )}
 
       {toast && (
-        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[200] px-5 py-3 rounded-xl shadow-xl border bg-neutral-900/60 border-neutral-800/40 backdrop-blur-xl flex items-center gap-3 animate-in slide-in-from-top-2">
-          <CheckCircle className="text-[#facc15]/60" size={16} />
-          <span className="text-[10px] font-black uppercase tracking-widest text-neutral-300">{toast.message}</span>
+        <div className="fixed top-6 md:top-12 left-1/2 -translate-x-1/2 z-[200] px-6 md:px-12 py-4 md:py-6 rounded-2xl border-2 bg-black border-white/20 shadow-[0_0_50px_rgba(255,255,255,0.1)] flex items-center gap-4 md:gap-6 animate-in slide-in-from-top-12">
+          <div className="w-2.5 h-2.5 bg-[#00e5ff] rounded-full animate-pulse shadow-[0_0_10px_#00e5ff]" />
+          <span className="text-[10px] md:text-[12px] font-black uppercase tracking-[0.3em] md:tracking-[0.5em] text-white text-glow">{toast.message}</span>
         </div>
       )}
 
-      <div className="hidden lg:flex will-change-transform">
+      <div className="hidden lg:flex">
         <MemoizedSidebar activeTab={activeTab} onTabChange={setActiveTab} role={user!.role} onLogout={handleLogout} hasInbox={marketData.notifications.some(n => !n.read)} />
       </div>
 
-      <div className="flex-1 flex flex-col min-w-0 h-full relative overflow-hidden will-change-transform">
+      <div className="flex-1 flex flex-col min-w-0 h-full relative overflow-hidden">
         <MemoizedHeader 
           user={user!} 
           notifications={marketData.notifications} 
@@ -428,203 +243,300 @@ const App: React.FC = () => {
           onLogout={handleLogout}
         />
         
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10 space-y-8 pb-32 lg:pb-10 scroll-smooth contain-layout">
+        <main className="flex-1 overflow-y-auto p-4 md:p-8 lg:p-12 space-y-4 md:space-y-6 pb-32 lg:pb-12 scroll-smooth scrollbar-hide">
           {activeTab === 'market' && (
-            <div className="space-y-8 animate-in fade-in duration-200">
-               <div className="flex justify-between items-center">
-                  <h2 className="text-xl font-black text-neutral-400 italic uppercase flex items-center gap-3"><TrendingUp className="text-[#facc15]/40" /> Market Floor</h2>
-                  <div className="hidden sm:flex items-center gap-2 px-4 py-1.5 bg-black/20 border border-neutral-800/30 rounded-full shadow-sm">
-                    <Database size={10} className="text-neutral-700" />
-                    <span className="text-[8px] font-black text-neutral-700 uppercase tracking-widest">{marketData.db_size ? `${(marketData.db_size / 1024).toFixed(1)}KB` : 'SYNCING'}</span>
+            <div className="max-w-[1400px] mx-auto space-y-4 md:space-y-6 animate-in fade-in duration-700">
+               {/* Landscape Header Section - Vault Style */}
+               <div className="flex flex-col gap-4 md:gap-6">
+                 <div className="px-1">
+                    <h2 className="text-3xl md:text-5xl font-futuristic font-black text-white italic uppercase tracking-tighter leading-none text-glow">
+                      SALES <span className="text-neutral-600">FLOOR</span>
+                    </h2>
+                    <p className="text-[7px] md:text-[10px] text-neutral-600 font-bold uppercase tracking-[0.3em] md:tracking-[0.4em] mt-1.5 italic">LIVE_MARKET_STREAM // NODES_SYNCED</p>
+                 </div>
+                 
+                 <DashboardStats leads={marketData.leads} user={user!} />
+               </div>
+
+               {/* Split Content - Landscape Architecture */}
+               <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
+                 
+                 {/* Main Market Feed (Col 8) */}
+                 <div className="lg:col-span-8 space-y-4 order-2 lg:order-1">
+                   <div className="bg-[#0c0c0c]/90 rounded-[1.5rem] md:rounded-[2rem] border border-neutral-800/50 p-3 md:p-6 shadow-2xl">
+                     <MemoizedLeadGrid 
+                      leads={marketData.leads} 
+                      onBid={(id) => setSelectedLeadForBid(marketData.leads.find(l => l.id === id) || null)} 
+                      onEdit={setSelectedLeadForEdit} 
+                      onAdminApprove={(id) => apiService.updateLead(id, { status: 'approved' }).then(fetchAppData)} 
+                      onAdminReject={(id) => apiService.updateLead(id, { status: 'rejected' }).then(fetchAppData)} 
+                      onBulkApprove={(ids) => Promise.all(ids.map(id => apiService.updateLead(id, { status: 'approved' }))).then(fetchAppData)}
+                      onBulkReject={(ids) => Promise.all(ids.map(id => apiService.updateLead(id, { status: 'rejected' }))).then(fetchAppData)}
+                      onDelete={(id) => apiService.deleteLead(id).then(fetchAppData)} 
+                      onToggleWishlist={(id) => apiService.toggleWishlist(user!.id, id).then(fetchAppData)} 
+                      userRole={user!.role} 
+                      currentUserId={user!.id} 
+                      wishlist={user!.wishlist || []} 
+                      activeBids={activeBidIds} 
+                     />
+                   </div>
+                 </div>
+
+                 {/* Side Telemetry / Recent Activity (Col 4) */}
+                 <div className="lg:col-span-4 h-full order-1 lg:order-2">
+                    <div className="bg-[#0f0f0f] p-4 md:p-6 rounded-[1.5rem] md:rounded-[2rem] border border-neutral-800/40 h-full flex flex-col shadow-xl">
+                      <div className="flex justify-between items-center border-b border-neutral-800/30 pb-3 md:pb-4 mb-3 md:mb-4">
+                         <h4 className="text-[8px] md:text-[9px] font-black text-neutral-500 uppercase tracking-widest flex items-center gap-2 font-futuristic">
+                            <History size={10} className="text-[#00e5ff]/50" /> Market Ledger
+                         </h4>
+                         <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping" />
+                      </div>
+                      
+                      <div className="flex-1 space-y-2 md:space-y-3 overflow-y-auto pr-1 scrollbar-hide max-h-[240px] md:max-h-[600px]">
+                         {marketData.notifications.length > 0 ? (
+                           marketData.notifications.map((n, idx) => (
+                             <div key={idx} className="bg-black/30 p-3 md:p-4 rounded-xl border border-neutral-800/20 flex items-center justify-between group hover:border-[#00e5ff]/30 transition-all">
+                                <div className="flex items-center gap-3">
+                                   <div className={`w-7 h-7 md:w-8 md:h-8 rounded-lg flex items-center justify-center ${n.type === 'buy' ? 'bg-emerald-900/10 text-emerald-500/80' : 'bg-blue-900/10 text-blue-500/80'}`}>
+                                      {n.type === 'buy' ? <ArrowDownLeft size={10} md:size={12} /> : <ArrowUpRight size={10} md:size={12} />}
+                                   </div>
+                                   <div className="min-w-0">
+                                      <p className="text-[9px] md:text-[10px] text-neutral-200 font-black uppercase tracking-tight truncate leading-tight">{n.message}</p>
+                                      <p className="text-[6px] md:text-[7px] text-neutral-700 font-bold uppercase mt-0.5">{n.timestamp} ago</p>
+                                   </div>
+                                </div>
+                             </div>
+                           ))
+                         ) : (
+                           <div className="py-12 md:py-20 text-center">
+                              <History size={24} className="mx-auto text-neutral-800 mb-3 opacity-20" />
+                              <p className="text-[7px] text-neutral-700 font-black uppercase tracking-widest">Awaiting Nodes</p>
+                           </div>
+                         )}
+                      </div>
+
+                      <button onClick={() => setActiveTab('inbox')} className="w-full mt-4 py-2 text-[7px] md:text-[8px] font-black text-neutral-700 uppercase tracking-[0.3em] hover:text-[#00e5ff]/60 border border-neutral-800/40 rounded-lg transition-all">
+                        Full Audit Log
+                      </button>
+                    </div>
+                 </div>
+               </div>
+            </div>
+          )}
+
+          {activeTab === 'admin' && (
+            <div className="max-w-[1400px] mx-auto space-y-8 animate-in fade-in duration-700">
+               {/* ROOT CONTROL HEADER */}
+               <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 md:gap-10 border-b-2 border-neutral-900 pb-8 md:pb-12">
+                  <div className="relative">
+                    <div className="absolute -left-4 md:-left-12 top-1/2 -translate-y-1/2 w-4 h-12 md:h-24 bg-red-600 rounded-full blur-xl opacity-20" />
+                    <h2 className="text-4xl sm:text-7xl lg:text-8xl font-futuristic font-black text-white italic uppercase tracking-tighter leading-none flex items-center gap-4 md:gap-10 text-glow">
+                      ROOT <span className="text-neutral-600">CONTROL</span>
+                    </h2>
+                    <div className="flex flex-wrap items-center gap-3 md:gap-6 mt-4 md:mt-6">
+                      <div className="px-3 md:px-4 py-1.5 bg-red-600/10 border border-red-600/30 rounded-full text-[8px] md:text-[10px] font-black text-red-500 uppercase tracking-[0.3em] md:tracking-[0.4em]">MASTER_COMMAND_CENTER</div>
+                      <span className="text-[10px] md:text-[12px] text-neutral-600 font-bold uppercase tracking-[0.4em] md:tracking-[0.6em] italic shrink-0">GLOBAL_OVERRIDE_ACTIVE // v4.2</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 md:gap-6 w-full md:w-auto">
+                    <div className="flex-1 md:flex-none p-4 md:p-6 bg-[#0f0f0f] border-2 border-neutral-900 rounded-[1.5rem] md:rounded-3xl shadow-2xl flex items-center gap-4 md:gap-6 group hover:border-red-600/50 transition-all cursor-default">
+                      <div className="w-10 h-10 md:w-14 md:h-14 bg-red-600/10 rounded-xl md:rounded-2xl flex items-center justify-center text-red-500 group-hover:scale-110 transition-transform">
+                        <Terminal size={24} className="md:w-7 md:h-7" />
+                      </div>
+                      <div>
+                        <span className="text-[8px] md:text-[10px] font-black text-neutral-600 uppercase tracking-widest block mb-1">SYSTEM_AUTH</span>
+                        <span className="text-xl md:text-3xl font-tactical text-white tracking-widest leading-none text-glow">ROOT_LEVEL</span>
+                      </div>
+                    </div>
                   </div>
                </div>
-               <DashboardStats leads={marketData.leads} user={user!} />
-               <MemoizedLeadGrid 
-                leads={marketData.leads} 
-                onBid={(id) => setSelectedLeadForBid(marketData.leads.find(l => l.id === id) || null)} 
-                onAdminEdit={setSelectedLeadForAdminEdit} 
-                onAdminApprove={(id) => apiService.updateLead(id, { status: 'approved' }).then(fetchAppData)} 
-                onAdminReject={(id) => apiService.updateLead(id, { status: 'rejected' }).then(fetchAppData)} 
-                onBulkApprove={handleBulkApprove}
-                onBulkReject={handleBulkReject}
-                onDelete={(id) => apiService.deleteLead(id).then(fetchAppData)} 
-                onToggleWishlist={(id) => apiService.toggleWishlist(user!.id, id).then(fetchAppData)} 
-                userRole={user!.role} 
-                currentUserId={user!.id} 
-                wishlist={user!.wishlist || []} 
-                activeBids={activeBidIds} 
-               />
+
+               {/* ADMIN TELEMETRY BAR */}
+               <div className="bg-[#0f0f0f] border border-neutral-800/60 rounded-[1.5rem] p-4 md:p-6 flex flex-col md:flex-row items-center justify-between gap-6 md:gap-10 shadow-xl overflow-hidden">
+                 <div className="flex items-center gap-8 md:gap-12 overflow-x-auto scrollbar-hide w-full">
+                    <div className="flex flex-col shrink-0">
+                      <span className="text-neutral-700 font-black uppercase text-[8px] tracking-[0.3em] mb-1">Platform Revenue</span>
+                      <div className="text-3xl md:text-4xl font-black text-white italic tracking-tighter flex items-baseline gap-1.5 font-tactical">
+                        <span className="text-sm text-red-500/50">$</span>{(marketData.analytics?.totalVolume || 0).toLocaleString()}
+                      </div>
+                    </div>
+                    <div className="hidden md:block h-10 w-px bg-neutral-800 shrink-0" />
+                    <div className="flex items-center gap-8 md:gap-10 shrink-0">
+                       <div>
+                          <span className="text-neutral-700 font-black uppercase text-[8px] tracking-[0.3em] mb-1">Identities</span>
+                          <div className="text-sm md:text-lg font-black text-white italic flex items-center gap-2 md:gap-3 font-tactical tracking-widest">
+                             <UserCircle size={14} className="text-red-500" /> {marketData.users.length}
+                          </div>
+                       </div>
+                       <div>
+                          <span className="text-neutral-700 font-black uppercase text-[8px] tracking-[0.3em] mb-1">Success</span>
+                          <div className="text-sm md:text-lg font-black text-emerald-500 italic flex items-center gap-2 md:gap-3 font-tactical tracking-widest">
+                             <CheckCircle size={14} /> 94.2%
+                          </div>
+                       </div>
+                       <div>
+                          <span className="text-neutral-700 font-black uppercase text-[8px] tracking-[0.3em] mb-1">Gateways</span>
+                          <div className="text-sm md:text-lg font-black text-cyan-400 italic flex items-center gap-2 md:gap-3 font-tactical tracking-widest">
+                             <Zap size={14} /> {marketData.gateways.length}
+                          </div>
+                       </div>
+                    </div>
+                 </div>
+               </div>
+
+               {/* IDENTITY MANAGEMENT SECTION */}
+               <div className="bg-[#0c0c0c]/90 rounded-[2rem] md:rounded-[3rem] border-2 border-neutral-900 p-4 md:p-8 shadow-2xl space-y-6 md:space-y-8">
+                  <div className="flex items-center gap-4 border-b border-neutral-900 pb-4 md:pb-6">
+                    <div className="w-10 h-10 bg-red-600/10 rounded-xl flex items-center justify-center text-red-500 border border-red-900/30">
+                       <UserIcon size={20} />
+                    </div>
+                    <div>
+                       <h3 className="text-lg md:text-xl font-black text-white uppercase tracking-tight italic">Identity Registry</h3>
+                       <p className="text-[8px] md:text-[9px] text-neutral-700 font-black uppercase tracking-widest mt-1">Manage network access & node integrity</p>
+                    </div>
+                  </div>
+                  
+                  <UserManagement users={marketData.users} onUpdateUser={(id, updates) => apiService.updateUser(id, updates).then(fetchAppData)} />
+               </div>
+
+               {/* LANDSCAPE ADMIN SPLIT */}
+               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                  {/* Left: Global Market Intelligence */}
+                  <div className="lg:col-span-8 space-y-6 md:space-y-8">
+                     <div className="bg-[#0c0c0c]/90 rounded-[2rem] md:rounded-[3rem] border-2 border-neutral-900 p-2 shadow-2xl relative overflow-hidden group">
+                        <WorldMarketMap leads={marketData.leads} users={marketData.users} onSelectCountry={() => {}} selectedCountry={null} />
+                     </div>
+                     <RevenueChart history={marketData.analytics?.revenueHistory || []} />
+                  </div>
+                  {/* Right: Master Audit Ledger */}
+                  <div className="lg:col-span-4 h-full">
+                     <div className="bg-[#0f0f0f] p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] border-2 border-neutral-900 h-full flex flex-col shadow-2xl relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity">
+                           <ActivityIcon size={120} />
+                        </div>
+                        <div className="flex justify-between items-center border-b border-neutral-800/40 pb-6 mb-6 md:mb-8 relative z-10">
+                           <h4 className="text-[10px] md:text-[11px] font-black text-neutral-500 uppercase tracking-[0.3em] md:tracking-[0.4em] flex items-center gap-3 font-futuristic">
+                              <ShieldAlert size={16} className="text-red-500" /> MASTER_AUDIT
+                           </h4>
+                           <div className="w-2.5 h-2.5 bg-red-600 rounded-full animate-pulse shadow-[0_0_12px_#dc2626]" />
+                        </div>
+                        
+                        <div className="flex-1 space-y-4 overflow-y-auto pr-1 md:pr-2 scrollbar-hide relative z-10 max-h-[400px] md:max-h-[800px]">
+                           {marketData.notifications.map((n, idx) => (
+                             <div 
+                              key={idx} 
+                              onClick={() => setSelectedLogForInspection(n)}
+                              className="bg-black/40 p-4 md:p-6 rounded-2xl border border-neutral-800/40 flex items-center justify-between group/log hover:border-red-600/30 transition-all cursor-pointer"
+                             >
+                                <div className="flex items-center gap-4 md:gap-5">
+                                   <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl flex items-center justify-center ${n.type === 'buy' ? 'bg-emerald-900/10 text-emerald-500' : 'bg-blue-900/10 text-blue-500'}`}>
+                                      {n.type === 'buy' ? <TrendingUp size={14} className="md:w-4 md:h-4" /> : <Zap size={14} className="md:w-4 md:h-4" />}
+                                   </div>
+                                   <div className="min-w-0">
+                                      <p className="text-[10px] md:text-[11px] text-neutral-200 font-black uppercase tracking-tight truncate max-w-[140px] md:max-w-[180px]">{n.message}</p>
+                                      <p className="text-[7px] md:text-[8px] text-neutral-700 font-bold uppercase mt-1">{n.timestamp}</p>
+                                   </div>
+                                </div>
+                                <ArrowRight size={14} className="text-neutral-800 group-hover/log:translate-x-1 group-hover/log:text-red-600 transition-all shrink-0" />
+                             </div>
+                           ))}
+                        </div>
+
+                        <div className="mt-6 md:mt-8 pt-6 md:pt-8 border-t border-neutral-800/40 relative z-10">
+                           <button onClick={() => setActiveTab('inbox')} className="w-full bg-red-600 text-white py-3 md:py-4 rounded-xl md:rounded-2xl font-black text-[9px] md:text-[10px] uppercase tracking-[0.3em] md:tracking-[0.4em] border-b-4 border-red-900 hover:bg-red-500 transition-all shadow-xl shadow-red-900/10 active:translate-y-1 active:border-b-0">
+                             INITIALIZE_FULL_AUDIT
+                           </button>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+            </div>
+          )}
+
+          {activeTab === 'payment-config' && <AdminPaymentSettings gateways={marketData.gateways} onGatewaysChange={(gw) => apiService.updateGateways(gw).then(fetchAppData)} onDeploy={() => {}} />}
+          {activeTab === 'auth-config' && <AdminOAuthSettings config={marketData.authConfig} onConfigChange={(cfg) => apiService.updateAuthConfig(cfg).then(fetchAppData)} />}
+
+          {activeTab === 'inbox' && (
+            <div className="max-w-[1400px] mx-auto space-y-8 md:space-y-12 animate-in fade-in duration-600">
+               <h2 className="text-3xl md:text-4xl font-futuristic text-white italic uppercase flex items-center gap-4 md:gap-8 text-glow">AUDIT <span className="text-red-500 font-normal">LEDGER</span></h2>
+               <div className="bg-[#0c0c0c]/90 rounded-[2rem] border border-neutral-800/50 p-4 md:p-6 shadow-2xl">
+                 <div className="space-y-3">
+                   {marketData.notifications.map((n, idx) => (
+                     <div key={idx} onClick={() => setSelectedLogForInspection(n)} className="bg-black/30 p-4 md:p-6 rounded-2xl border border-neutral-800/20 flex items-center justify-between group hover:border-red-600/30 transition-all cursor-pointer">
+                        <div className="flex items-center gap-4 md:gap-6">
+                           <div className={`w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl flex items-center justify-center ${n.type === 'buy' ? 'bg-emerald-900/10 text-emerald-500/80' : 'bg-blue-900/10 text-blue-500/80'}`}>
+                              {n.type === 'buy' ? <ArrowDownLeft size={16} md:size={20} /> : <ArrowUpRight size={16} md:size={20} />}
+                           </div>
+                           <div className="min-w-0">
+                              <p className="text-xs md:text-sm text-neutral-200 font-black uppercase tracking-tight truncate max-w-[160px] md:max-w-none">{n.message}</p>
+                              <p className="text-[8px] md:text-[10px] text-neutral-700 font-bold uppercase mt-1">TS // {n.timestamp} ago</p>
+                           </div>
+                        </div>
+                        <div className="flex items-center gap-4 md:gap-6 shrink-0">
+                           <span className={`text-[9px] md:text-xs font-black italic hidden sm:inline ${n.type === 'buy' ? 'text-emerald-500/80' : 'text-blue-500/80'}`}>{n.type.toUpperCase()}</span>
+                           <ArrowRight className="text-neutral-800 group-hover:text-white transition-all w-4 h-4 md:w-5 md:h-5" />
+                        </div>
+                     </div>
+                   ))}
+                 </div>
+               </div>
             </div>
           )}
 
           {activeTab === 'wishlist' && (
-            <div className="space-y-8 animate-in fade-in duration-200">
-               <h2 className="text-xl font-black text-neutral-400 italic uppercase flex items-center gap-3"><Heart className="text-red-900/60" /> Saved Nodes</h2>
-               <MemoizedLeadGrid leads={wishlistLeads} onBid={(id) => setSelectedLeadForBid(marketData.leads.find(l => l.id === id) || null)} onToggleWishlist={(id) => apiService.toggleWishlist(user!.id, id).then(fetchAppData)} userRole={user!.role} currentUserId={user!.id} wishlist={user!.wishlist || []} activeBids={activeBidIds} />
+            <div className="max-w-[1400px] mx-auto space-y-8 md:space-y-12 animate-in fade-in duration-600">
+               <h2 className="text-3xl md:text-4xl font-futuristic text-white italic uppercase flex items-center gap-4 md:gap-8 text-glow">SAVED <span className="text-[#00e5ff] font-normal">NODES</span></h2>
+               <div className="bg-[#0c0c0c]/90 rounded-[2rem] border border-neutral-800/50 p-4 md:p-6 shadow-2xl">
+                <MemoizedLeadGrid leads={wishlistLeads} onBid={(id) => setSelectedLeadForBid(marketData.leads.find(l => l.id === id) || null)} onEdit={setSelectedLeadForEdit} onToggleWishlist={(id) => apiService.toggleWishlist(user!.id, id).then(fetchAppData)} userRole={user!.role} currentUserId={user!.id} wishlist={user!.wishlist || []} activeBids={activeBidIds} />
+               </div>
             </div>
           )}
 
           {activeTab === 'bids' && (
-            <div className="space-y-8 animate-in fade-in duration-200">
-               <h2 className="text-xl font-black text-neutral-400 italic uppercase flex items-center gap-3"><Gavel className="text-emerald-900/60" /> Active Portfolio</h2>
-               <MemoizedLeadGrid leads={portfolioLeads} onBid={(id) => setSelectedLeadForBid(marketData.leads.find(l => l.id === id) || null)} onToggleWishlist={(id) => apiService.toggleWishlist(user!.id, id).then(fetchAppData)} userRole={user!.role} currentUserId={user!.id} wishlist={user!.wishlist || []} activeBids={activeBidIds} />
+            <div className="max-w-[1400px] mx-auto space-y-8 md:space-y-12 animate-in fade-in duration-600">
+               <h2 className="text-3xl md:text-4xl font-futuristic text-white italic uppercase flex items-center gap-4 md:gap-8 text-glow">ACTIVE <span className="text-emerald-500 font-normal">PORTFOLIO</span></h2>
+               <div className="bg-[#0c0c0c]/90 rounded-[2rem] border border-neutral-800/50 p-4 md:p-6 shadow-2xl">
+                 <MemoizedLeadGrid leads={portfolioLeads} onBid={(id) => setSelectedLeadForBid(marketData.leads.find(l => l.id === id) || null)} onEdit={setSelectedLeadForEdit} onToggleWishlist={(id) => apiService.toggleWishlist(user!.id, id).then(fetchAppData)} userRole={user!.role} currentUserId={user!.id} wishlist={user!.wishlist || []} activeBids={activeBidIds} />
+               </div>
             </div>
           )}
 
           {activeTab === 'ledger' && <InvoiceLedger invoices={userInvoices} />}
-
-          {activeTab === 'admin' && user!.role === 'admin' && (
-             <div className="max-w-7xl mx-auto space-y-12 animate-in fade-in duration-200">
-                <div className="flex justify-between items-center">
-                   <h2 className="text-xl font-black text-neutral-400 italic uppercase flex items-center gap-3"><ShieldAlert className="text-[#facc15]/40" /> Control Room</h2>
-                   <div className="flex items-center gap-4">
-                      <div className="px-4 py-2 bg-black/40 border border-neutral-800 rounded-xl flex items-center gap-3">
-                         <Activity size={14} className="text-emerald-500 animate-pulse" />
-                         <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Global Telemetry Active</span>
-                      </div>
-                   </div>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  <div className="bg-[#121212]/40 p-6 rounded-2xl border border-neutral-800/30 shadow-sm flex flex-col justify-center">
-                      <BarChart3 className="text-emerald-900/40 mb-2" size={20} />
-                      <p className="text-[9px] text-neutral-700 font-black uppercase tracking-widest">Global Volume</p>
-                      <p className="text-lg font-black text-neutral-300 italic">${marketData.analytics?.totalVolume.toLocaleString()}</p>
-                  </div>
-                  {marketData.analytics && <RevenueChart history={marketData.analytics.revenueHistory} />}
-                </div>
-
-                {/* Live Node Distribution Reveal */}
-                <div className="space-y-6">
-                   <div className="flex items-center gap-4 border-b border-neutral-800/20 pb-2">
-                      <Globe size={14} className="text-[#facc15]/60" />
-                      <h3 className="text-[10px] font-black text-neutral-500 uppercase tracking-widest italic">Live Geographic Node Distribution</h3>
-                   </div>
-                   <WorldMarketMap 
-                     leads={[]} // No leads here, purely for user visual distribution
-                     onSelectCountry={() => {}} 
-                     selectedCountry={null}
-                   />
-                </div>
-
-                <div className="space-y-6">
-                   <div className="flex items-center gap-4 border-b border-neutral-800/20 pb-2">
-                      <UserIcon size={14} className="text-[#facc15]/60" />
-                      <h3 className="text-[10px] font-black text-neutral-500 uppercase tracking-widest italic">User Telemetry Grid</h3>
-                   </div>
-                   <UserPresenceTable users={marketData.users} currentUserId={user!.id} />
-                </div>
-
-                <div className="space-y-6">
-                   <h3 className="text-[10px] font-black text-neutral-700 uppercase tracking-widest italic border-b border-neutral-800/20 pb-2">Full Inventory Oversight</h3>
-                   <MemoizedLeadGrid 
-                    leads={marketData.leads} 
-                    onBid={() => {}} 
-                    onAdminEdit={setSelectedLeadForAdminEdit} 
-                    onBulkApprove={handleBulkApprove}
-                    onBulkReject={handleBulkReject}
-                    userRole={user!.role} 
-                    currentUserId={user!.id} 
-                   />
-                </div>
-             </div>
-          )}
-
-          {activeTab === 'auth-config' && user!.role === 'admin' && <AdminOAuthSettings config={marketData.authConfig} onConfigChange={(cfg) => apiService.updateAuthConfig(cfg).then((res) => { fetchAppData(); showToast("Identity Node Updated"); return res; })} />}
-          {activeTab === 'payment-config' && user!.role === 'admin' && <AdminPaymentSettings gateways={marketData.gateways} onGatewaysChange={(gws) => apiService.updateGateways(gws).then(fetchAppData)} onDeploy={() => { fetchAppData(); showToast("Gateways Deployed"); }} />}
           {activeTab === 'profile' && <ProfileSettings user={user!} onUpdate={(u) => apiService.updateUser(user!.id, u).then(fetchAppData)} />}
           {activeTab === 'settings' && <WalletSettings stripeConnected={user!.stripeConnected} onConnect={() => {}} balance={user!.balance} onDeposit={(amt) => apiService.deposit(user!.id, amt).then(fetchAppData)} gateways={marketData.gateways} />}
-          {activeTab === 'create' && <LeadSubmissionForm onSubmit={(l) => { 
-            setIsSubmitting(true); 
-            apiService.createLead({...l, ownerId: user!.id}).then(async () => { 
-              await fetchAppData(); 
-              setActiveTab('market'); 
-              showToast("Asset Provisioned Successfully"); 
-              setIsSubmitting(false); 
-            }).catch(() => {
-              setIsSubmitting(false);
-              showToast("Provisioning Failed", "error");
-            }); 
-          }} />}
-          {activeTab === 'inbox' && (
-             <div className="space-y-6 animate-in fade-in duration-200 max-w-5xl">
-                <div className="flex justify-between items-center">
-                  <h2 className="text-xl font-black text-neutral-400 italic uppercase flex items-center gap-3"><Inbox className="text-[#facc15]/40" /> System Audit Ledger</h2>
-                  {user!.role === 'admin' && marketData.notifications.length > 0 && (
-                    <button onClick={() => apiService.clearNotifications().then(fetchAppData)} className="text-[10px] font-black uppercase text-red-500/60 hover:text-red-500 transition-colors tracking-widest px-4 py-2 border border-red-900/20 rounded-xl hover:bg-red-950/10">Purge Logs</button>
-                  )}
-                </div>
-                
-                <div className="bg-[#111111]/40 border border-neutral-800/30 rounded-[2rem] overflow-hidden shadow-2xl backdrop-blur-md">
-                   {marketData.notifications.length === 0 ? (
-                      <div className="p-32 text-center">
-                        <Terminal className="mx-auto text-neutral-800 mb-6" size={48} />
-                        <p className="text-neutral-700 text-xs font-black uppercase tracking-[0.4em]">Zero Active Logs in Stream</p>
-                      </div>
-                   ) : (
-                      marketData.notifications.map(n => {
-                        const subjectUser = marketData.users.find(u => u.id === n.userId);
-                        return (
-                          <div 
-                            key={n.id} 
-                            onClick={() => user!.role === 'admin' && setSelectedLogForInspection(n)}
-                            className={`p-6 border-b border-neutral-800/20 flex items-center justify-between hover:bg-white/[0.02] transition-all cursor-pointer group ${!n.read ? 'bg-[#facc15]/[0.02]' : ''}`}
-                          >
-                             <div className="flex items-center gap-6">
-                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
-                                  n.type === 'buy' ? 'bg-blue-900/10 text-blue-500' : 
-                                  n.type === 'sell' ? 'bg-yellow-900/10 text-yellow-500' :
-                                  n.type === 'approval' ? 'bg-emerald-900/10 text-emerald-500' : 'bg-neutral-800 text-neutral-600'
-                                } border border-transparent group-hover:border-current/20`}>
-                                   {n.type === 'approval' ? <CheckCircle size={20} /> : <Database size={20} />}
-                                </div>
-                                <div>
-                                   <div className="flex items-center gap-3">
-                                      <p className="text-sm text-neutral-300 font-bold group-hover:text-white transition-colors">{n.message}</p>
-                                      {user!.role === 'admin' && (
-                                        <div className="flex items-center gap-1.5 px-2 py-0.5 bg-black/40 border border-neutral-800 rounded-md">
-                                          <Fingerprint size={10} className="text-[#facc15]/60" />
-                                          <span className="text-[8px] font-mono text-neutral-500">{subjectUser?.username || n.userId.substring(0, 8)}</span>
-                                        </div>
-                                      )}
-                                   </div>
-                                   <div className="flex items-center gap-3 mt-1.5">
-                                      <span className="text-[9px] text-neutral-600 font-black uppercase tracking-widest">{n.timestamp}</span>
-                                      <span className="w-1 h-1 bg-neutral-800 rounded-full" />
-                                      <span className="text-[9px] text-neutral-700 font-black uppercase tracking-tighter">NODE_ID: {n.id}</span>
-                                   </div>
-                                </div>
-                             </div>
-                             <div className="flex items-center gap-4">
-                               <span className={`text-[8px] px-3 py-1 rounded-lg border font-black uppercase tracking-[0.2em] ${
-                                  n.type === 'buy' ? 'border-blue-900/30 text-blue-600' : 
-                                  n.type === 'sell' ? 'border-yellow-900/30 text-yellow-600' :
-                                  n.type === 'approval' ? 'border-emerald-900/30 text-emerald-600' : 'border-neutral-800 text-neutral-600'
-                               }`}>{n.type}</span>
-                               {user!.role === 'admin' && <Eye size={16} className="text-neutral-700 opacity-0 group-hover:opacity-100 transition-opacity" />}
-                             </div>
-                          </div>
-                        );
-                      })
-                   )}
-                </div>
-             </div>
-          )}
+          {activeTab === 'create' && <LeadSubmissionForm onSubmit={(l) => { setIsSubmitting(true); apiService.createLead({...l, ownerId: user!.id}).then(() => { fetchAppData(); setActiveTab('market'); showToast("NODE_PROVISIONED"); setIsSubmitting(false); }); }} />}
+          
         </main>
         <div className="lg:hidden">
           <MobileNav activeTab={activeTab} onTabChange={setActiveTab} role={user!.role} />
         </div>
       </div>
 
-      {selectedLeadForBid && <BiddingModal lead={selectedLeadForBid} user={user!} onClose={() => setSelectedLeadForBid(null)} onSubmit={(d) => { setIsSubmitting(true); apiService.placeBid({ userId: user!.id, leadId: selectedLeadForBid.id, ...d }).then(() => { fetchAppData(); setSelectedLeadForBid(null); setIsSubmitting(false); showToast("Bid Committed to Ledger"); }); }} onRefill={handleRefillFromModal} />}
-      {selectedLeadForAdminEdit && <AdminLeadActionsModal lead={selectedLeadForAdminEdit} onClose={() => setSelectedLeadForAdminEdit(null)} onSave={(u) => apiService.updateLead(u.id!, u).then(fetchAppData)} onDelete={(id) => apiService.deleteLead(id).then(fetchAppData)} />}
-      {selectedLogForInspection && (
-        <LogInspectionModal 
-          notification={selectedLogForInspection} 
-          subjectUser={marketData.users.find(u => u.id === selectedLogForInspection.userId)}
-          onClose={() => setSelectedLogForInspection(null)} 
+      {selectedLeadForBid && <BiddingModal lead={selectedLeadForBid} user={user!} onClose={() => setSelectedLeadForBid(null)} onSubmit={(d) => { setIsSubmitting(true); apiService.placeBid({ userId: user!.id, leadId: selectedLeadForBid.id, ...d }).then(() => { fetchAppData(); setSelectedLeadForBid(null); setIsSubmitting(false); showToast("BID_COMMITTED"); }); }} onRefill={() => { setSelectedLeadForBid(null); setActiveTab('settings'); }} />}
+      {selectedLeadForEdit && (
+        <AdminLeadActionsModal 
+          lead={selectedLeadForEdit} 
+          user={user!} 
+          onClose={() => setSelectedLeadForEdit(null)} 
+          onSave={(u) => {
+            apiService.updateLead(u.id!, u).then(() => {
+              fetchAppData();
+              setSelectedLeadForEdit(null);
+              setActiveTab('market');
+              showToast("NODE_MODIFIED");
+            });
+          }} 
+          onDelete={(id) => {
+            apiService.deleteLead(id).then(() => {
+              fetchAppData();
+              setSelectedLeadForEdit(null);
+              setActiveTab('market');
+              showToast("NODE_PURGED", "error");
+            });
+          }} 
         />
       )}
+      {selectedLogForInspection && <LogInspectionModal notification={selectedLogForInspection} subjectUser={marketData.users.find(u => u.id === selectedLogForInspection.userId)} onClose={() => setSelectedLogForInspection(null)} />}
     </div>
   );
 };

@@ -19,11 +19,10 @@ export interface BiddingFormData {
   totalDailyCost: number;
 }
 
-// Inline component for help tooltips in the modal
 const HelpTip = ({ text }: { text: string }) => (
   <div className="group relative inline-block ml-1 align-middle">
-    <Info size={12} className="text-neutral-500 hover:text-[#facc15] cursor-help transition-colors" />
-    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-3 bg-black border border-white/10 rounded-xl text-[10px] text-neutral-400 font-medium leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[110] shadow-2xl backdrop-blur-md">
+    <Info size={14} className="text-neutral-500 hover:text-[#fbbf24] cursor-help transition-colors" />
+    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-56 p-4 bg-black border-2 border-neutral-700 rounded-2xl text-[10px] text-neutral-300 font-bold uppercase tracking-widest leading-relaxed opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-[110] shadow-2xl backdrop-blur-md">
       {text}
     </div>
   </div>
@@ -57,110 +56,115 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, onClose, onSubm
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md overflow-hidden">
-      <div className="w-full max-w-xl max-h-[90vh] bg-[#0d111a] border border-[#facc15]/20 rounded-[2rem] shadow-2xl flex flex-col animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl overflow-hidden">
+      <div className="w-full max-w-2xl max-h-[95vh] bg-[#1a1a1a] border-4 border-neutral-800 rounded-[3rem] shadow-[0_50px_150px_-20px_rgba(0,0,0,1)] flex flex-col animate-in zoom-in-95 duration-300">
         
-        <div className="flex justify-between items-center p-6 sm:p-8 border-b border-white/5 bg-black/20 shrink-0">
-          <div>
-            <h2 className="text-lg sm:text-xl font-black text-white uppercase tracking-tighter">Initialize Lead Purchase</h2>
-            <p className="text-[#facc15] text-[10px] font-black uppercase tracking-widest mt-1">Acquiring: {lead.title}</p>
+        <div className="flex justify-between items-center p-8 sm:p-10 border-b-2 border-neutral-800 bg-black/40 shrink-0">
+          <div className="flex items-center gap-5">
+            <div className="w-14 h-14 bg-[#fbbf24] rounded-2xl flex items-center justify-center shadow-lg">
+              <Zap className="text-black" size={28} />
+            </div>
+            <div>
+              <h2 className="text-2xl font-black text-white uppercase tracking-tighter leading-none italic">Provision Lead Pipeline</h2>
+              <p className="text-[#fbbf24] text-[10px] font-black uppercase tracking-[0.4em] mt-2">Target Node: {lead.title.toUpperCase()}</p>
+            </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full transition-colors text-neutral-500 hover:text-white">
-            <X size={24} />
+          <button onClick={onClose} className="p-3 hover:bg-neutral-800 rounded-full transition-all text-neutral-500 hover:text-white active:scale-90">
+            <X size={32} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-6 overflow-y-auto scrollbar-hide">
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-            <div className="flex-1 bg-[#1a202c] p-4 sm:p-5 rounded-2xl border border-white/5 flex justify-between items-center">
+        <form onSubmit={handleSubmit} className="p-8 sm:p-10 space-y-8 overflow-y-auto scrollbar-hide">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-6">
+            <div className="flex-1 bg-black p-6 rounded-3xl border-2 border-neutral-800 flex justify-between items-center shadow-inner">
               <div>
-                <span className="text-neutral-500 text-[10px] font-black uppercase tracking-widest block leading-none mb-1">Min Next Bid</span>
-                <span className="text-emerald-500 text-lg font-black italic">${minBid} <span className="text-[10px] text-neutral-600 font-black uppercase not-italic">/ unit</span></span>
+                <span className="text-neutral-500 text-[10px] font-black uppercase tracking-[0.3em] block leading-none mb-2">Protocol Floor</span>
+                <span className="text-emerald-400 text-2xl font-black italic tracking-tighter">${minBid.toLocaleString()} <span className="text-[11px] text-neutral-600 font-black uppercase not-italic ml-1">USD/EA</span></span>
               </div>
             </div>
-            <div className="flex-1 bg-[#facc15]/5 p-4 sm:p-5 rounded-2xl border border-[#facc15]/20 flex justify-between items-center">
+            <div className="flex-1 bg-[#fbbf24] p-6 rounded-3xl border-2 border-[#ca8a04] flex justify-between items-center shadow-lg">
               <div>
-                <span className="text-[#facc15] text-[10px] font-black uppercase tracking-widest block leading-none mb-1">Your Credits</span>
-                <span className="text-neutral-300 text-lg font-black italic">${user.balance.toLocaleString()}</span>
+                <span className="text-black/60 text-[10px] font-black uppercase tracking-[0.3em] block leading-none mb-2">Node Liquidity</span>
+                <span className="text-black text-2xl font-black italic tracking-tighter">${user.balance.toLocaleString()}</span>
               </div>
-              <Wallet size={18} className="text-[#facc15] opacity-50" />
+              <Wallet size={24} className="text-black/60" />
             </div>
           </div>
 
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest flex items-center gap-2 px-1">
-                  <Globe size={12} className="text-[#facc15]" /> Official Domain
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.3em] flex items-center gap-2 px-2 italic">
+                  <Globe size={14} className="text-[#fbbf24]" /> Identity Origin
                 </label>
                 <input 
                   required
                   type="url"
-                  className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-neutral-400 text-sm outline-none focus:border-[#facc15] transition-all"
-                  placeholder="https://your-hq.com"
+                  className="w-full bg-black border-2 border-neutral-800 rounded-2xl px-6 py-4 text-neutral-200 text-sm font-bold outline-none focus:border-[#fbbf24] transition-all shadow-inner"
+                  placeholder="https://official-hq.com"
                   value={formData.buyerBusinessUrl}
                   onChange={e => setFormData({...formData, buyerBusinessUrl: e.target.value})}
                 />
               </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest flex items-center gap-2 px-1">
-                  <Phone size={12} className="text-[#facc15]" /> Endpoint
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.3em] flex items-center gap-2 px-2 italic">
+                  <Phone size={14} className="text-[#fbbf24]" /> Endpoint ID
                 </label>
                 <input 
                   required
                   type="text"
-                  className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-neutral-400 text-sm outline-none focus:border-[#facc15] transition-all"
-                  placeholder="e.g. 1-800-LEADS"
+                  className="w-full bg-black border-2 border-neutral-800 rounded-2xl px-6 py-4 text-neutral-200 text-sm font-bold outline-none focus:border-[#fbbf24] transition-all shadow-inner"
+                  placeholder="e.g. 1-800-PROVISION"
                   value={formData.buyerTollFree}
                   onChange={e => setFormData({...formData, buyerTollFree: e.target.value})}
                 />
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest flex items-center gap-2 px-1">
-                <Target size={12} className="text-[#facc15]" /> Webhook / Post-Back URL
+            <div className="space-y-3">
+              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.3em] flex items-center gap-2 px-2 italic">
+                <Target size={14} className="text-[#fbbf24]" /> POST-BACK TERMINAL (WEBHOOK)
               </label>
               <input 
                 required
                 type="url"
-                className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-neutral-400 text-sm outline-none focus:border-[#facc15] transition-all"
-                placeholder="https://crm.yoursite.com/ingest"
+                className="w-full bg-black border-2 border-neutral-800 rounded-2xl px-6 py-4 text-neutral-200 text-sm font-bold outline-none focus:border-[#fbbf24] transition-all shadow-inner"
+                placeholder="https://api.crm.io/v1/ingest"
                 value={formData.buyerTargetLeadUrl}
                 onChange={e => setFormData({...formData, buyerTargetLeadUrl: e.target.value})}
               />
             </div>
           </div>
 
-          <div className="space-y-4 pt-2 bg-black/40 p-4 sm:p-6 rounded-3xl border border-neutral-900">
-            <div className="flex justify-between items-end mb-2">
-              <label className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] flex items-center gap-1">
-                <Zap size={14} className="text-[#facc15]" /> Daily Volume Protocol
-                <HelpTip text="Target number of leads you wish to acquire per 24h cycle. Adjusting this impacts your daily settlement total." />
+          <div className="space-y-6 pt-2 bg-black/60 p-8 rounded-[2.5rem] border-2 border-neutral-800 shadow-inner">
+            <div className="flex justify-between items-end mb-4">
+              <label className="text-[11px] font-black text-neutral-400 uppercase tracking-[0.4em] flex items-center gap-2 italic">
+                <Calculator size={18} className="text-[#fbbf24]" /> Daily Batch Protocol
+                <HelpTip text="Target nodes to process per 24h cycle. Adjusting this modifies your total daily clearing amount." />
               </label>
               <div className="text-right">
-                <span className="text-xl sm:text-2xl font-black text-neutral-300 italic">{formData.leadsPerDay}</span>
-                <span className="text-[9px] font-black text-neutral-600 uppercase tracking-widest ml-1 sm:ml-2 italic">Units/Day</span>
+                <span className="text-3xl font-black text-white italic tracking-tighter">{formData.leadsPerDay}</span>
+                <span className="text-[10px] font-black text-neutral-600 uppercase tracking-[0.2em] ml-3 italic">UNITS/DAY</span>
               </div>
             </div>
             
-            <div className="relative h-10 flex items-center">
+            <div className="relative h-12 flex items-center">
               <input 
                 type="range"
                 min="1"
                 max="1000"
                 step="1"
-                className="w-full h-1.5 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-[#facc15] hover:accent-yellow-500 transition-all"
+                className="w-full h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-[#fbbf24] hover:accent-yellow-500 transition-all"
                 value={formData.leadsPerDay}
                 onChange={e => setFormData({...formData, leadsPerDay: parseInt(e.target.value) || 1})}
               />
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1 flex items-center gap-1">
-              Unit Bid Amount ($)
-              <HelpTip text="The maximum price you are willing to pay for a single verified lead. Higher bids increase your priority in the distribution waterfall." />
+          <div className="space-y-3">
+            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.3em] px-2 flex items-center gap-2 italic">
+              UNIT SETTLEMENT BID ($)
+              <HelpTip text="Your maximum bid for a single asset. Higher bids receive priority in the automated distribution waterfall." />
             </label>
             <div className="relative">
               <input 
@@ -168,30 +172,28 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, onClose, onSubm
                 type="number"
                 min={minBid}
                 step="0.01"
-                className={`w-full bg-black border ${isBidTooLow ? 'border-red-500/50' : 'border-[#facc15]/30'} rounded-2xl px-6 py-4 sm:py-5 text-2xl sm:text-3xl font-black text-neutral-400 outline-none focus:border-[#facc15] transition-all`}
+                className={`w-full bg-black border-4 ${isBidTooLow ? 'border-red-600' : 'border-[#fbbf24]'} rounded-3xl px-8 py-6 text-4xl font-black text-white outline-none focus:ring-8 focus:ring-[#fbbf24]/10 transition-all text-center shadow-inner`}
                 value={formData.bidAmount}
                 onChange={e => setFormData({...formData, bidAmount: parseFloat(e.target.value) || 0})}
               />
             </div>
           </div>
 
-          <div className={`${hasInsufficientFunds ? 'bg-red-500/10 border-red-500/30' : 'bg-[#facc15]/5 border-[#facc15]/10'} border rounded-[1.5rem] sm:rounded-[2rem] p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-4 transition-all duration-500`}>
-             <div className="flex items-center gap-4 sm:gap-6">
-                <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl ${hasInsufficientFunds ? 'bg-red-500/20 text-red-500' : 'bg-[#facc15]/10 text-[#facc15]'} flex items-center justify-center shrink-0`}>
-                  <Calculator size={28} className="sm:size-[32px]" />
+          <div className={`${hasInsufficientFunds ? 'bg-red-600' : 'bg-[#222]'} border-4 ${hasInsufficientFunds ? 'border-red-800' : 'border-neutral-700'} rounded-[3rem] p-8 flex flex-col sm:flex-row items-center justify-between gap-6 transition-all duration-500 shadow-2xl`}>
+             <div className="flex items-center gap-6">
+                <div className={`w-16 h-16 rounded-2xl ${hasInsufficientFunds ? 'bg-black/20 text-white' : 'bg-[#fbbf24] text-black'} flex items-center justify-center shrink-0 shadow-lg`}>
+                  <Calculator size={32} />
                 </div>
                 <div>
-                  <span className="text-neutral-500 text-[9px] font-black uppercase tracking-[0.3em] block leading-none mb-2">Aggregate Daily Settlement</span>
-                  <span className={`${hasInsufficientFunds ? 'text-red-500' : 'text-neutral-300'} text-2xl sm:text-3xl font-black tracking-tighter italic`}>
+                  <span className={`${hasInsufficientFunds ? 'text-white/60' : 'text-neutral-500'} text-[10px] font-black uppercase tracking-[0.4em] block leading-none mb-2 italic`}>AGGREGATE DAILY CLEARING</span>
+                  <span className={`${hasInsufficientFunds ? 'text-white' : 'text-neutral-200'} text-3xl font-black tracking-tighter italic`}>
                     ${totalDailyCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
              </div>
              {hasInsufficientFunds && (
-                <div className="flex flex-col items-center sm:items-end gap-1">
-                  <div className="text-red-500 text-[10px] font-black uppercase flex items-center gap-1.5 animate-pulse bg-red-500/10 px-4 py-2 rounded-xl border border-red-500/20">
-                    <AlertTriangle size={14} /> Critical Balance
-                  </div>
+                <div className="text-white text-[11px] font-black uppercase flex items-center gap-2 animate-pulse bg-black/30 px-6 py-3 rounded-2xl border-2 border-white/20">
+                  <AlertTriangle size={18} /> INSUFFICIENT LIQUIDITY
                 </div>
              )}
           </div>
@@ -199,15 +201,15 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, onClose, onSubm
           <button 
             type="submit"
             disabled={isBidTooLow}
-            className={`w-full py-5 sm:py-7 rounded-[1.5rem] sm:rounded-[2.5rem] font-black text-xl sm:text-2xl transition-all flex items-center justify-center gap-4 shadow-2xl active:scale-[0.97] mt-4 transform ${
+            className={`w-full py-8 rounded-[3rem] font-black text-2xl sm:text-3xl transition-all flex items-center justify-center gap-6 shadow-2xl active:scale-[0.98] mt-6 border-b-[10px] ${
               isBidTooLow 
-              ? 'bg-neutral-800 text-neutral-500 cursor-not-allowed opacity-50 grayscale' 
+              ? 'bg-neutral-800 text-neutral-600 border-neutral-900 cursor-not-allowed' 
               : hasInsufficientFunds 
-                ? 'bg-red-600 text-white hover:bg-red-500 border-b-[6px] border-red-800 shadow-red-500/20'
-                : 'bg-[#facc15] text-black hover:bg-[#eab308] border-b-[6px] border-yellow-600 shadow-yellow-400/20'
+                ? 'bg-red-600 text-white hover:bg-red-500 border-red-900 shadow-red-600/20'
+                : 'bg-[#fbbf24] text-black hover:bg-[#eab308] border-[#ca8a04] shadow-yellow-400/20'
             }`}
           >
-            {hasInsufficientFunds ? 'RECHARGE NODE' : 'LOCK IN BUY ORDER'} <ChevronRight size={28} className="sm:size-[32px]" />
+            {hasInsufficientFunds ? 'DEPOSIT FUNDS' : 'AUTHORIZE PROTOCOL'} <ChevronRight size={32} />
           </button>
         </form>
       </div>
