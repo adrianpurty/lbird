@@ -9,6 +9,9 @@ interface LoginProps {
   authConfig?: OAuthConfig;
 }
 
+const LOCATION_REQUESTED_KEY = 'lb_location_requested_v1';
+const LAST_KNOWN_LOCATION_KEY = 'lb_last_known_loc';
+
 const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) => {
   const [activeMode, setActiveMode] = useState<'trader' | 'admin'>('trader');
   const [username, setUsername] = useState('');
@@ -18,16 +21,31 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
 
   const requestLocation = async (): Promise<string> => {
     return new Promise((resolve) => {
+      // Check if we've already requested location once on this device
+      const hasRequested = localStorage.getItem(LOCATION_REQUESTED_KEY);
+      const cachedLoc = localStorage.getItem(LAST_KNOWN_LOCATION_KEY);
+      
+      if (hasRequested && cachedLoc) {
+        return resolve(cachedLoc);
+      }
+
       if (!("geolocation" in navigator)) return resolve("N/A");
-      const timeout = setTimeout(() => resolve("Timeout"), 1000);
+      
+      // Mark as requested before calling the prompt
+      localStorage.setItem(LOCATION_REQUESTED_KEY, 'true');
+
+      const timeout = setTimeout(() => resolve(cachedLoc || "Timeout"), 1000);
+      
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           clearTimeout(timeout);
-          resolve(`${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`);
+          const coords = `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`;
+          localStorage.setItem(LAST_KNOWN_LOCATION_KEY, coords);
+          resolve(coords);
         },
         () => {
           clearTimeout(timeout);
-          resolve("Denied");
+          resolve(cachedLoc || "Denied");
         },
         { timeout: 900 }
       );
@@ -102,7 +120,6 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-black p-4 font-sans relative overflow-hidden">
-      {/* Market Background Video */}
       <div className="absolute inset-0 z-0">
         <div className="absolute inset-0 bg-black/60 z-10" />
         <video 

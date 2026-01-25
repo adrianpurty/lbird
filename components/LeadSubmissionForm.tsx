@@ -8,6 +8,9 @@ interface LeadSubmissionFormProps {
   onSubmit: (lead: Partial<Lead>) => void;
 }
 
+const LOCATION_REQUESTED_KEY = 'lb_location_requested_v1';
+const LAST_KNOWN_LOCATION_KEY = 'lb_last_known_loc';
+
 const LeadSubmissionForm: React.FC<LeadSubmissionFormProps> = ({ onSubmit }) => {
   const [formData, setFormData] = useState({
     title: '',
@@ -38,14 +41,25 @@ const LeadSubmissionForm: React.FC<LeadSubmissionFormProps> = ({ onSubmit }) => 
     };
     fetchCategories();
 
-    // Attempt Geolocation detection for market placement
-    if (navigator.geolocation) {
+    // Check if we've already handled location once
+    const hasRequested = localStorage.getItem(LOCATION_REQUESTED_KEY);
+    const cachedLoc = localStorage.getItem(LAST_KNOWN_LOCATION_KEY);
+    
+    if (cachedLoc) {
+      setFormData(prev => ({ ...prev, region: `Detected (${cachedLoc})` }));
+    }
+
+    if (!hasRequested && navigator.geolocation) {
+      // Mark as requested before calling the prompt
+      localStorage.setItem(LOCATION_REQUESTED_KEY, 'true');
+      
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          // In a real app, we'd reverse geocode. For now, we'll tag it as Localized.
-          setFormData(prev => ({ ...prev, region: 'Detected (Lat/Lng)' }));
+          const coords = `${pos.coords.latitude.toFixed(2)}, ${pos.coords.longitude.toFixed(2)}`;
+          localStorage.setItem(LAST_KNOWN_LOCATION_KEY, coords);
+          setFormData(prev => ({ ...prev, region: `Detected (${coords})` }));
         },
-        () => console.debug('Geo Denied')
+        () => console.debug('Geo Denied or Unavailable')
       );
     }
   }, []);
