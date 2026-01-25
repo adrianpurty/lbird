@@ -3,8 +3,10 @@ import { Lead, UserRole } from '../types.ts';
 import { 
   Timer, Zap, Settings2, Heart, ChevronLeft, ChevronRight, 
   BriefcaseBusiness, PlaneTakeoff, Ship, Hotel, Building2, 
-  Coins, ListFilter, Stethoscope, Shield, Info, CheckCircle2, XCircle, MousePointer2
+  Coins, ListFilter, Stethoscope, Shield, Info, CheckCircle2, XCircle, MousePointer2,
+  Sparkles, ShieldAlert, Database, RefreshCw
 } from 'lucide-react';
+import { soundService } from '../services/soundService.ts';
 
 interface LeadGridProps {
   leads: Lead[];
@@ -15,7 +17,6 @@ interface LeadGridProps {
   onBulkApprove?: (ids: string[]) => void;
   onBulkReject?: (ids: string[]) => void;
   onDelete?: (id: string) => void;
-  onDeleteLead?: (id: string) => void;
   onToggleWishlist?: (id: string) => void;
   userRole: UserRole;
   currentUserId: string;
@@ -62,19 +63,17 @@ const MemoizedLeadCard = memo(({
   onToggleSelect
 }: any) => {
   const [successTrigger, setSuccessTrigger] = useState(false);
+  const [isHoveringStatus, setIsHoveringStatus] = useState(false);
   const prevStatus = useRef(lead.status);
-  const prevEngaged = useRef(isUserEngaged);
 
   useEffect(() => {
-    if ((prevStatus.current !== 'approved' && lead.status === 'approved') || 
-        (prevEngaged.current === false && isUserEngaged === true)) {
+    if (prevStatus.current !== lead.status) {
       setSuccessTrigger(true);
       const timer = setTimeout(() => setSuccessTrigger(false), 1000);
       return () => clearTimeout(timer);
     }
     prevStatus.current = lead.status;
-    prevEngaged.current = isUserEngaged;
-  }, [lead.status, isUserEngaged]);
+  }, [lead.status]);
 
   const getIcon = (category: string) => {
     const cat = category.toLowerCase();
@@ -82,7 +81,7 @@ const MemoizedLeadCard = memo(({
     if (cat.includes('cruise')) return <Ship size={16} className="text-[#facc15]/50" />;
     if (cat.includes('hotel')) return <Hotel size={16} className="text-[#facc15]/50" />;
     if (cat.includes('real estate')) return <Building2 size={16} className="text-[#facc15]/50" />;
-    if (cat.includes('crypto') || cat.includes('stock')) return <Coins size={16} className="text-[#facc15]/50" />;
+    if (cat.includes('crypto')) return <Coins size={16} className="text-[#facc15]/50" />;
     if (cat.includes('insurance')) return <Shield size={16} className="text-[#facc15]/50" />;
     if (cat.includes('medical')) return <Stethoscope size={16} className="text-[#facc15]/50" />;
     return <BriefcaseBusiness size={16} className="text-neutral-700" />;
@@ -90,6 +89,14 @@ const MemoizedLeadCard = memo(({
 
   const isPending = lead.status === 'pending';
   const isAdmin = userRole === 'admin';
+
+  const handleStatusToggle = (e: React.MouseEvent) => {
+    if (!isAdmin) return;
+    e.stopPropagation();
+    soundService.playClick(true);
+    if (lead.status === 'approved') onAdminReject?.(lead.id);
+    else onAdminApprove?.(lead.id);
+  };
 
   return (
     <div className={`bg-[#121212]/40 rounded-2xl border transition-all flex flex-col relative overflow-hidden animate-card-pop ${
@@ -99,9 +106,9 @@ const MemoizedLeadCard = memo(({
       isUserEngaged ? 'border-[#facc15]/30 ring-1 ring-[#facc15]/5' : 'border-neutral-800/30'
     } hover:border-[#facc15]/20 group shadow-md`}>
       
-      {/* Selection Interface for Admin */}
+      {/* Admin Selection and Override Bar */}
       {isAdmin && (
-        <div className="absolute top-4 left-4 z-20">
+        <div className="absolute top-4 left-4 z-20 flex items-center gap-2">
           <button 
             onClick={() => onToggleSelect?.(lead.id)}
             className={`w-5 h-5 rounded-md border-2 transition-all flex items-center justify-center ${
@@ -110,6 +117,15 @@ const MemoizedLeadCard = memo(({
           >
             {isSelected && <CheckCircle2 size={14} strokeWidth={3} />}
           </button>
+          
+          <Tooltip text="Direct Tactical Override (AI Node)">
+             <button 
+               onClick={() => onAdminEdit?.(lead)} 
+               className="p-1.5 bg-[#facc15]/10 border border-[#facc15]/20 rounded-lg text-[#facc15]/60 hover:text-[#facc15] transition-all"
+             >
+               <Sparkles size={12} fill="currentColor" />
+             </button>
+          </Tooltip>
         </div>
       )}
 
@@ -138,9 +154,19 @@ const MemoizedLeadCard = memo(({
           </Tooltip>
         </div>
 
-        <p className="text-neutral-600 text-xs line-clamp-2 mb-6 flex-1 italic leading-relaxed">
-          {lead.description}
-        </p>
+        <div className="relative group/desc">
+           <p className="text-neutral-600 text-xs line-clamp-2 mb-6 flex-1 italic leading-relaxed">
+             {lead.description}
+           </p>
+           {isAdmin && (
+             <button 
+               onClick={() => onAdminEdit?.(lead)}
+               className="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover/desc:opacity-100 flex items-center justify-center transition-all rounded-xl border border-[#facc15]/10"
+             >
+                <span className="text-[8px] font-black text-[#facc15] uppercase tracking-[0.3em]">Modify Node Prompt</span>
+             </button>
+           )}
+        </div>
 
         <div className="grid grid-cols-2 gap-3 mb-6">
           <div className="bg-black/30 p-3 rounded-xl border border-neutral-800/40">
@@ -148,8 +174,22 @@ const MemoizedLeadCard = memo(({
             <p className="text-sm font-black text-neutral-400">${lead.currentBid}</p>
           </div>
           <div className="bg-black/30 p-3 rounded-xl border border-neutral-800/40">
-            <p className="text-[8px] text-neutral-700 font-black uppercase tracking-wider mb-1">Remaining</p>
-            <p className="text-sm font-black text-[#facc15]/50 flex items-center gap-1.5"><Timer size={14} /> {lead.timeLeft}</p>
+            <p className="text-[8px] text-neutral-700 font-black uppercase tracking-wider mb-1">Status Protocol</p>
+            <button 
+               onClick={handleStatusToggle}
+               onMouseEnter={() => setIsHoveringStatus(true)}
+               onMouseLeave={() => setIsHoveringStatus(false)}
+               className={`w-full flex items-center justify-center gap-1.5 text-[10px] font-black uppercase transition-all ${
+                 lead.status === 'approved' ? 'text-emerald-500/80' : 
+                 lead.status === 'rejected' ? 'text-red-500/80' : 'text-neutral-500'
+               } ${isAdmin ? 'cursor-pointer hover:bg-[#facc15]/5 rounded-lg py-0.5' : ''}`}
+            >
+              {isHoveringStatus && isAdmin ? (
+                <><RefreshCw size={10} className="animate-spin" /> CYCLE</>
+              ) : (
+                <>{lead.status === 'approved' ? <CheckCircle2 size={10} /> : <ShieldAlert size={10} />} {lead.status}</>
+              )}
+            </button>
           </div>
         </div>
 
@@ -225,7 +265,7 @@ const LeadGrid: React.FC<LeadGridProps> = ({
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
-      setSelectedIds(new Set()); // Clear selection on page change for safety
+      setSelectedIds(new Set()); 
     }
   };
 
@@ -288,7 +328,15 @@ const LeadGrid: React.FC<LeadGridProps> = ({
             {categories.map(c => <option key={c} value={c} className="bg-black">{c}</option>)}
           </select>
         </div>
-        <div className="text-[11px] font-black text-neutral-700 uppercase tracking-[0.2em]">{filteredLeads.length} Operational Nodes</div>
+        <div className="flex items-center gap-3">
+           <div className="text-[11px] font-black text-neutral-700 uppercase tracking-[0.2em]">{filteredLeads.length} Operational Nodes</div>
+           {isAdmin && (
+             <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-950/20 border border-emerald-900/20 rounded-lg">
+                <Shield size={10} className="text-emerald-500" />
+                <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest">Admin HUD Active</span>
+             </div>
+           )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">

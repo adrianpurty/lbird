@@ -1,11 +1,10 @@
 import { GoogleGenAI, Type } from "@google/genai";
+import { Lead } from "../types.ts";
 
 export const analyzeLeadQuality = async (businessUrl: string, targetUrl: string) => {
   try {
-    // Initializing inside function for safer call-time environment access
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
-    // Using gemini-3-pro-preview for complex reasoning task (lead analysis and fraud detection)
     const response = await ai.models.generateContent({
       model: "gemini-3-pro-preview",
       contents: `You are acting as a world-class Lead Generation Auditor and Digital Arbitrage Expert. 
@@ -37,11 +36,57 @@ export const analyzeLeadQuality = async (businessUrl: string, targetUrl: string)
       }
     });
 
-    // Access response.text property directly as per property definition
     const resultText = response.text;
     return resultText ? JSON.parse(resultText) : null;
   } catch (error) {
     console.error("AI Analysis Error:", error);
+    return null;
+  }
+};
+
+export const applyAiOverride = async (lead: Partial<Lead>, instruction: string) => {
+  try {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    
+    const response = await ai.models.generateContent({
+      model: "gemini-3-pro-preview",
+      contents: `You are a System Operator for a high-stakes lead marketplace. 
+      The administrator wants to modify a lead asset based on specific tactical instructions.
+      
+      CURRENT ASSET DATA:
+      Title: ${lead.title}
+      Category: ${lead.category}
+      Description: ${lead.description}
+      Current Quality Score: ${lead.qualityScore}
+      
+      ADMINISTRATOR INSTRUCTION:
+      "${instruction}"
+      
+      Modify the asset data to reflect the instruction. 
+      - Enhance the title to be more compelling and market-aligned.
+      - Rewrite the description to follow the admin's goal (e.g., professional tone, focus on conversion, ROI emphasis).
+      - Recalculate or adjust the Quality Score if the instruction implies a change in verification or source quality.
+      - Keep the category unchanged unless explicitly asked.
+      
+      Return the updated values in the provided JSON schema.`,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            title: { type: Type.STRING, description: "The modified campaign title" },
+            description: { type: Type.STRING, description: "The modified campaign description" },
+            qualityScore: { type: Type.NUMBER, description: "The updated quality score (0-100)" }
+          },
+          required: ["title", "description", "qualityScore"]
+        }
+      }
+    });
+
+    const resultText = response.text;
+    return resultText ? JSON.parse(resultText) : null;
+  } catch (error) {
+    console.error("AI Override Error:", error);
     return null;
   }
 };
