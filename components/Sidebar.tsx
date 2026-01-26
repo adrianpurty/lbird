@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { 
   LayoutDashboard, 
@@ -14,7 +15,8 @@ import {
   User as UserIcon,
   Globe,
   Heart,
-  FileText
+  FileText,
+  Activity
 } from 'lucide-react';
 import { UserRole } from '../types.ts';
 
@@ -29,6 +31,7 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, role, onLogout, hasInbox }) => {
   const menuItems = [
     { id: 'market', icon: LayoutDashboard, label: 'SALES_FLOOR', roles: ['admin', 'user'] },
+    { id: 'action-center', icon: Activity, label: 'ACTION_CENTER', roles: ['admin', 'user'] },
     { id: 'profile', icon: UserIcon, label: 'IDENTITY_NODE', roles: ['admin', 'user'] },
     { id: 'wishlist', icon: Heart, label: 'SAVED_ASSETS', roles: ['admin', 'user'] },
     { id: 'create', icon: PlusCircle, label: 'ASSET_PROVISION', roles: ['admin', 'user'] },

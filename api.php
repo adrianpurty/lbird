@@ -28,7 +28,7 @@ try {
         $db->exec("CREATE TABLE config (key TEXT PRIMARY KEY, value TEXT)");
         $db->exec("CREATE TABLE users (id TEXT PRIMARY KEY, name TEXT, username TEXT, password TEXT, email TEXT, balance REAL, role TEXT, status TEXT DEFAULT 'active', stripeConnected INTEGER, wishlist TEXT, bio TEXT, profileImage TEXT, phone TEXT, companyWebsite TEXT, industryFocus TEXT, preferredContact TEXT, defaultBusinessUrl TEXT, defaultTargetUrl TEXT, last_active_at TEXT, current_page TEXT, ipAddress TEXT, deviceInfo TEXT, location TEXT, totalSpend REAL DEFAULT 0)");
         $db->exec("CREATE TABLE leads (id TEXT PRIMARY KEY, title TEXT, category TEXT, description TEXT, businessUrl TEXT, targetLeadUrl TEXT, basePrice REAL, currentBid REAL, bidCount INTEGER, timeLeft TEXT, qualityScore INTEGER, sellerRating REAL, status TEXT, countryCode TEXT, region TEXT, ownerId TEXT)");
-        $db->exec("CREATE TABLE bids (id TEXT PRIMARY KEY, leadId TEXT, userId TEXT, bidAmount REAL, leadsPerDay INTEGER, totalDailyCost REAL, timestamp TEXT, status TEXT, buyerBusinessUrl TEXT, buyerTargetLeadUrl TEXT)");
+        $db->exec("CREATE TABLE bids (id TEXT PRIMARY KEY, leadId TEXT, userId TEXT, bidAmount REAL, leadsPerDay INTEGER, totalDailyCost REAL, timestamp TEXT, status TEXT, buyerBusinessUrl TEXT, buyerTargetLeadUrl TEXT, leadTitle TEXT)");
         $db->exec("CREATE TABLE invoices (id TEXT PRIMARY KEY, purchaseRequestId TEXT, userId TEXT, userName TEXT, leadTitle TEXT, category TEXT, unitPrice REAL, dailyVolume INTEGER, totalSettlement REAL, timestamp TEXT, status TEXT)");
         $db->exec("CREATE TABLE notifications (id TEXT PRIMARY KEY, userId TEXT, message TEXT, type TEXT, timestamp TEXT, read INTEGER DEFAULT 0)");
         $db->exec("CREATE TABLE categories (id TEXT PRIMARY KEY, name TEXT, group_name TEXT)");
@@ -48,6 +48,9 @@ try {
         if (!in_array('current_page', $cols)) $db->exec("ALTER TABLE users ADD COLUMN current_page TEXT");
         if (!in_array('status', $cols)) $db->exec("ALTER TABLE users ADD COLUMN status TEXT DEFAULT 'active'");
         if (!in_array('totalSpend', $cols)) $db->exec("ALTER TABLE users ADD COLUMN totalSpend REAL DEFAULT 0");
+
+        $cols_bids = $db->query("PRAGMA table_info(bids)")->fetchAll(PDO::FETCH_COLUMN, 1);
+        if (!in_array('leadTitle', $cols_bids)) $db->exec("ALTER TABLE bids ADD COLUMN leadTitle TEXT");
 
         // Activity migration
         $res = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name='wallet_activities'")->fetch();
@@ -69,7 +72,7 @@ switch ($action) {
             'metadata' => ['version' => '4.1.3-PRO', 'last_updated' => date('Y-m-d H:i:s'), 'db_size' => filesize($db_path), 'status' => 'OPERATIONAL'],
             'leads' => $db->query("SELECT * FROM leads")->fetchAll(),
             'users' => $db->query("SELECT * FROM users")->fetchAll(),
-            'purchaseRequests' => $db->query("SELECT * FROM bids")->fetchAll(),
+            'purchaseRequests' => $db->query("SELECT * FROM bids ORDER BY timestamp DESC")->fetchAll(),
             'invoices' => $db->query("SELECT * FROM invoices")->fetchAll(),
             'walletActivities' => $db->query("SELECT * FROM wallet_activities ORDER BY timestamp DESC")->fetchAll(),
             'notifications' => $db->query("SELECT * FROM notifications ORDER BY timestamp DESC")->fetchAll(),
@@ -122,11 +125,20 @@ switch ($action) {
 
     case 'place_bid':
         $id = 'bid_' . bin2hex(random_bytes(4));
-        $stmt = $db->prepare("INSERT INTO bids (id, leadId, userId, bidAmount, leadsPerDay, totalDailyCost REAL, timestamp, status, buyerBusinessUrl, buyerTargetLeadUrl) VALUES (?,?,?,?,?,?,?,?,?,?)");
-        $stmt->execute([$id, $input['leadId'], $input['userId'], $input['bidAmount'], $input['leadsPerDay'], $input['totalDailyCost'], date('Y-m-d H:i:s'), 'approved', $input['buyerBusinessUrl'], $input['buyerTargetLeadUrl']]);
+        $stmt = $db->prepare("INSERT INTO bids (id, leadId, userId, bidAmount, leadsPerDay, totalDailyCost, timestamp, status, buyerBusinessUrl, buyerTargetLeadUrl, leadTitle) VALUES (?,?,?,?,?,?,?,?,?,?,?)");
+        $stmt->execute([$id, $input['leadId'], $input['userId'], $input['bidAmount'], $input['leadsPerDay'], $input['totalDailyCost'], date('Y-m-d H:i:s'), 'pending', $input['buyerBusinessUrl'], $input['buyerTargetLeadUrl'], $input['leadTitle']]);
+        
+        // Update lead metrics
         $db->prepare("UPDATE leads SET currentBid = ?, bidCount = bidCount + 1 WHERE id = ?")->execute([$input['bidAmount'], $input['leadId']]);
-        // Update user stats
-        $db->prepare("UPDATE users SET totalSpend = totalSpend + ? WHERE id = ?")->execute([$input['totalDailyCost'], $input['userId']]);
+        
+        // Deduct from balance
+        $db->prepare("UPDATE users SET balance = balance - ?, totalSpend = totalSpend + ? WHERE id = ?")->execute([$input['totalDailyCost'], $input['totalDailyCost'], $input['userId']]);
+        
+        // Log withdrawal
+        $tx_id = 'tx_' . bin2hex(random_bytes(4));
+        $db->prepare("INSERT INTO wallet_activities (id, userId, type, amount, provider, timestamp, status) VALUES (?,?,?,?,?,?,?)")
+           ->execute([$tx_id, $input['userId'], 'withdrawal', $input['totalDailyCost'], 'MARKET_ACQUISITION', date('Y-m-d H:i:s'), 'completed']);
+        
         echo json_encode(['status' => 'success']);
         break;
 
@@ -177,7 +189,7 @@ switch ($action) {
     case 'register_user':
         $id = 'u_' . bin2hex(random_bytes(4));
         $stmt = $db->prepare("INSERT INTO users (id, name, email, username, password, phone, ipAddress, deviceInfo, balance, role, status, stripeConnected, wishlist, last_active_at, current_page) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
-        $stmt->execute([$id, $input['name'], $input['email'], $input['username'], $input['password'], $input['phone'], $input['ipAddress'], $input['deviceInfo'], 1000.0, 'user', 'active', 0, '[]', date('c'), 'Registration']);
+        $stmt->execute([$id, $input['name'], $email, $input['username'], $input['password'], $input['phone'], $input['ipAddress'], $input['deviceInfo'], 1000.0, 'user', 'active', 0, '[]', date('c'), 'Registration']);
         $user_stmt = $db->prepare("SELECT * FROM users WHERE id = ?");
         $user_stmt->execute([$id]);
         echo json_encode(['status' => 'success', 'user' => $user_stmt->fetch()]);

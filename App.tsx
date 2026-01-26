@@ -14,6 +14,7 @@ import MobileNav from './components/MobileNav.tsx';
 import Login from './components/Login.tsx';
 import Signup from './components/Signup.tsx';
 import BiddingModal from './components/BiddingModal.tsx';
+import ActionCenter from './components/ActionCenter.tsx';
 import AdminLeadActionsModal from './components/AdminLeadActionsModal.tsx';
 import AdminOAuthSettings from './components/AdminOAuthSettings.tsx';
 import AdminPaymentSettings from './components/AdminPaymentSettings.tsx';
@@ -58,7 +59,7 @@ const App: React.FC = () => {
     }
   });
 
-  const [activeTab, setActiveTab] = useState<'market' | 'profile' | 'create' | 'settings' | 'bids' | 'admin' | 'inbox' | 'auth-config' | 'payment-config' | 'wishlist' | 'ledger'>('market');
+  const [activeTab, setActiveTab] = useState<'market' | 'profile' | 'create' | 'settings' | 'bids' | 'admin' | 'inbox' | 'auth-config' | 'payment-config' | 'wishlist' | 'ledger' | 'action-center'>('market');
   
   const [marketData, setMarketData] = useState<{
     leads: Lead[];
@@ -205,6 +206,11 @@ const App: React.FC = () => {
     [marketData.walletActivities, user?.id]
   );
 
+  const userPurchaseRequests = useMemo(() =>
+    marketData.purchaseRequests.filter(pr => pr.userId === user?.id),
+    [marketData.purchaseRequests, user?.id]
+  );
+
   if (isLoading && !user) return (
     <div className="h-screen flex items-center justify-center bg-black">
       <div className="flex flex-col items-center gap-10">
@@ -331,6 +337,8 @@ const App: React.FC = () => {
                </div>
             </div>
           )}
+
+          {activeTab === 'action-center' && <ActionCenter requests={userPurchaseRequests} />}
 
           {activeTab === 'admin' && (
             <div className="max-w-[1400px] mx-auto space-y-8 animate-in fade-in duration-700">
@@ -621,7 +629,7 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      {selectedLeadForBid && <BiddingModal lead={selectedLeadForBid} user={user!} onClose={() => setSelectedLeadForBid(null)} onSubmit={(d) => { setIsSubmitting(true); apiService.placeBid({ userId: user!.id, leadId: selectedLeadForBid.id, ...d }).then(() => { fetchAppData(); setSelectedLeadForBid(null); setIsSubmitting(false); showToast("BID_COMMITTED"); }); }} onRefill={() => { setSelectedLeadForBid(null); setActiveTab('settings'); }} />}
+      {selectedLeadForBid && <BiddingModal lead={selectedLeadForBid} user={user!} onClose={() => setSelectedLeadForBid(null)} onSubmit={(d) => { setIsSubmitting(true); apiService.placeBid({ userId: user!.id, leadId: selectedLeadForBid.id, leadTitle: selectedLeadForBid.title, ...d }).then(() => { fetchAppData(); setSelectedLeadForBid(null); setIsSubmitting(false); showToast("ACQUISITION_INITIALIZED"); setActiveTab('action-center'); }); }} onRefill={() => { setSelectedLeadForBid(null); setActiveTab('settings'); }} />}
       {selectedLeadForEdit && (
         <AdminLeadActionsModal 
           lead={selectedLeadForEdit} 
