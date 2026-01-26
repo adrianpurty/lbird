@@ -24,7 +24,11 @@ import {
   Target,
   Database,
   TrendingUp,
-  DollarSign
+  DollarSign,
+  Landmark,
+  ShoppingBag,
+  CircleDollarSign,
+  CreditCard as CardIcon
 } from 'lucide-react';
 import { GatewayAPI } from '../types.ts';
 import { soundService } from '../services/soundService.ts';
@@ -33,7 +37,7 @@ interface WalletSettingsProps {
   stripeConnected: boolean;
   onConnect: () => void;
   balance: number;
-  onDeposit: (amount: number) => void;
+  onDeposit: (amount: number, provider?: string) => void;
   gateways: GatewayAPI[];
 }
 
@@ -46,7 +50,7 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
   const [showCheckout, setShowCheckout] = useState(false);
   const [processingStatus, setProcessingStatus] = useState<string>('');
   const [flowMode, setFlowMode] = useState<'deposit' | 'withdraw'>('deposit');
-  const [withdrawMethod, setWithdrawMethod] = useState<'bank' | 'binance' | 'gpay' | 'paypal'>('bank');
+  const [withdrawMethod, setWithdrawMethod] = useState<string>('bank');
 
   useEffect(() => {
     if (activeGateways.length > 0 && !selectedGatewayId) {
@@ -73,11 +77,23 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
   const getProviderIcon = (provider: string) => {
     switch (provider) {
       case 'stripe': return CreditCard;
-      case 'binance': return Scan;
-      case 'crypto': return Bitcoin;
-      case 'upi': return Smartphone;
       case 'paypal': return Globe;
-      default: return Building2;
+      case 'adyen': return Landmark;
+      case 'braintree': return Cpu;
+      case 'square': return ShoppingBag;
+      case 'authorize_net': return ShieldCheck;
+      case 'razorpay': return Zap;
+      case 'mollie': return Activity;
+      case 'paystack': return Database;
+      case 'crypto': return Bitcoin;
+      case 'binance': return Scan;
+      case 'upi': return Smartphone;
+      case 'skrill': return Wallet;
+      case 'neteller': return CircleDollarSign;
+      case 'klarna': return CardIcon;
+      case 'alipay': return Globe;
+      case 'wechat': return Smartphone;
+      default: return Database;
     }
   };
 
@@ -98,7 +114,11 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
       await new Promise(r => setTimeout(r, 650));
     }
 
-    onDeposit(flowMode === 'deposit' ? numericAmount : -numericAmount);
+    const providerName = flowMode === 'deposit' 
+        ? (selectedGateway?.name || selectedGateway?.provider.toUpperCase() || 'SYNC_NODE')
+        : (withdrawMethod.toUpperCase());
+
+    onDeposit(flowMode === 'deposit' ? numericAmount : -numericAmount, providerName);
     setIsProcessing(false);
     setShowCheckout(false);
     soundService.playClick(false);
@@ -107,7 +127,7 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
   const renderCompactForm = () => {
     if (flowMode === 'deposit') {
       if (!selectedGateway) return null;
-      if (selectedGateway.provider === 'binance') {
+      if (selectedGateway.provider === 'binance' || selectedGateway.provider === 'crypto') {
         return (
           <div className="flex flex-col items-center gap-6 p-4 md:p-8 bg-black/60 rounded-[1.5rem] md:rounded-[2rem] border-2 border-neutral-800/40 animate-in zoom-in-95 duration-300">
              <QrCode size={120} md:size={160} className="text-white opacity-90" />
@@ -155,6 +175,13 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
       );
     }
   };
+
+  const withdrawalOptions = [
+    { id: 'bank', provider: 'adyen', name: 'SWIFT' },
+    { id: 'binance', provider: 'binance', name: 'BNB' },
+    { id: 'razorpay', provider: 'razorpay', name: 'RZRPY' },
+    { id: 'paypal', provider: 'paypal', name: 'PAYPAL' }
+  ];
 
   return (
     <div className="max-w-[1400px] mx-auto space-y-8 md:space-y-10 pb-32 animate-in fade-in duration-700">
@@ -253,13 +280,8 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
                      <label className="text-[10px] md:text-[11px] font-black text-neutral-600 uppercase tracking-widest px-2 italic flex items-center gap-3">
                        <Cpu size={16} className="text-[#00e5ff]" /> GATEWAY_SECTOR
                      </label>
-                     <div className="grid grid-cols-2 gap-3 md:gap-4">
-                       {(flowMode === 'deposit' ? activeGateways : [
-                         { id: 'bank', provider: 'bank', name: 'SWIFT' },
-                         { id: 'binance', provider: 'binance', name: 'BNB' },
-                         { id: 'gpay', provider: 'upi', name: 'GPAY' },
-                         { id: 'paypal', provider: 'paypal', name: 'PAYPAL' }
-                       ]).map((item: any) => {
+                     <div className="grid grid-cols-2 gap-3 md:gap-4 max-h-[300px] overflow-y-auto pr-2 scrollbar-hide">
+                       {(flowMode === 'deposit' ? activeGateways : withdrawalOptions).map((item: any) => {
                          const Icon = getProviderIcon(item.provider);
                          const isSelected = flowMode === 'deposit' ? selectedGatewayId === item.id : withdrawMethod === item.id;
                          return (
@@ -273,7 +295,7 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
                              }`}
                            >
                              <Icon size={20} md:size={24} />
-                             <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest font-tactical truncate w-full text-center">{item.name}</span>
+                             <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest font-tactical truncate w-full text-center">{item.name || item.provider.toUpperCase()}</span>
                            </button>
                          );
                        })}

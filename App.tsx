@@ -22,7 +22,7 @@ import InvoiceLedger from './components/InvoiceLedger.tsx';
 import LogInspectionModal from './components/LogInspectionModal.tsx';
 import WorldMarketMap from './components/WorldMarketMap.tsx';
 import UserManagement from './components/UserManagement.tsx';
-import { Lead, User, PurchaseRequest, Notification, PlatformAnalytics, OAuthConfig, Invoice, GatewayAPI } from './types.ts';
+import { Lead, User, PurchaseRequest, Notification, PlatformAnalytics, OAuthConfig, Invoice, GatewayAPI, WalletActivity } from './types.ts';
 import { apiService } from './services/apiService.ts';
 import { soundService } from './services/soundService.ts';
 
@@ -64,6 +64,7 @@ const App: React.FC = () => {
     leads: Lead[];
     purchaseRequests: PurchaseRequest[];
     invoices: Invoice[];
+    walletActivities: WalletActivity[];
     notifications: Notification[];
     analytics: PlatformAnalytics | null;
     authConfig: OAuthConfig;
@@ -75,6 +76,7 @@ const App: React.FC = () => {
     leads: [],
     purchaseRequests: [],
     invoices: [],
+    walletActivities: [],
     notifications: [],
     analytics: null,
     authConfig: { googleEnabled: false, googleClientId: '', googleClientSecret: '', facebookEnabled: false, facebookAppId: '', facebookAppSecret: '' },
@@ -123,6 +125,7 @@ const App: React.FC = () => {
         leads: data.leads || [],
         purchaseRequests: data.purchaseRequests || [],
         invoices: data.invoices || [],
+        walletActivities: data.walletActivities || [],
         notifications: data.notifications || [],
         analytics: data.analytics || null,
         authConfig: data.authConfig || prev.authConfig,
@@ -195,6 +198,11 @@ const App: React.FC = () => {
   const userInvoices = useMemo(() => 
     marketData.invoices.filter(inv => inv.userId === user?.id),
     [marketData.invoices, user?.id]
+  );
+
+  const userWalletActivities = useMemo(() =>
+    marketData.walletActivities.filter(wa => wa.userId === user?.id),
+    [marketData.walletActivities, user?.id]
   );
 
   if (isLoading && !user) return (
@@ -602,9 +610,9 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {activeTab === 'ledger' && <InvoiceLedger invoices={userInvoices} />}
+          {activeTab === 'ledger' && <InvoiceLedger invoices={userInvoices} walletActivities={userWalletActivities} />}
           {activeTab === 'profile' && <ProfileSettings user={user!} onUpdate={(u) => apiService.updateUser(user!.id, u).then(fetchAppData)} />}
-          {activeTab === 'settings' && <WalletSettings stripeConnected={user!.stripeConnected} onConnect={() => {}} balance={user!.balance} onDeposit={(amt) => apiService.deposit(user!.id, amt).then(fetchAppData)} gateways={marketData.gateways} />}
+          {activeTab === 'settings' && <WalletSettings stripeConnected={user!.stripeConnected} onConnect={() => {}} balance={user!.balance} onDeposit={(amt, provider) => apiService.deposit(user!.id, amt, provider).then(fetchAppData)} gateways={marketData.gateways} />}
           {activeTab === 'create' && <LeadSubmissionForm onSubmit={(l) => { setIsSubmitting(true); apiService.createLead({...l, ownerId: user!.id}).then(() => { fetchAppData(); setActiveTab('market'); showToast("NODE_PROVISIONED"); setIsSubmitting(false); }); }} />}
           
         </main>

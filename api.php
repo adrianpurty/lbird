@@ -33,6 +33,7 @@ try {
         $db->exec("CREATE TABLE notifications (id TEXT PRIMARY KEY, userId TEXT, message TEXT, type TEXT, timestamp TEXT, read INTEGER DEFAULT 0)");
         $db->exec("CREATE TABLE categories (id TEXT PRIMARY KEY, name TEXT, group_name TEXT)");
         $db->exec("CREATE TABLE api_nodes (id TEXT PRIMARY KEY, type TEXT, provider TEXT, name TEXT, publicKey TEXT, secretKey TEXT, fee TEXT, status TEXT)");
+        $db->exec("CREATE TABLE wallet_activities (id TEXT PRIMARY KEY, userId TEXT, type TEXT, amount REAL, provider TEXT, timestamp TEXT, status TEXT)");
 
         // Initial Seed
         $db->prepare("INSERT INTO users (id, name, username, password, email, balance, role, status, stripeConnected, wishlist, last_active_at, current_page) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)")
@@ -47,6 +48,12 @@ try {
         if (!in_array('current_page', $cols)) $db->exec("ALTER TABLE users ADD COLUMN current_page TEXT");
         if (!in_array('status', $cols)) $db->exec("ALTER TABLE users ADD COLUMN status TEXT DEFAULT 'active'");
         if (!in_array('totalSpend', $cols)) $db->exec("ALTER TABLE users ADD COLUMN totalSpend REAL DEFAULT 0");
+
+        // Activity migration
+        $res = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name='wallet_activities'")->fetch();
+        if (!$res) {
+            $db->exec("CREATE TABLE wallet_activities (id TEXT PRIMARY KEY, userId TEXT, type TEXT, amount REAL, provider TEXT, timestamp TEXT, status TEXT)");
+        }
     }
 } catch (PDOException $e) {
     echo json_encode(['error' => 'DATABASE_NODE_OFFLINE', 'message' => $e->getMessage()]);
@@ -64,6 +71,7 @@ switch ($action) {
             'users' => $db->query("SELECT * FROM users")->fetchAll(),
             'purchaseRequests' => $db->query("SELECT * FROM bids")->fetchAll(),
             'invoices' => $db->query("SELECT * FROM invoices")->fetchAll(),
+            'walletActivities' => $db->query("SELECT * FROM wallet_activities ORDER BY timestamp DESC")->fetchAll(),
             'notifications' => $db->query("SELECT * FROM notifications ORDER BY timestamp DESC")->fetchAll(),
             'gateways' => $db->query("SELECT * FROM api_nodes WHERE type='payment'")->fetchAll(),
             'authConfig' => json_decode($db->query("SELECT value FROM config WHERE key='auth_config'")->fetchColumn(), true)
@@ -114,7 +122,7 @@ switch ($action) {
 
     case 'place_bid':
         $id = 'bid_' . bin2hex(random_bytes(4));
-        $stmt = $db->prepare("INSERT INTO bids (id, leadId, userId, bidAmount, leadsPerDay, totalDailyCost, timestamp, status, buyerBusinessUrl, buyerTargetLeadUrl) VALUES (?,?,?,?,?,?,?,?,?,?)");
+        $stmt = $db->prepare("INSERT INTO bids (id, leadId, userId, bidAmount, leadsPerDay, totalDailyCost REAL, timestamp, status, buyerBusinessUrl, buyerTargetLeadUrl) VALUES (?,?,?,?,?,?,?,?,?,?)");
         $stmt->execute([$id, $input['leadId'], $input['userId'], $input['bidAmount'], $input['leadsPerDay'], $input['totalDailyCost'], date('Y-m-d H:i:s'), 'approved', $input['buyerBusinessUrl'], $input['buyerTargetLeadUrl']]);
         $db->prepare("UPDATE leads SET currentBid = ?, bidCount = bidCount + 1 WHERE id = ?")->execute([$input['bidAmount'], $input['leadId']]);
         // Update user stats
@@ -177,6 +185,15 @@ switch ($action) {
 
     case 'deposit':
         $db->prepare("UPDATE users SET balance = balance + ? WHERE id = ?")->execute([$input['amount'], $input['userId']]);
+        
+        $id = 'tx_' . bin2hex(random_bytes(4));
+        $type = $input['amount'] >= 0 ? 'deposit' : 'withdrawal';
+        $abs_amount = abs($input['amount']);
+        $provider = $input['provider'] ?? 'SYSTEM_SYNC';
+        
+        $stmt = $db->prepare("INSERT INTO wallet_activities (id, userId, type, amount, provider, timestamp, status) VALUES (?,?,?,?,?,?,?)");
+        $stmt->execute([$id, $input['userId'], $type, $abs_amount, $provider, date('Y-m-d H:i:s'), 'completed']);
+        
         echo json_encode(['status' => 'success']);
         break;
 

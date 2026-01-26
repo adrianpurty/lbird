@@ -10,21 +10,23 @@ import {
   Eye,
   EyeOff,
   Percent,
-  Settings,
   Plus,
   Trash2,
   RefreshCw,
   Globe,
-  ToggleLeft,
-  ToggleRight,
   Scan,
-  CheckCircle2,
   Cpu,
   Database,
   Zap,
   Activity,
   ChevronDown,
-  X
+  X,
+  CreditCard as CardIcon,
+  Landmark,
+  Wallet,
+  ShoppingBag,
+  CircleDollarSign,
+  ArrowRight
 } from 'lucide-react';
 import { GatewayAPI } from '../types.ts';
 import { soundService } from '../services/soundService.ts';
@@ -34,6 +36,27 @@ interface AdminPaymentSettingsProps {
   onGatewaysChange: (gateways: GatewayAPI[]) => void;
   onDeploy: (gateways: GatewayAPI[]) => void;
 }
+
+const PROVIDER_DIRECTORY = [
+  { id: 'stripe', name: 'Stripe', category: 'Global' },
+  { id: 'paypal', name: 'PayPal', category: 'Global' },
+  { id: 'adyen', name: 'Adyen', category: 'Enterprise' },
+  { id: 'braintree', name: 'Braintree', category: 'Enterprise' },
+  { id: 'square', name: 'Square', category: 'Retail' },
+  { id: 'authorize_net', name: 'Authorize.net', category: 'Legacy' },
+  { id: 'razorpay', name: 'Razorpay', category: 'Asia' },
+  { id: 'mollie', name: 'Mollie', category: 'Europe' },
+  { id: 'paystack', name: 'Paystack', category: 'Africa' },
+  { id: 'crypto', name: 'Crypto Core', category: 'Web3' },
+  { id: 'binance', name: 'Binance Pay', category: 'Web3' },
+  { id: 'upi', name: 'Unified Payments (UPI)', category: 'Asia' },
+  { id: 'skrill', name: 'Skrill', category: 'E-Wallet' },
+  { id: 'neteller', name: 'Neteller', category: 'E-Wallet' },
+  { id: 'klarna', name: 'Klarna', category: 'BNPL' },
+  { id: 'alipay', name: 'Alipay', category: 'China' },
+  { id: 'wechat', name: 'WeChat Pay', category: 'China' },
+  { id: 'custom', name: 'Custom Gateway', category: 'Other' },
+];
 
 const AdminPaymentSettings: React.FC<AdminPaymentSettingsProps> = ({ gateways, onGatewaysChange, onDeploy }) => {
   const [showKeys, setShowKeys] = useState(false);
@@ -54,13 +77,43 @@ const AdminPaymentSettings: React.FC<AdminPaymentSettingsProps> = ({ gateways, o
     fee: '2.5'
   });
 
+  const getProviderIcon = (provider: string) => {
+    switch (provider) {
+      case 'stripe': return CreditCard;
+      case 'paypal': return Globe;
+      case 'adyen': return Landmark;
+      case 'braintree': return Cpu;
+      case 'square': return ShoppingBag;
+      case 'authorize_net': return ShieldCheck;
+      case 'razorpay': return Zap;
+      case 'mollie': return Activity;
+      case 'paystack': return Database;
+      case 'crypto': return Bitcoin;
+      case 'binance': return Scan;
+      case 'upi': return Smartphone;
+      case 'skrill': return Wallet;
+      case 'neteller': return CircleDollarSign;
+      case 'klarna': return CardIcon;
+      case 'alipay': return Globe;
+      case 'wechat': return Smartphone;
+      default: return Database;
+    }
+  };
+
   const getLabels = (provider: GatewayAPI['provider']) => {
     switch (provider) {
       case 'stripe': return { public: 'Publishable Token', secret: 'Secret Node Key' };
-      case 'crypto': return { public: 'Wallet Ledger Address', secret: 'Private Node API' };
-      case 'binance': return { public: 'Pay ID / API Key', secret: 'API Secret' };
-      case 'upi': return { public: 'Merchant VPA', secret: 'Authorization Secret' };
-      case 'paypal': return { public: 'Client Identifier', secret: 'Access Secret' };
+      case 'paypal': return { public: 'Client ID', secret: 'Secret Access Token' };
+      case 'adyen': return { public: 'Live Endpoint Prefix', secret: 'API Key Hash' };
+      case 'braintree': return { public: 'Merchant ID', secret: 'Private Token' };
+      case 'square': return { public: 'Application ID', secret: 'Personal Access Token' };
+      case 'authorize_net': return { public: 'API Login ID', secret: 'Transaction Key' };
+      case 'razorpay': return { public: 'Key ID', secret: 'Key Secret' };
+      case 'mollie': return { public: 'Live API Key', secret: 'Partner ID (Optional)' };
+      case 'crypto': return { public: 'Master Wallet Address', secret: 'RPC Node Endpoint' };
+      case 'binance': return { public: 'Merchant ID', secret: 'API Secret' };
+      case 'alipay': return { public: 'App ID', secret: 'RSA Private Key' };
+      case 'wechat': return { public: 'MCH ID', secret: 'API V3 Key' };
       default: return { public: 'Public Node Key', secret: 'Private Node Key' };
     }
   };
@@ -152,11 +205,13 @@ const AdminPaymentSettings: React.FC<AdminPaymentSettingsProps> = ({ gateways, o
           </button>
         </div>
       </div>
+
       {/* Gateway Cards */}
       <div className="grid grid-cols-1 gap-6">
         {localGateways.length > 0 ? (
           localGateways.map((api) => {
             const labels = getLabels(api.provider);
+            const Icon = getProviderIcon(api.provider);
             return (
               <div 
                 key={api.id} 
@@ -167,15 +222,11 @@ const AdminPaymentSettings: React.FC<AdminPaymentSettingsProps> = ({ gateways, o
                 <div className={`absolute top-0 left-0 w-full md:w-1.5 h-1.5 md:h-full ${api.status === 'active' ? 'bg-emerald-500' : 'bg-red-500'}`} />
                 <div className="flex items-center gap-6 md:gap-8 shrink-0 w-full md:w-auto md:min-w-[240px]">
                   <div className={`w-16 h-16 md:w-20 md:h-20 rounded-2xl md:rounded-3xl bg-black border-2 flex items-center justify-center transition-all shrink-0 ${api.status === 'active' ? 'border-neutral-800 group-hover:border-emerald-500/50 text-emerald-500' : 'border-neutral-900 text-neutral-800'}`}>
-                    {api.provider === 'stripe' && <CreditCard size={28} md:size={32} />}
-                    {api.provider === 'crypto' && <Bitcoin size={28} md:size={32} />}
-                    {api.provider === 'binance' && <Scan size={28} md:size={32} />}
-                    {api.provider === 'upi' && <Smartphone size={28} md:size={32} />}
-                    {api.provider === 'paypal' && <Globe size={28} md:size={32} />}
+                    <Icon size={28} md:size={32} />
                   </div>
                   <div className="min-w-0">
                      <span className="text-[8px] md:text-[10px] font-black text-neutral-600 uppercase tracking-widest block mb-1">NODE_IDENTITY</span>
-                     <h3 className="text-xl md:text-2xl font-black text-white italic tracking-tighter uppercase font-futuristic leading-none truncate">{api.name}</h3>
+                     <h3 className="text-xl md:text-2xl font-black text-white italic tracking-tighter uppercase font-futuristic leading-none truncate">{api.name || api.provider.toUpperCase()}</h3>
                      <div className="flex items-center gap-3 mt-2 md:mt-3">
                        <button 
                           onClick={() => toggleStatus(api.id)}
@@ -240,6 +291,102 @@ const AdminPaymentSettings: React.FC<AdminPaymentSettingsProps> = ({ gateways, o
           </div>
         )}
       </div>
+
+      {/* ADD GATEWAY MODAL */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl animate-in fade-in duration-300">
+           <div className="w-full max-w-2xl bg-[#080808] border-2 border-neutral-800 rounded-[2.5rem] md:rounded-[3.5rem] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-500">
+              <div className="flex justify-between items-center p-8 bg-black/40 border-b-2 border-neutral-900">
+                 <div>
+                    <h2 className="text-2xl font-black text-white italic uppercase tracking-tighter">PROVISION_NEW_NODE</h2>
+                    <p className="text-[10px] text-neutral-600 font-black uppercase tracking-widest mt-1">Expanding Financial Infrastructure</p>
+                 </div>
+                 <button onClick={() => setShowAddModal(false)} className="p-3 bg-neutral-950 hover:bg-neutral-900 border-2 border-neutral-800 rounded-2xl transition-all">
+                    <X size={24} className="text-neutral-500 hover:text-white" />
+                 </button>
+              </div>
+
+              <form onSubmit={handleAddGateway} className="p-8 md:p-12 space-y-8 overflow-y-auto max-h-[70vh] scrollbar-hide">
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-3">
+                       <label className="text-[9px] md:text-[10px] font-black text-neutral-600 uppercase tracking-widest px-2 italic">PROTOCOL_PROVIDER</label>
+                       <div className="relative group">
+                          <select 
+                            required
+                            className="w-full bg-black/40 border-2 border-neutral-800 rounded-2xl px-6 py-5 text-white font-bold outline-none focus:border-emerald-500/60 transition-all appearance-none cursor-pointer uppercase text-xs tracking-widest"
+                            value={newGateway.provider}
+                            onChange={e => setNewGateway({...newGateway, provider: e.target.value as any})}
+                          >
+                             {PROVIDER_DIRECTORY.map(p => (
+                                <option key={p.id} value={p.id} className="bg-black text-neutral-400">{p.name} [{p.category.toUpperCase()}]</option>
+                             ))}
+                          </select>
+                          <ChevronDown size={20} className="absolute right-6 top-1/2 -translate-y-1/2 text-neutral-700 pointer-events-none" />
+                       </div>
+                    </div>
+                    <div className="space-y-3">
+                       <label className="text-[9px] md:text-[10px] font-black text-neutral-600 uppercase tracking-widest px-2 italic">NODE_LABEL</label>
+                       <input 
+                         required
+                         className="w-full bg-black/40 border-2 border-neutral-800 rounded-2xl px-6 py-5 text-white font-bold outline-none focus:border-emerald-500/60 transition-all text-xs uppercase tracking-widest"
+                         placeholder="e.g. PRIMARY_SETTLEMENT"
+                         value={newGateway.name}
+                         onChange={e => setNewGateway({...newGateway, name: e.target.value})}
+                       />
+                    </div>
+                 </div>
+
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-3">
+                       <label className="text-[9px] md:text-[10px] font-black text-neutral-600 uppercase tracking-widest px-2 italic">{getLabels(newGateway.provider).public}</label>
+                       <input 
+                         required
+                         className="w-full bg-black/40 border-2 border-neutral-800 rounded-2xl px-6 py-5 text-emerald-500/70 font-mono text-[10px] outline-none focus:border-emerald-500/60 transition-all"
+                         placeholder="IDENTIFIER_STRING"
+                         value={newGateway.publicKey}
+                         onChange={e => setNewGateway({...newGateway, publicKey: e.target.value})}
+                       />
+                    </div>
+                    <div className="space-y-3">
+                       <label className="text-[9px] md:text-[10px] font-black text-neutral-600 uppercase tracking-widest px-2 italic">{getLabels(newGateway.provider).secret}</label>
+                       <input 
+                         required
+                         type="password"
+                         className="w-full bg-black/40 border-2 border-neutral-800 rounded-2xl px-6 py-5 text-emerald-500/70 font-mono text-[10px] outline-none focus:border-emerald-500/60 transition-all"
+                         placeholder="SECRET_AUTH_STRING"
+                         value={newGateway.secretKey}
+                         onChange={e => setNewGateway({...newGateway, secretKey: e.target.value})}
+                       />
+                    </div>
+                 </div>
+
+                 <div className="space-y-3">
+                    <label className="text-[9px] md:text-[10px] font-black text-neutral-600 uppercase tracking-widest px-2 italic">NETWORK_TAX (%)</label>
+                    <div className="relative">
+                       <input 
+                         required
+                         type="number"
+                         step="0.01"
+                         className="w-full bg-black border-2 border-neutral-800 rounded-2xl px-12 py-5 text-white font-black outline-none focus:border-emerald-500 text-2xl font-tactical tracking-widest"
+                         value={newGateway.fee}
+                         onChange={e => setNewGateway({...newGateway, fee: e.target.value})}
+                       />
+                       <Percent size={20} className="absolute left-5 top-1/2 -translate-y-1/2 text-neutral-700" />
+                    </div>
+                 </div>
+
+                 <div className="pt-6">
+                    <button 
+                      type="submit"
+                      className="w-full py-6 md:py-8 rounded-2xl md:rounded-[3rem] font-black text-xl md:text-2xl transition-all transform active:scale-[0.98] border-b-8 md:border-b-[12px] font-tactical italic tracking-widest bg-black text-white border-neutral-800 hover:bg-neutral-900 shadow-[0_20px_50px_rgba(0,0,0,0.8)] flex items-center justify-center gap-6"
+                    >
+                      AUTHORIZE_PROVISION <ArrowRight size={28} md:size={32} />
+                    </button>
+                 </div>
+              </form>
+           </div>
+        </div>
+      )}
     </div>
   );
 };

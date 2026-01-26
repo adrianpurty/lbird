@@ -1,4 +1,5 @@
-import { Lead, User, PurchaseRequest, Notification, PlatformAnalytics, OAuthConfig, Invoice, GatewayAPI } from '../types.ts';
+
+import { Lead, User, PurchaseRequest, Notification, PlatformAnalytics, OAuthConfig, Invoice, GatewayAPI, WalletActivity } from '../types.ts';
 
 const API_ENDPOINT = './api.php';
 const FALLBACK_KEY = 'leadbid_v4_local_db';
@@ -55,6 +56,7 @@ class ApiService {
       ],
       purchaseRequests: [],
       invoices: [],
+      walletActivities: [],
       notifications: [],
       authConfig: { googleEnabled: false, googleClientId: '', googleClientSecret: '', facebookEnabled: false, facebookAppId: '', facebookAppSecret: '' },
       gateways: [
@@ -171,6 +173,16 @@ class ApiService {
 
       case 'deposit':
         db.users = db.users.map((u: any) => u.id === body.userId ? { ...u, balance: u.balance + body.amount } : u);
+        const txId = 'tx_' + Math.random().toString(36).substr(2, 5);
+        db.walletActivities.push({
+            id: txId,
+            userId: body.userId,
+            type: body.amount >= 0 ? 'deposit' : 'withdrawal',
+            amount: Math.abs(body.amount),
+            provider: body.provider || 'SYSTEM_SYNC',
+            timestamp: new Date().toISOString(),
+            status: 'completed'
+        });
         this.saveFallbackDB(db);
         return { status: 'success' };
 
@@ -251,8 +263,8 @@ class ApiService {
     return this.request('place_bid', 'POST', bidData);
   }
 
-  async deposit(userId: string, amount: number): Promise<any> {
-    return this.request('deposit', 'POST', { userId, amount });
+  async deposit(userId: string, amount: number, provider?: string): Promise<any> {
+    return this.request('deposit', 'POST', { userId, amount, provider });
   }
 
   async toggleWishlist(userId: string, leadId: string): Promise<any> {

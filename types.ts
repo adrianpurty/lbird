@@ -48,6 +48,16 @@ export interface Invoice {
   status: 'paid';
 }
 
+export interface WalletActivity {
+  id: string;
+  userId: string;
+  type: 'deposit' | 'withdrawal';
+  amount: number;
+  provider: string;
+  timestamp: string;
+  status: 'completed' | 'pending';
+}
+
 export interface PlatformAnalytics {
   totalVolume: number;
   activeTraders: number;
@@ -74,8 +84,8 @@ export interface User {
   balance: number;
   stripeConnected: boolean;
   role: UserRole;
-  status: 'active' | 'restricted'; // Added for Control Center management
-  totalSpend?: number; // Added for administrative telemetry
+  status: 'active' | 'restricted'; 
+  totalSpend?: number; 
   username?: string;
   bio?: string;
   profileImage?: string;
@@ -113,7 +123,10 @@ export interface AIInsight {
 export interface GatewayAPI {
   id: string;
   name: string;
-  provider: 'stripe' | 'crypto' | 'upi' | 'paypal' | 'binance' | 'custom';
+  provider: 
+    | 'stripe' | 'paypal' | 'adyen' | 'braintree' | 'square' | 'authorize_net' 
+    | 'razorpay' | 'mollie' | 'paystack' | 'crypto' | 'binance' | 'upi' 
+    | 'skrill' | 'neteller' | 'klarna' | 'alipay' | 'wechat' | 'custom';
   publicKey: string;
   secretKey: string;
   fee: string;
