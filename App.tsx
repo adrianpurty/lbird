@@ -629,7 +629,18 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      {selectedLeadForBid && <BiddingModal lead={selectedLeadForBid} user={user!} onClose={() => setSelectedLeadForBid(null)} onSubmit={(d) => { setIsSubmitting(true); apiService.placeBid({ userId: user!.id, leadId: selectedLeadForBid.id, leadTitle: selectedLeadForBid.title, ...d }).then(() => { fetchAppData(); setSelectedLeadForBid(null); setIsSubmitting(false); showToast("ACQUISITION_INITIALIZED"); setActiveTab('action-center'); }); }} onRefill={() => { setSelectedLeadForBid(null); setActiveTab('settings'); }} />}
+      {selectedLeadForBid && <BiddingModal lead={selectedLeadForBid} user={user!} onClose={() => setSelectedLeadForBid(null)} onSubmit={(d) => { 
+        setIsSubmitting(true); 
+        // Optimistic local update for current user balance
+        setUser(prev => prev ? { ...prev, balance: prev.balance - d.totalDailyCost } : null);
+        apiService.placeBid({ userId: user!.id, leadId: selectedLeadForBid.id, leadTitle: selectedLeadForBid.title, ...d }).then(() => { 
+          fetchAppData(); 
+          setSelectedLeadForBid(null); 
+          setIsSubmitting(false); 
+          showToast("ACQUISITION_INITIALIZED"); 
+          setActiveTab('action-center'); 
+        }); 
+      }} onRefill={() => { setSelectedLeadForBid(null); setActiveTab('settings'); }} />}
       {selectedLeadForEdit && (
         <AdminLeadActionsModal 
           lead={selectedLeadForEdit} 

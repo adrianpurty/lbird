@@ -127,6 +127,7 @@ class ApiService {
           profileImage: body.profileImage,
           balance: 1000, 
           role: 'user', 
+          status: 'active',
           stripeConnected: false, 
           wishlist: [],
           last_active_at: new Date().toISOString(),
@@ -137,7 +138,7 @@ class ApiService {
         return { status: 'success', user: socialUser };
 
       case 'register_user':
-        const newUser = { ...body, id: 'u_' + Math.random().toString(36).substr(2, 5), balance: 1000, role: 'user', stripeConnected: false, wishlist: [], last_active_at: new Date().toISOString(), current_page: 'Onboarding' };
+        const newUser = { ...body, id: 'u_' + Math.random().toString(36).substr(2, 5), balance: 1000, role: 'user', status: 'active', stripeConnected: false, wishlist: [], last_active_at: new Date().toISOString(), current_page: 'Onboarding' };
         db.users.push(newUser);
         this.saveFallbackDB(db);
         return { status: 'success', user: newUser };
@@ -167,15 +168,37 @@ class ApiService {
       case 'place_bid':
         const bidId = 'bid_' + Math.random().toString(36).substr(2, 5);
         db.purchaseRequests.push({ ...body, id: bidId, timestamp: new Date().toISOString(), status: 'approved' });
+        
+        // Update lead metrics
         db.leads = db.leads.map((l: any) => l.id === body.leadId ? { ...l, currentBid: body.bidAmount, bidCount: l.bidCount + 1 } : l);
+        
+        // Deduct from balance in local storage
+        db.users = db.users.map((u: any) => u.id === body.userId ? { 
+          ...u, 
+          balance: u.balance - body.totalDailyCost,
+          totalSpend: (u.totalSpend || 0) + body.totalDailyCost
+        } : u);
+
+        // Log wallet activity
+        const txId = 'tx_' + Math.random().toString(36).substr(2, 5);
+        db.walletActivities.push({
+            id: txId,
+            userId: body.userId,
+            type: 'withdrawal',
+            amount: body.totalDailyCost,
+            provider: 'MARKET_ACQUISITION',
+            timestamp: new Date().toISOString(),
+            status: 'completed'
+        });
+
         this.saveFallbackDB(db);
         return { status: 'success' };
 
       case 'deposit':
         db.users = db.users.map((u: any) => u.id === body.userId ? { ...u, balance: u.balance + body.amount } : u);
-        const txId = 'tx_' + Math.random().toString(36).substr(2, 5);
+        const depId = 'tx_' + Math.random().toString(36).substr(2, 5);
         db.walletActivities.push({
-            id: txId,
+            id: depId,
             userId: body.userId,
             type: body.amount >= 0 ? 'deposit' : 'withdrawal',
             amount: Math.abs(body.amount),
