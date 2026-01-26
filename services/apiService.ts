@@ -1,5 +1,5 @@
 
-import { Lead, User, PurchaseRequest, Notification, PlatformAnalytics, OAuthConfig, Invoice, GatewayAPI, WalletActivity } from '../types.ts';
+import { Lead, User, PurchaseRequest, Notification, PlatformAnalytics, OAuthConfig, Invoice, GatewayAPI } from '../types.ts';
 
 const API_ENDPOINT = './api.php';
 const FALLBACK_KEY = 'leadbid_v4_local_db';
@@ -48,15 +48,14 @@ class ApiService {
     // Initial Seed for Fallback
     const initialData = {
       leads: [
-        { id: 'l1', title: 'First Class: NYC to London', category: 'International Flights', description: 'Executive travelers looking for last-minute first class bookings between JFK and LHR.', businessUrl: 'https://sky-luxury.com', targetLeadUrl: 'https://travel-ads.net/f-class', basePrice: 150, currentBid: 450, bidCount: 15, timeLeft: '10h 30m', qualityScore: 95, sellerRating: 4.9, status: 'approved', countryCode: 'US', region: 'New York', ownerId: 'admin_1' },
-        { id: 'l2', title: 'Private Overwater Villa (Maldives)', category: 'Resort Bookings', description: 'Honeymooners and luxury seekers looking for 7-night stays at premium Maldivian resorts.', businessUrl: 'https://maldives-escapes.io', targetLeadUrl: 'https://resort-leads.pro/villa', basePrice: 80, currentBid: 210, bidCount: 8, timeLeft: '14h 15m', qualityScore: 91, sellerRating: 4.7, status: 'approved', countryCode: 'MV', region: 'Male', ownerId: 'admin_1' }
+        { id: 'l1', title: 'First Class: NYC to London', category: 'International Flights', description: 'Executive travelers looking for last-minute first class bookings between JFK and LHR.', businessUrl: 'https://sky-luxury.com', targetLeadUrl: 'https://travel-ads.net/f-class', tollFreeNumber: '+1-800-SKY-LUXE', basePrice: 150, currentBid: 450, bidCount: 15, timeLeft: '10h 30m', qualityScore: 95, sellerRating: 4.9, status: 'approved', countryCode: 'US', region: 'New York', ownerId: 'admin_1' },
+        { id: 'l2', title: 'Private Overwater Villa (Maldives)', category: 'Resort Bookings', description: 'Honeymooners and luxury seekers looking for 7-night stays at premium Maldivian resorts.', businessUrl: 'https://maldives-escapes.io', targetLeadUrl: 'https://resort-leads.pro/villa', tollFreeNumber: '+1-888-MALDIVES', basePrice: 80, currentBid: 210, bidCount: 8, timeLeft: '14h 15m', qualityScore: 91, sellerRating: 4.7, status: 'approved', countryCode: 'MV', region: 'Male', ownerId: 'admin_1' }
       ],
       users: [
         { id: 'admin_1', name: 'System Administrator', username: 'admin', password: '1234', email: 'admin@leadbid.pro', balance: 1000000, role: 'admin', stripeConnected: true, wishlist: [] }
       ],
       purchaseRequests: [],
       invoices: [],
-      walletActivities: [],
       notifications: [],
       authConfig: { googleEnabled: false, googleClientId: '', googleClientSecret: '', facebookEnabled: false, facebookAppId: '', facebookAppSecret: '' },
       gateways: [
@@ -77,7 +76,7 @@ class ApiService {
     switch (action) {
       case 'get_data':
         return {
-          metadata: { version: '4.1.3-LOCAL', last_updated: new Date().toISOString(), db_size: JSON.stringify(db).length, status: 'VIRTUAL' },
+          metadata: { version: '4.1.4-LOCAL', last_updated: new Date().toISOString(), db_size: JSON.stringify(db).length, status: 'VIRTUAL' },
           ...db,
           analytics: {
             totalVolume: db.invoices.reduce((acc: number, inv: any) => acc + inv.totalSettlement, 0),
@@ -127,7 +126,6 @@ class ApiService {
           profileImage: body.profileImage,
           balance: 1000, 
           role: 'user', 
-          status: 'active',
           stripeConnected: false, 
           wishlist: [],
           last_active_at: new Date().toISOString(),
@@ -138,7 +136,7 @@ class ApiService {
         return { status: 'success', user: socialUser };
 
       case 'register_user':
-        const newUser = { ...body, id: 'u_' + Math.random().toString(36).substr(2, 5), balance: 1000, role: 'user', status: 'active', stripeConnected: false, wishlist: [], last_active_at: new Date().toISOString(), current_page: 'Onboarding' };
+        const newUser = { ...body, id: 'u_' + Math.random().toString(36).substr(2, 5), balance: 1000, role: 'user', stripeConnected: false, wishlist: [], last_active_at: new Date().toISOString(), current_page: 'Onboarding' };
         db.users.push(newUser);
         this.saveFallbackDB(db);
         return { status: 'success', user: newUser };
@@ -168,44 +166,20 @@ class ApiService {
       case 'place_bid':
         const bidId = 'bid_' + Math.random().toString(36).substr(2, 5);
         db.purchaseRequests.push({ ...body, id: bidId, timestamp: new Date().toISOString(), status: 'approved' });
-        
-        // Update lead metrics
-        db.leads = db.leads.map((l: any) => l.id === body.leadId ? { ...l, currentBid: body.bidAmount, bidCount: l.bidCount + 1 } : l);
-        
-        // Deduct from balance in local storage
-        db.users = db.users.map((u: any) => u.id === body.userId ? { 
-          ...u, 
-          balance: u.balance - body.totalDailyCost,
-          totalSpend: (u.totalSpend || 0) + body.totalDailyCost
-        } : u);
+        db.leads = db.leads.map((l: any) => l.id === body.leadId ? { ...l, currentBid: Math.max(l.currentBid, body.bidAmount), bidCount: l.bidCount + 1 } : l);
+        this.saveFallbackDB(db);
+        return { status: 'success' };
 
-        // Log wallet activity
-        const txId = 'tx_' + Math.random().toString(36).substr(2, 5);
-        db.walletActivities.push({
-            id: txId,
-            userId: body.userId,
-            type: 'withdrawal',
-            amount: body.totalDailyCost,
-            provider: 'MARKET_ACQUISITION',
-            timestamp: new Date().toISOString(),
-            status: 'completed'
-        });
-
+      case 'update_bid':
+        db.purchaseRequests = db.purchaseRequests.map((pr: any) => pr.id === body.id ? { ...pr, ...body } : pr);
+        if (body.bidAmount) {
+            db.leads = db.leads.map((l: any) => l.id === body.leadId ? { ...l, currentBid: Math.max(l.currentBid, body.bidAmount) } : l);
+        }
         this.saveFallbackDB(db);
         return { status: 'success' };
 
       case 'deposit':
         db.users = db.users.map((u: any) => u.id === body.userId ? { ...u, balance: u.balance + body.amount } : u);
-        const depId = 'tx_' + Math.random().toString(36).substr(2, 5);
-        db.walletActivities.push({
-            id: depId,
-            userId: body.userId,
-            type: body.amount >= 0 ? 'deposit' : 'withdrawal',
-            amount: Math.abs(body.amount),
-            provider: body.provider || 'SYSTEM_SYNC',
-            timestamp: new Date().toISOString(),
-            status: 'completed'
-        });
         this.saveFallbackDB(db);
         return { status: 'success' };
 
@@ -286,8 +260,12 @@ class ApiService {
     return this.request('place_bid', 'POST', bidData);
   }
 
-  async deposit(userId: string, amount: number, provider?: string): Promise<any> {
-    return this.request('deposit', 'POST', { userId, amount, provider });
+  async updatePurchaseRequest(id: string, updates: Partial<PurchaseRequest>): Promise<any> {
+    return this.request('update_bid', 'POST', { id, ...updates });
+  }
+
+  async deposit(userId: string, amount: number): Promise<any> {
+    return this.request('deposit', 'POST', { userId, amount });
   }
 
   async toggleWishlist(userId: string, leadId: string): Promise<any> {
