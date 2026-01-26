@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { X, Save, Trash2, ShieldCheck, AlertCircle, Globe, DollarSign, Target, Sparkles, Terminal, Loader2, Zap, MapPin, Activity, Database, TrendingUp } from 'lucide-react';
+import { X, Save, Trash2, ShieldCheck, AlertCircle, Globe, DollarSign, Target, Sparkles, Terminal, Loader2, Zap, MapPin, Activity, Database, TrendingUp, Phone } from 'lucide-react';
 import { Lead, User } from '../types.ts';
 import { applyAiOverride } from '../services/geminiService.ts';
 import { soundService } from '../services/soundService.ts';
@@ -101,6 +101,18 @@ const AdminLeadActionsModal: React.FC<AdminLeadActionsModalProps> = ({ lead, use
                   onChange={e => setFormData({...formData, category: e.target.value})}
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-neutral-600 uppercase tracking-widest px-2 flex items-center gap-2">
+                <Phone size={14} className="text-[#FACC15]" /> VOICE_RELAY_ENDPOINT
+              </label>
+              <input 
+                className="w-full bg-[#1A1A1A]/40 border border-[#1A1A1A] rounded-2xl px-6 py-4 text-white font-mono outline-none focus:border-[#FACC15]/40"
+                placeholder="+1-800-000-0000"
+                value={formData.tollFreeNumber || ''}
+                onChange={e => setFormData({...formData, tollFreeNumber: e.target.value})}
+              />
             </div>
 
             <div className="bg-[#1A1A1A] p-8 rounded-[2.5rem] border border-white/5 grid grid-cols-2 md:grid-cols-3 gap-8">

@@ -100,6 +100,7 @@ const App: React.FC = () => {
   const [selectedLeadForEdit, setSelectedLeadForEdit] = useState<Lead | null>(null);
   const [selectedLogForInspection, setSelectedLogForInspection] = useState<Notification | null>(null);
   const [selectedPurchaseForManifest, setSelectedPurchaseForManifest] = useState<PurchaseRequest | null>(null);
+  const [selectedPurchaseForEdit, setSelectedPurchaseForEdit] = useState<PurchaseRequest | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toast, setToast] = useState<{ message: string, type: 'info' } | null>(null);
@@ -202,6 +203,30 @@ const App: React.FC = () => {
     marketData.invoices.filter(inv => inv.userId === user?.id),
     [marketData.invoices, user?.id]
   );
+
+  const handlePurchaseUpdate = async (data: any) => {
+    setIsSubmitting(true);
+    try {
+        await apiService.updatePurchaseRequest(data.id, data);
+        await fetchAppData();
+        setSelectedPurchaseForEdit(null);
+        showToast("SYNC_RECONFIGURED");
+    } finally {
+        setIsSubmitting(false);
+    }
+  };
+
+  const handleNewPurchase = async (data: any) => {
+    setIsSubmitting(true);
+    try {
+        await apiService.placeBid({ userId: user!.id, leadId: selectedLeadForBid!.id, ...data });
+        await fetchAppData();
+        setSelectedLeadForBid(null);
+        showToast("BID_REGISTERED");
+    } finally {
+        setIsSubmitting(false);
+    }
+  };
 
   if (isLoading && !user) return (
     <div className="h-screen flex items-center justify-center bg-black">
@@ -476,6 +501,7 @@ const App: React.FC = () => {
                  notifications={marketData.notifications} 
                  leads={marketData.leads} 
                  onViewManifest={setSelectedPurchaseForManifest}
+                 onEditSync={setSelectedPurchaseForEdit}
                />
 
                <div className="pt-8 border-t border-neutral-900">
@@ -513,7 +539,19 @@ const App: React.FC = () => {
         <WelcomeModal userName={user.name} onClose={() => setShowWelcome(false)} />
       )}
 
-      {selectedLeadForBid && <BiddingModal lead={selectedLeadForBid} user={user!} onClose={() => setSelectedLeadForBid(null)} onSubmit={(d) => { setIsSubmitting(true); apiService.placeBid({ userId: user!.id, leadId: selectedLeadForBid.id, ...d }).then(() => { fetchAppData(); setSelectedLeadForBid(null); setIsSubmitting(false); showToast("BID_REGISTERED"); }); }} onRefill={() => { setSelectedLeadForBid(null); setActiveTab('settings'); }} />}
+      {selectedLeadForBid && <BiddingModal lead={selectedLeadForBid} user={user!} onClose={() => setSelectedLeadForBid(null)} onSubmit={handleNewPurchase} onRefill={() => { setSelectedLeadForBid(null); setActiveTab('settings'); }} />}
+      
+      {selectedPurchaseForEdit && (
+        <BiddingModal 
+            lead={marketData.leads.find(l => l.id === selectedPurchaseForEdit.leadId) || featuredLead!} 
+            user={user!} 
+            existingPurchase={selectedPurchaseForEdit}
+            onClose={() => setSelectedPurchaseForEdit(null)} 
+            onSubmit={handlePurchaseUpdate} 
+            onRefill={() => { setSelectedPurchaseForEdit(null); setActiveTab('settings'); }} 
+        />
+      )}
+
       {selectedLeadForEdit && (
         <AdminLeadActionsModal 
           lead={selectedLeadForEdit} 

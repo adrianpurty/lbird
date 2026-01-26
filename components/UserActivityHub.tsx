@@ -3,7 +3,7 @@ import React, { useMemo } from 'react';
 import { 
   FileText, Zap, ShieldCheck, ArrowUpRight, Clock, 
   History, Activity, Target, Database, TrendingUp,
-  CheckCircle2, AlertCircle, ExternalLink, Globe
+  CheckCircle2, AlertCircle, ExternalLink, Globe, Settings2
 } from 'lucide-react';
 import { PurchaseRequest, Notification, Lead } from '../types.ts';
 import { soundService } from '../services/soundService.ts';
@@ -14,9 +14,10 @@ interface UserActivityHubProps {
   leads: Lead[];
   userId: string;
   onViewManifest: (purchase: PurchaseRequest) => void;
+  onEditSync: (purchase: PurchaseRequest) => void;
 }
 
-const UserActivityHub: React.FC<UserActivityHubProps> = ({ purchaseRequests, notifications, leads, userId, onViewManifest }) => {
+const UserActivityHub: React.FC<UserActivityHubProps> = ({ purchaseRequests, notifications, leads, userId, onViewManifest, onEditSync }) => {
   const userPurchases = useMemo(() => 
     purchaseRequests.filter(pr => pr.userId === userId).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
     [purchaseRequests, userId]
@@ -82,18 +83,26 @@ const UserActivityHub: React.FC<UserActivityHubProps> = ({ purchaseRequests, not
                             <span className="text-xs text-[#FACC15] opacity-40">$</span>{purchase.bidAmount.toLocaleString()}
                          </div>
                       </div>
-                      <div className="flex flex-col items-center gap-2">
-                         <div className={`px-4 py-1.5 rounded-full text-[8px] font-tactical font-black uppercase tracking-widest border ${
+                      <div className="flex flex-col items-center gap-3 min-w-[120px]">
+                         <div className={`w-full text-center py-1.5 rounded-full text-[8px] font-tactical font-black uppercase tracking-widest border ${
                             purchase.status === 'approved' ? 'bg-emerald-950/20 border-emerald-900/30 text-emerald-500' : 'bg-amber-950/20 border-amber-900/30 text-amber-500'
                          }`}>
                             {purchase.status === 'approved' ? 'HANDSHAKE_OK' : 'PENDING_AUTH'}
                          </div>
-                         <button 
-                           onClick={() => { soundService.playClick(true); onViewManifest(purchase); }}
-                           className="text-[8px] font-tactical font-black text-neutral-700 hover:text-[#FACC15] uppercase tracking-widest flex items-center gap-1 transition-colors"
-                         >
-                            VIEW_MANIFEST <ArrowUpRight size={10} />
-                         </button>
+                         <div className="flex items-center gap-4">
+                            <button 
+                                onClick={() => { soundService.playClick(true); onEditSync(purchase); }}
+                                className="text-[8px] font-tactical font-black text-neutral-600 hover:text-[#FACC15] uppercase tracking-widest flex items-center gap-1 transition-colors group/edit"
+                            >
+                                <Settings2 size={10} className="group-hover/edit:rotate-90 transition-transform" /> UPDATE_SYNC
+                            </button>
+                            <button 
+                                onClick={() => { soundService.playClick(true); onViewManifest(purchase); }}
+                                className="text-[8px] font-tactical font-black text-neutral-600 hover:text-[#FACC15] uppercase tracking-widest flex items-center gap-1 transition-colors"
+                            >
+                                VIEW_MANIFEST <ArrowUpRight size={10} />
+                            </button>
+                         </div>
                       </div>
                    </div>
                    

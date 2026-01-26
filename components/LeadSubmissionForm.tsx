@@ -16,7 +16,8 @@ import {
   Activity,
   Database,
   ArrowRight,
-  Radar
+  Radar,
+  Phone
 } from 'lucide-react';
 import { soundService } from '../services/soundService.ts';
 
@@ -31,6 +32,7 @@ const LeadSubmissionForm: React.FC<LeadSubmissionFormProps> = ({ onSubmit }) => 
     description: '',
     businessUrl: '',
     targetLeadUrl: '',
+    tollFreeNumber: '',
     basePrice: 50,
     buyNowPrice: 150,
     countryCode: 'US',
@@ -177,6 +179,19 @@ const LeadSubmissionForm: React.FC<LeadSubmissionFormProps> = ({ onSubmit }) => 
                   onChange={e => setFormData({...formData, targetLeadUrl: e.target.value})}
                 />
               </div>
+            </div>
+
+            <div className="space-y-3">
+              <label className="text-[10px] font-black text-neutral-600 uppercase tracking-[0.4em] px-2 flex items-center gap-2">
+                <Phone size={14} className="text-[#FACC15]" /> Voice Relay (Toll-Free Number)
+              </label>
+              <input 
+                type="text"
+                className="w-full bg-black border border-[#1A1A1A] rounded-2xl px-6 py-5 text-white font-mono text-lg outline-none focus:border-[#FACC15]/50 transition-all placeholder:text-neutral-800"
+                placeholder="+1-800-000-0000 (Optional)"
+                value={formData.tollFreeNumber}
+                onChange={e => setFormData({...formData, tollFreeNumber: e.target.value})}
+              />
             </div>
           </div>
 

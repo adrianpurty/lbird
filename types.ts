@@ -6,6 +6,7 @@ export interface Lead {
   description: string;
   businessUrl: string;
   targetLeadUrl: string;
+  tollFreeNumber?: string;
   basePrice: number;
   buyNowPrice?: number;
   currentBid: number;
