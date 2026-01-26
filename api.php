@@ -24,28 +24,29 @@ try {
     $db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 
     if ($is_new) {
+        // Init tables
         $db->exec("CREATE TABLE config (key TEXT PRIMARY KEY, value TEXT)");
         $db->exec("CREATE TABLE users (id TEXT PRIMARY KEY, name TEXT, username TEXT, password TEXT, email TEXT, balance REAL, role TEXT, status TEXT DEFAULT 'active', stripeConnected INTEGER, wishlist TEXT, bio TEXT, profileImage TEXT, phone TEXT, companyWebsite TEXT, industryFocus TEXT, preferredContact TEXT, defaultBusinessUrl TEXT, defaultTargetUrl TEXT, last_active_at TEXT, current_page TEXT, ipAddress TEXT, deviceInfo TEXT, location TEXT, totalSpend REAL DEFAULT 0)");
-        $db->exec("CREATE TABLE leads (id TEXT PRIMARY KEY, title TEXT, category TEXT, description TEXT, businessUrl TEXT, targetLeadUrl TEXT, tollFreeNumber TEXT, basePrice REAL, buyNowPrice REAL, currentBid REAL, bidCount INTEGER, timeLeft TEXT, qualityScore INTEGER, sellerRating REAL, status TEXT, countryCode TEXT, region TEXT, ownerId TEXT)");
-        $db->exec("CREATE TABLE bids (id TEXT PRIMARY KEY, leadId TEXT, userId TEXT, bidAmount REAL, leadsPerDay INTEGER, totalDailyCost REAL, timestamp TEXT, status TEXT, buyerBusinessUrl TEXT, buyerTargetLeadUrl TEXT, buyerTollFree TEXT, purchaseMode TEXT)");
+        $db->exec("CREATE TABLE leads (id TEXT PRIMARY KEY, title TEXT, category TEXT, description TEXT, businessUrl TEXT, targetLeadUrl TEXT, basePrice REAL, currentBid REAL, bidCount INTEGER, timeLeft TEXT, qualityScore INTEGER, sellerRating REAL, status TEXT, countryCode TEXT, region TEXT, ownerId TEXT)");
+        $db->exec("CREATE TABLE bids (id TEXT PRIMARY KEY, leadId TEXT, userId TEXT, bidAmount REAL, leadsPerDay INTEGER, totalDailyCost REAL, timestamp TEXT, status TEXT, buyerBusinessUrl TEXT, buyerTargetLeadUrl TEXT)");
         $db->exec("CREATE TABLE invoices (id TEXT PRIMARY KEY, purchaseRequestId TEXT, userId TEXT, userName TEXT, leadTitle TEXT, category TEXT, unitPrice REAL, dailyVolume INTEGER, totalSettlement REAL, timestamp TEXT, status TEXT)");
         $db->exec("CREATE TABLE notifications (id TEXT PRIMARY KEY, userId TEXT, message TEXT, type TEXT, timestamp TEXT, read INTEGER DEFAULT 0)");
         $db->exec("CREATE TABLE categories (id TEXT PRIMARY KEY, name TEXT, group_name TEXT)");
         $db->exec("CREATE TABLE api_nodes (id TEXT PRIMARY KEY, type TEXT, provider TEXT, name TEXT, publicKey TEXT, secretKey TEXT, fee TEXT, status TEXT)");
 
+        // Initial Seed
         $db->prepare("INSERT INTO users (id, name, username, password, email, balance, role, status, stripeConnected, wishlist, last_active_at, current_page) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)")
            ->execute(['admin_1', 'System Administrator', 'admin', '1234', 'admin@leadbid.pro', 1000000, 'admin', 'active', 1, '[]', date('c'), 'Control Room']);
         
         $auth_defaults = json_encode(['googleEnabled' => false, 'googleClientId' => '', 'googleClientSecret' => '', 'facebookEnabled' => false, 'facebookAppId' => '', 'facebookAppSecret' => '']);
         $db->prepare("INSERT INTO config (key, value) VALUES (?, ?)")->execute(['auth_config', $auth_defaults]);
     } else {
-        $cols = $db->query("PRAGMA table_info(leads)")->fetchAll(PDO::FETCH_COLUMN, 1);
-        if (!in_array('buyNowPrice', $cols)) $db->exec("ALTER TABLE leads ADD COLUMN buyNowPrice REAL");
-        if (!in_array('tollFreeNumber', $cols)) $db->exec("ALTER TABLE leads ADD COLUMN tollFreeNumber TEXT");
-        
-        $bid_cols = $db->query("PRAGMA table_info(bids)")->fetchAll(PDO::FETCH_COLUMN, 1);
-        if (!in_array('purchaseMode', $bid_cols)) $db->exec("ALTER TABLE bids ADD COLUMN purchaseMode TEXT");
-        if (!in_array('buyerTollFree', $bid_cols)) $db->exec("ALTER TABLE bids ADD COLUMN buyerTollFree TEXT");
+        // Migration check
+        $cols = $db->query("PRAGMA table_info(users)")->fetchAll(PDO::FETCH_COLUMN, 1);
+        if (!in_array('last_active_at', $cols)) $db->exec("ALTER TABLE users ADD COLUMN last_active_at TEXT");
+        if (!in_array('current_page', $cols)) $db->exec("ALTER TABLE users ADD COLUMN current_page TEXT");
+        if (!in_array('status', $cols)) $db->exec("ALTER TABLE users ADD COLUMN status TEXT DEFAULT 'active'");
+        if (!in_array('totalSpend', $cols)) $db->exec("ALTER TABLE users ADD COLUMN totalSpend REAL DEFAULT 0");
     }
 } catch (PDOException $e) {
     echo json_encode(['error' => 'DATABASE_NODE_OFFLINE', 'message' => $e->getMessage()]);
@@ -58,7 +59,7 @@ $action = $_GET['action'] ?? '';
 switch ($action) {
     case 'get_data':
         echo json_encode([
-            'metadata' => ['version' => '4.1.4-PRO', 'last_updated' => date('Y-m-d H:i:s'), 'db_size' => filesize($db_path), 'status' => 'OPERATIONAL'],
+            'metadata' => ['version' => '4.1.3-PRO', 'last_updated' => date('Y-m-d H:i:s'), 'db_size' => filesize($db_path), 'status' => 'OPERATIONAL'],
             'leads' => $db->query("SELECT * FROM leads")->fetchAll(),
             'users' => $db->query("SELECT * FROM users")->fetchAll(),
             'purchaseRequests' => $db->query("SELECT * FROM bids")->fetchAll(),
@@ -69,34 +70,55 @@ switch ($action) {
         ]);
         break;
 
-    case 'place_bid':
-        $id = 'bid_' . bin2hex(random_bytes(4));
-        $stmt = $db->prepare("INSERT INTO bids (id, leadId, userId, bidAmount, leadsPerDay, totalDailyCost, timestamp, status, buyerBusinessUrl, buyerTargetLeadUrl, buyerTollFree, purchaseMode) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
-        $stmt->execute([$id, $input['leadId'], $input['userId'], $input['bidAmount'], $input['leadsPerDay'], $input['totalDailyCost'], date('Y-m-d H:i:s'), 'approved', $input['buyerBusinessUrl'], $input['buyerTargetLeadUrl'], $input['buyerTollFree'], $input['purchaseMode']]);
-        
-        if ($input['purchaseMode'] === 'bid') {
-            $db->prepare("UPDATE leads SET currentBid = ?, bidCount = bidCount + 1 WHERE id = ?")->execute([$input['bidAmount'], $input['leadId']]);
-        } else {
-            $db->prepare("UPDATE leads SET bidCount = bidCount + 1 WHERE id = ?")->execute([$input['leadId']]);
+    case 'heartbeat':
+        if (isset($input['userId'])) {
+            $sets = ["last_active_at = ?", "current_page = ?"];
+            $params = [date('c'), $input['page']];
+            
+            if (isset($input['location'])) { $sets[] = "location = ?"; $params[] = $input['location']; }
+            if (isset($input['ipAddress'])) { $sets[] = "ipAddress = ?"; $params[] = $input['ipAddress']; }
+            if (isset($input['deviceInfo'])) { $sets[] = "deviceInfo = ?"; $params[] = $input['deviceInfo']; }
+            
+            $params[] = $input['userId'];
+            $stmt = $db->prepare("UPDATE users SET " . implode(", ", $sets) . " WHERE id = ?");
+            $stmt->execute($params);
+            echo json_encode(['status' => 'success']);
         }
-        
-        $db->prepare("UPDATE users SET totalSpend = totalSpend + ? WHERE id = ?")->execute([$input['totalDailyCost'], $input['userId']]);
+        break;
+
+    case 'social_sync':
+        $email = $input['email'];
+        $user_stmt = $db->prepare("SELECT * FROM users WHERE email = ?");
+        $user_stmt->execute([$email]);
+        $user = $user_stmt->fetch();
+
+        if ($user) {
+            echo json_encode(['status' => 'success', 'user' => $user]);
+        } else {
+            $id = 'u_' . bin2hex(random_bytes(4));
+            $username = explode('@', $email)[0] . rand(100, 999);
+            $stmt = $db->prepare("INSERT INTO users (id, name, email, username, profileImage, balance, role, status, stripeConnected, wishlist, last_active_at, current_page) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
+            $stmt->execute([$id, $input['name'], $email, $username, $input['profileImage'], 1000.0, 'user', 'active', 0, '[]', date('c'), 'Marketplace']);
+            
+            $user_stmt->execute([$email]);
+            $new_user = $user_stmt->fetch();
+            echo json_encode(['status' => 'success', 'user' => $new_user]);
+        }
+        break;
+
+    case 'update_auth_config':
+        $stmt = $db->prepare("UPDATE config SET value = ? WHERE key = 'auth_config'");
+        $stmt->execute([json_encode($input)]);
         echo json_encode(['status' => 'success']);
         break;
 
-    case 'update_bid':
-        $id = $input['id'];
-        unset($input['id']);
-        $sets = [];
-        $vals = [];
-        foreach($input as $k => $v) { $sets[] = "$k = ?"; $vals[] = $v; }
-        $vals[] = $id;
-        $db->prepare("UPDATE bids SET " . implode(', ', $sets) . " WHERE id = ?")->execute($vals);
-        
-        // If price changed, update lead current bid
-        if (isset($input['bidAmount']) && isset($input['leadId'])) {
-             $db->prepare("UPDATE leads SET currentBid = ? WHERE id = ? AND currentBid < ?")->execute([$input['bidAmount'], $input['leadId'], $input['bidAmount']]);
-        }
+    case 'place_bid':
+        $id = 'bid_' . bin2hex(random_bytes(4));
+        $stmt = $db->prepare("INSERT INTO bids (id, leadId, userId, bidAmount, leadsPerDay, totalDailyCost, timestamp, status, buyerBusinessUrl, buyerTargetLeadUrl) VALUES (?,?,?,?,?,?,?,?,?,?)");
+        $stmt->execute([$id, $input['leadId'], $input['userId'], $input['bidAmount'], $input['leadsPerDay'], $input['totalDailyCost'], date('Y-m-d H:i:s'), 'approved', $input['buyerBusinessUrl'], $input['buyerTargetLeadUrl']]);
+        $db->prepare("UPDATE leads SET currentBid = ?, bidCount = bidCount + 1 WHERE id = ?")->execute([$input['bidAmount'], $input['leadId']]);
+        // Update user stats
+        $db->prepare("UPDATE users SET totalSpend = totalSpend + ? WHERE id = ?")->execute([$input['totalDailyCost'], $input['userId']]);
         echo json_encode(['status' => 'success']);
         break;
 
@@ -111,10 +133,8 @@ switch ($action) {
         echo json_encode(['status' => 'success']);
         break;
 
-    case 'create_lead':
-        $id = 'lead_' . bin2hex(random_bytes(4));
-        $stmt = $db->prepare("INSERT INTO leads (id, title, category, description, businessUrl, targetLeadUrl, tollFreeNumber, basePrice, buyNowPrice, currentBid, bidCount, timeLeft, qualityScore, sellerRating, status, countryCode, region, ownerId) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
-        $stmt->execute([$id, $input['title'], $input['category'], $input['description'], $input['businessUrl'], $input['targetLeadUrl'], $input['tollFreeNumber'], $input['basePrice'], $input['buyNowPrice'], $input['basePrice'], 0, '24h 0m', $input['qualityScore'], 5.0, 'approved', $input['countryCode'], $input['region'], $input['ownerId']]);
+    case 'delete_lead':
+        $db->prepare("DELETE FROM leads WHERE id = ?")->execute([$input['id']]);
         echo json_encode(['status' => 'success']);
         break;
 
@@ -129,6 +149,32 @@ switch ($action) {
         echo json_encode(['status' => 'success']);
         break;
 
+    case 'create_lead':
+        $id = 'lead_' . bin2hex(random_bytes(4));
+        $stmt = $db->prepare("INSERT INTO leads (id, title, category, description, businessUrl, targetLeadUrl, basePrice, currentBid, bidCount, timeLeft, qualityScore, sellerRating, status, countryCode, region, ownerId) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+        $stmt->execute([$id, $input['title'], $input['category'], $input['description'], $input['businessUrl'], $input['targetLeadUrl'], $input['basePrice'], $input['basePrice'], 0, '24h 0m', $input['qualityScore'], 5.0, 'approved', $input['countryCode'], $input['region'], $input['ownerId']]);
+        echo json_encode(['status' => 'success']);
+        break;
+
+    case 'authenticate_user':
+        $user = $db->prepare("SELECT * FROM users WHERE (username = ? OR email = ?) AND password = ?");
+        $user->execute([$input['username'], $input['username'], $input['token']]);
+        $found = $user->fetch();
+        if ($found) {
+            $db->prepare("UPDATE users SET last_active_at = ?, current_page = 'Authentication' WHERE id = ?")->execute([date('c'), $found['id']]);
+        }
+        echo json_encode(['status' => 'success', 'user' => $found ?: null]);
+        break;
+
+    case 'register_user':
+        $id = 'u_' . bin2hex(random_bytes(4));
+        $stmt = $db->prepare("INSERT INTO users (id, name, email, username, password, phone, ipAddress, deviceInfo, balance, role, status, stripeConnected, wishlist, last_active_at, current_page) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+        $stmt->execute([$id, $input['name'], $input['email'], $input['username'], $input['password'], $input['phone'], $input['ipAddress'], $input['deviceInfo'], 1000.0, 'user', 'active', 0, '[]', date('c'), 'Registration']);
+        $user_stmt = $db->prepare("SELECT * FROM users WHERE id = ?");
+        $user_stmt->execute([$id]);
+        echo json_encode(['status' => 'success', 'user' => $user_stmt->fetch()]);
+        break;
+
     case 'deposit':
         $db->prepare("UPDATE users SET balance = balance + ? WHERE id = ?")->execute([$input['amount'], $input['userId']]);
         echo json_encode(['status' => 'success']);
@@ -136,6 +182,15 @@ switch ($action) {
 
     case 'clear_notifications':
         $db->exec("DELETE FROM notifications");
+        echo json_encode(['status' => 'success']);
+        break;
+
+    case 'update_gateways':
+        $db->prepare("DELETE FROM api_nodes WHERE type='payment'")->execute();
+        foreach($input['gateways'] as $gw) {
+            $stmt = $db->prepare("INSERT INTO api_nodes (id, type, provider, name, publicKey, secretKey, fee, status) VALUES (?,?,?,?,?,?,?,?)");
+            $stmt->execute([$gw['id'], 'payment', $gw['provider'], $gw['name'], $gw['publicKey'], $gw['secretKey'], $gw['fee'], $gw['status']]);
+        }
         echo json_encode(['status' => 'success']);
         break;
 

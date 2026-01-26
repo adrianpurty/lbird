@@ -12,17 +12,16 @@ import {
   Globe, 
   MonitorSmartphone, 
   Briefcase, 
-  MessageSquare, 
   Target, 
   Phone, 
   Link as LinkIcon,
   Activity,
-  Zap,
-  Fingerprint,
-  Database,
   Cpu,
-  ShieldAlert,
-  ArrowRight
+  Database,
+  Fingerprint,
+  Zap,
+  ArrowRight,
+  ShieldAlert
 } from 'lucide-react';
 import { User } from '../types.ts';
 import { NICHE_PROTOCOLS } from '../services/apiService.ts';
@@ -48,39 +47,47 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onUpdate }) => 
     defaultBusinessUrl: user.defaultBusinessUrl || '',
     defaultTargetUrl: user.defaultTargetUrl || ''
   });
-  
   const [isSaving, setIsSaving] = useState(false);
-  const [syncProgress, setSyncProgress] = useState(100);
   const [telemetry, setTelemetry] = useState({
-    ip: user.ipAddress || '0.0.0.0',
-    device: user.deviceInfo || 'ANALYZING...',
-    reputation: 98.4
+    ip: user.ipAddress || 'Detecting...',
+    device: user.deviceInfo || 'Analyzing...',
+    integrity: 98.4
   });
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const detectNode = async () => {
+    const fetchIdentity = async () => {
       let currentIp = user.ipAddress;
       try {
-        const res = await fetch('https://api.ipify.org?format=json');
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 3000);
+        const res = await fetch('https://api.ipify.org?format=json', { signal: controller.signal });
+        clearTimeout(timeout);
         const data = await res.json();
         currentIp = data.ip;
       } catch (err) {
-        currentIp = 'LOCAL_HOST';
+        currentIp = user.ipAddress || 'Restricted Node';
       }
-      
+
       const ua = navigator.userAgent;
-      const platform = navigator.platform;
-      setTelemetry(prev => ({ ...prev, ip: currentIp || '0.0.0.0', device: `${platform} // ${ua.split(') ')[0].split('(')[1]}` }));
+      let deviceType = "Desktop";
+      if (/Mobi|Android/i.test(ua)) deviceType = "Mobile";
+      const specs = `${deviceType} | ${navigator.platform}`;
+
+      setTelemetry(prev => ({ ...prev, ip: currentIp, device: specs }));
     };
-    detectNode();
+
+    fetchIdentity();
   }, [user.ipAddress]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      soundService.playClick(true);
+      if (file.size > 1024 * 1024 * 1.5) {
+        alert("PAYLOAD REJECTED: Image exceeds 1.5MB threshold.");
+        return;
+      }
       const reader = new FileReader();
       reader.onloadend = () => {
         setFormData(prev => ({ ...prev, profileImage: reader.result as string }));
@@ -92,15 +99,11 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onUpdate }) => 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.newPassword && formData.newPassword !== formData.confirmPassword) {
-      soundService.playClick(false);
-      alert("HANDSHAKE_ERROR: SECURITY_TOKENS_MISMATCH");
+      alert("ERROR: Security tokens do not match.");
       return;
     }
-    
-    setIsSaving(true);
-    setSyncProgress(20);
     soundService.playClick(true);
-    
+    setIsSaving(true);
     const updates: Partial<User> = {
       name: formData.name,
       email: formData.email,
@@ -113,306 +116,315 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onUpdate }) => 
       defaultBusinessUrl: formData.defaultBusinessUrl,
       defaultTargetUrl: formData.defaultTargetUrl
     };
-    
     if (formData.newPassword) updates.password = formData.newPassword;
-
-    // Simulation of data commitment
-    const timer = setInterval(() => {
-      setSyncProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(timer);
-          onUpdate(updates);
-          setIsSaving(false);
-          return 100;
-        }
-        return prev + 15;
-      });
-    }, 100);
+    
+    onUpdate(updates);
+    
+    setTimeout(() => {
+      setIsSaving(false);
+      setFormData(prev => ({ ...prev, newPassword: '', confirmPassword: '' }));
+    }, 500);
   };
 
   return (
-    <div className="max-w-[1600px] mx-auto space-y-8 animate-in fade-in duration-700 pb-32">
+    <div className="max-w-[1400px] mx-auto space-y-6 md:space-y-10 pb-32 animate-in fade-in duration-700">
       
-      {/* LANDSCAPE HEADER - TACTICAL HUD */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b-2 border-neutral-900 pb-8">
+      {/* LANDSCAPE HEADER - SALES FLOOR STYLE */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 md:gap-10 border-b-2 border-neutral-900 pb-8 md:pb-12">
         <div className="relative">
-          <div className="absolute -left-4 md:-left-12 top-1/2 -translate-y-1/2 w-4 h-12 md:h-24 bg-[#FACC15] rounded-full blur-xl opacity-10" />
-          <h2 className="text-3xl md:text-5xl font-futuristic font-black text-white italic uppercase tracking-tighter leading-none">
-            IDENTITY <span className="text-[#FACC15]">NODE</span>
+          <div className="absolute -left-4 md:-left-12 top-1/2 -translate-y-1/2 w-4 h-12 md:h-24 bg-[#00e5ff] rounded-full blur-xl opacity-20" />
+          <h2 className="text-3xl md:text-4xl font-futuristic text-white italic uppercase flex items-center gap-4 md:gap-8 text-glow">
+            IDENTITY <span className="text-neutral-600 font-normal">NODE</span>
           </h2>
-          <div className="flex flex-wrap items-center gap-3 md:gap-6 mt-4">
-            <div className="px-3 py-1 bg-[#FACC15]/10 border border-[#FACC15]/30 rounded-full text-[8px] md:text-[10px] font-black text-[#FACC15] uppercase tracking-[0.4em]">PRO_ACCOUNT_V4</div>
-            <span className="text-[10px] text-neutral-600 font-black uppercase tracking-[0.4em] italic flex items-center gap-2">
-              <Activity size={12} className="text-emerald-500 animate-pulse" /> SYNC_STABLE // 0.02ms
-            </span>
+          <div className="flex flex-wrap items-center gap-3 md:gap-6 mt-4 md:mt-6">
+            <div className="px-3 md:px-4 py-1.5 bg-[#00e5ff]/10 border border-[#00e5ff]/30 rounded-full text-[8px] md:text-[10px] font-black text-[#00e5ff] uppercase tracking-widest">AUTHENTICATED_TRADER_v4</div>
+            <span className="text-[10px] md:text-[12px] text-neutral-600 font-bold uppercase tracking-widest italic shrink-0">STATE_IMMUTABLE // {user.role.toUpperCase()}</span>
           </div>
         </div>
-        
-        <div className="flex items-center gap-4 bg-[#1A1A1A] border-2 border-white/5 rounded-3xl p-4 md:p-6 shadow-2xl">
-          <div className="w-10 h-10 bg-black/40 rounded-xl flex items-center justify-center text-[#FACC15]">
-            <Fingerprint size={20} />
-          </div>
-          <div>
-            <span className="text-[8px] font-black text-neutral-600 uppercase tracking-widest block mb-1">REPUTATION_SCORE</span>
-            <div className="flex items-center gap-3">
-              <span className="text-xl font-tactical text-white tracking-widest leading-none">{telemetry.reputation}%</span>
-              <div className="w-24 h-1.5 bg-black rounded-full overflow-hidden border border-white/5">
-                <div className="h-full bg-emerald-500 shadow-[0_0_10px_#10b981]" style={{ width: `${telemetry.reputation}%` }} />
-              </div>
+        <div className="flex items-center gap-4 md:gap-6 w-full md:w-auto">
+          <div className="flex-1 md:flex-none p-4 md:p-6 bg-[#0f0f0f] border-2 border-neutral-900 rounded-[1.5rem] md:rounded-3xl shadow-2xl flex items-center gap-4 md:gap-6 group hover:border-[#00e5ff]/50 transition-all cursor-default">
+            <div className="w-10 md:w-14 h-10 md:h-14 bg-[#00e5ff]/10 rounded-xl md:rounded-2xl flex items-center justify-center text-[#00e5ff] group-hover:scale-110 transition-transform shrink-0">
+              <ShieldCheck size={24} className="md:w-7 md:h-7" />
+            </div>
+            <div>
+              <span className="text-[8px] md:text-[10px] font-black text-neutral-600 uppercase tracking-widest block mb-1">NODE_TRUST_Q</span>
+              <span className="text-xl md:text-3xl font-tactical text-white tracking-widest leading-none text-glow">{telemetry.integrity}%</span>
             </div>
           </div>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+      {/* TELEMETRY HUD */}
+      <div className="bg-[#0f0f0f] border border-neutral-800/60 rounded-[1.5rem] p-4 md:p-6 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl">
+        <div className="flex items-center gap-8 md:gap-12 overflow-x-auto scrollbar-hide w-full">
+          <div className="flex flex-col shrink-0">
+            <span className="text-neutral-700 font-black uppercase text-[8px] tracking-widest mb-1">Identity Health</span>
+            <div className="text-lg md:text-xl font-black text-emerald-500/80 italic flex items-center gap-2 md:gap-3 font-tactical tracking-widest leading-none">
+              <Activity size={14} className="animate-pulse" /> 100.0%_SYNC
+            </div>
+          </div>
+          <div className="hidden md:block h-10 w-px bg-neutral-800 shrink-0" />
+          <div className="flex flex-col shrink-0">
+            <span className="text-neutral-700 font-black uppercase text-[8px] tracking-widest mb-1">Authorization</span>
+            <div className="text-base md:text-lg font-black text-neutral-400 italic font-tactical tracking-widest uppercase leading-none">{user.role}</div>
+          </div>
+          <div className="hidden md:block h-10 w-px bg-neutral-800 shrink-0" />
+          <div className="flex flex-col shrink-0">
+            <span className="text-neutral-700 font-black uppercase text-[8px] tracking-widest mb-1">IP_Origin</span>
+            <div className="text-xs md:text-sm font-bold text-neutral-500 font-mono tracking-widest leading-none">{telemetry.ip}</div>
+          </div>
+        </div>
         
-        {/* LEFT COLUMN: IDENTITY SIGNATURE (Col 3) */}
-        <div className="lg:col-span-3 space-y-6 flex flex-col">
-          <div className="bg-black p-8 rounded-[3rem] border border-[#1A1A1A] flex flex-col items-center text-center shadow-2xl relative overflow-hidden group flex-1">
+        <div className="flex items-center gap-4 bg-black/40 p-1.5 rounded-xl border border-neutral-800/40 shrink-0 w-full md:w-auto">
+           <div className="flex flex-col items-end px-3 flex-1 md:flex-none">
+             <span className="text-[7px] font-black text-neutral-600 uppercase tracking-widest">Protocol</span>
+             <span className="text-[10px] font-bold text-neutral-400 font-mono uppercase tracking-widest leading-none">V4.2.0_SECURE</span>
+           </div>
+           <div className="h-6 w-px bg-neutral-800/60 hidden md:block" />
+           <div className="px-3 flex items-center gap-2 flex-1 md:flex-none justify-center">
+              <Fingerprint size={14} className="text-[#00e5ff]/40" />
+              <span className="text-[10px] font-black text-[#00e5ff] uppercase tracking-widest font-tactical">ACTIVE_SESSION</span>
+           </div>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
+        
+        {/* LEFT COLUMN: IDENTITY & BI (Col 8) */}
+        <div className="lg:col-span-8 space-y-6 md:space-y-8 order-2 lg:order-1">
+          
+          {/* GENERAL INFO SECTOR */}
+          <div className="bg-[#0c0c0c]/90 rounded-[2rem] md:rounded-[3rem] border-2 border-neutral-900 p-6 md:p-10 shadow-2xl relative overflow-hidden scanline-effect group">
             <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity">
               <UserIcon size={120} />
             </div>
+            
+            <h3 className="text-[10px] font-black text-neutral-600 uppercase tracking-widest mb-8 md:mb-10 flex items-center gap-3">
+              <Cpu size={14} className="text-[#00e5ff]" /> Sector_01 // Generic_Identity
+            </h3>
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 mb-8 md:mb-10">
+              <div className="space-y-3">
+                <label className="text-[9px] md:text-[10px] font-black text-neutral-700 uppercase tracking-widest px-2 italic">LEGAL_IDENTITY_STRING</label>
+                <div className="relative group">
+                  <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700 group-focus-within:text-[#00e5ff] transition-colors" size={16} />
+                  <input 
+                    required
+                    className="w-full bg-black/40 border-2 border-neutral-800 rounded-xl md:rounded-2xl pl-12 pr-6 py-4 text-white font-bold outline-none focus:border-[#00e5ff]/60 transition-all placeholder:text-neutral-900"
+                    value={formData.name}
+                    onChange={e => setFormData({...formData, name: e.target.value})}
+                  />
+                </div>
+              </div>
+              <div className="space-y-3">
+                <label className="text-[9px] md:text-[10px] font-black text-neutral-700 uppercase tracking-widest px-2 italic">COMM_NODE_VECTOR (EMAIL)</label>
+                <div className="relative group">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700 group-focus-within:text-[#00e5ff] transition-colors" size={16} />
+                  <input 
+                    type="email"
+                    required
+                    className="w-full bg-black/40 border-2 border-neutral-800 rounded-xl md:rounded-2xl pl-12 pr-6 py-4 text-white font-bold outline-none focus:border-[#00e5ff]/60 transition-all placeholder:text-neutral-900"
+                    value={formData.email}
+                    onChange={e => setFormData({...formData, email: e.target.value})}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <label className="text-[9px] md:text-[10px] font-black text-neutral-700 uppercase tracking-widest px-2 italic">BIOGRAPHICAL_MANIFEST</label>
+              <div className="relative group">
+                <FileText className="absolute left-4 top-5 text-neutral-700 group-focus-within:text-[#00e5ff] transition-colors" size={16} />
+                <textarea 
+                  rows={4}
+                  className="w-full bg-black/40 border-2 border-neutral-800 rounded-2xl md:rounded-3xl pl-12 pr-6 py-4 text-neutral-300 outline-none focus:border-[#00e5ff]/60 transition-all resize-none italic text-sm md:text-base leading-relaxed"
+                  placeholder="Document your professional market footprint..."
+                  value={formData.bio}
+                  onChange={e => setFormData({...formData, bio: e.target.value})}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* BUSINESS INTELLIGENCE SECTOR */}
+          <div className="bg-[#0c0c0c]/90 rounded-[2rem] md:rounded-[3rem] border-2 border-neutral-900 p-6 md:p-10 shadow-2xl relative overflow-hidden group">
+            <h3 className="text-[10px] font-black text-neutral-600 uppercase tracking-widest mb-8 md:mb-10 flex items-center gap-3">
+              <Briefcase size={14} className="text-[#00e5ff]" /> Sector_02 // Business_Intelligence
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 mb-8 md:mb-10">
+              <div className="space-y-3">
+                <label className="text-[9px] md:text-[10px] font-black text-neutral-700 uppercase tracking-widest px-2 italic">CORPORATE_ENDPOINT_URL</label>
+                <div className="relative group">
+                  <Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700 group-focus-within:text-[#00e5ff] transition-colors" size={16} />
+                  <input 
+                    type="url"
+                    className="w-full bg-black/40 border-2 border-neutral-800 rounded-xl md:rounded-2xl pl-12 pr-6 py-4 text-neutral-400 font-mono text-xs outline-none focus:border-[#00e5ff]/60 transition-all"
+                    placeholder="https://hq.company.io"
+                    value={formData.companyWebsite}
+                    onChange={e => setFormData({...formData, companyWebsite: e.target.value})}
+                  />
+                </div>
+              </div>
+              <div className="space-y-3">
+                <label className="text-[9px] md:text-[10px] font-black text-neutral-700 uppercase tracking-widest px-2 italic">MARKET_SECTOR_FOCUS</label>
+                <div className="relative group">
+                  <Target className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700 group-focus-within:text-[#00e5ff] transition-colors" size={16} />
+                  <select 
+                    className="w-full bg-black/40 border-2 border-neutral-800 rounded-xl md:rounded-2xl pl-12 pr-10 py-4 text-white font-bold outline-none focus:border-[#00e5ff]/60 transition-all appearance-none cursor-pointer uppercase text-xs tracking-widest"
+                    value={formData.industryFocus}
+                    onChange={e => setFormData({...formData, industryFocus: e.target.value})}
+                  >
+                    <option value="">GENERAL_MARKET</option>
+                    {Object.values(NICHE_PROTOCOLS).flat().sort().map(niche => (
+                      <option key={niche} value={niche}>{niche.toUpperCase()}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <label className="text-[9px] md:text-[10px] font-black text-neutral-700 uppercase tracking-widest px-2 italic">COMM_HANDSHAKE_PROTOCOL</label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {['email', 'phone', 'whatsapp', 'telegram'].map((method) => (
+                  <button
+                    key={method}
+                    type="button"
+                    onClick={() => { soundService.playClick(); setFormData({...formData, preferredContact: method}); }}
+                    className={`py-4 rounded-xl md:rounded-2xl border-2 text-[9px] font-black uppercase tracking-widest transition-all ${
+                      formData.preferredContact === method 
+                        ? 'bg-[#00e5ff] text-black border-[#00e5ff] shadow-lg shadow-[#00e5ff]/10' 
+                        : 'bg-black/40 text-neutral-500 border-neutral-800 hover:border-neutral-700 hover:text-white'
+                    }`}
+                  >
+                    {method}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN: SECURITY & SIGNATURE (Col 4) */}
+        <div className="lg:col-span-4 space-y-6 md:space-y-8 order-1 lg:order-2">
+          
+          {/* PROFILE IMAGE SIGNATURE */}
+          <div className="bg-[#0f0f0f] p-8 rounded-[2.5rem] border-2 border-neutral-900 text-center space-y-8 shadow-xl relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity">
+              <Zap size={80} />
+            </div>
+            
             <div 
-              className="relative cursor-pointer group/avatar"
-              onClick={() => { soundService.playClick(true); fileInputRef.current?.click(); }}
+              className="relative inline-block cursor-pointer"
+              onClick={() => fileInputRef.current?.click()}
             >
-              <div className="w-40 h-40 rounded-[2.5rem] border-4 border-neutral-800 p-2 overflow-hidden bg-black transition-all group-hover/avatar:border-[#FACC15]/50 group-hover/avatar:rotate-2 shadow-2xl">
+              <div className="w-32 h-32 md:w-40 md:h-40 rounded-[2rem] border-4 border-neutral-800 overflow-hidden bg-black flex items-center justify-center text-neutral-700 group-hover:border-[#00e5ff]/40 transition-all shadow-2xl relative z-10">
                 {formData.profileImage ? (
-                  <img src={formData.profileImage} className="w-full h-full object-cover rounded-[1.8rem] grayscale group-hover/avatar:grayscale-0 transition-all" alt="Avatar" />
+                  <img src={formData.profileImage} alt={formData.name} className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full bg-[#1A1A1A] flex items-center justify-center text-neutral-800">
-                    <UserIcon size={64} />
-                  </div>
+                  <UserIcon size={48} className="md:w-16 md:h-16" />
                 )}
               </div>
-              <div className="absolute -bottom-2 -right-2 bg-[#FACC15] text-black p-3 rounded-2xl shadow-xl group-hover/avatar:scale-110 transition-transform border-4 border-black">
-                <Camera size={20} />
+              <div className="absolute -bottom-2 -right-2 bg-[#00e5ff] text-black p-3 rounded-xl shadow-lg hover:scale-110 transition-transform z-20">
+                <Camera size={18} />
               </div>
               <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
             </div>
-
-            <div className="mt-8 space-y-2">
-              <h3 className="text-2xl font-black text-white italic font-futuristic tracking-tighter">{formData.name || 'ANON_TRADER'}</h3>
-              <p className="text-[10px] text-neutral-600 font-black uppercase tracking-[0.3em]">NODE_IDENTIFIER: {user.id.slice(0, 8)}</p>
+            
+            <div className="relative z-10">
+              <h4 className="text-xl md:text-2xl font-black text-white italic uppercase tracking-tighter leading-none">{formData.name || 'UNNAMED_NODE'}</h4>
+              <p className="text-[9px] text-neutral-600 font-black uppercase tracking-widest mt-2">ACCESS_LEVEL: {user.role.toUpperCase()}</p>
             </div>
 
-            <div className="w-full mt-10 space-y-4 pt-8 border-t border-[#1A1A1A]">
-               <div className="flex justify-between items-center px-2">
-                  <span className="text-[8px] font-black text-neutral-700 uppercase tracking-widest">NETWORK_SYNC</span>
-                  <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest">{syncProgress}%</span>
-               </div>
-               <div className="w-full h-1 bg-neutral-900 rounded-full overflow-hidden">
-                  <div className={`h-full transition-all duration-500 ${isSaving ? 'bg-[#FACC15] animate-pulse' : 'bg-emerald-500'}`} style={{ width: `${syncProgress}%` }} />
-               </div>
-            </div>
-
-            <div className="mt-auto pt-10 space-y-3 w-full">
-              <div className="bg-[#1A1A1A]/40 p-4 rounded-2xl border border-white/5 flex items-center justify-between group/item hover:border-[#FACC15]/20 transition-all">
-                <span className="text-[9px] font-black text-neutral-600 uppercase tracking-widest flex items-center gap-2">
-                  <Globe size={12} className="text-[#FACC15]" /> Node_IP
-                </span>
-                <span className="text-[10px] font-mono text-neutral-400">{telemetry.ip}</span>
-              </div>
-              <div className="bg-[#1A1A1A]/40 p-4 rounded-2xl border border-white/5 flex flex-col gap-2 group/item hover:border-[#FACC15]/20 transition-all">
-                <span className="text-[9px] font-black text-neutral-600 uppercase tracking-widest flex items-center gap-2">
-                  <MonitorSmartphone size={12} className="text-[#FACC15]" /> Signature
-                </span>
-                <span className="text-[8px] font-mono text-neutral-500 text-left line-clamp-1">{telemetry.device}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* MIDDLE COLUMN: DATA TERMINAL (Col 6) */}
-        <div className="lg:col-span-6 space-y-8">
-          <div className="bg-black rounded-[3rem] border-2 border-[#1A1A1A] p-8 md:p-12 shadow-2xl relative overflow-hidden scanline-effect group">
-            <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity">
-              <Database size={120} />
-            </div>
-
-            <div className="space-y-10">
-               <div className="flex items-center gap-4 border-b border-[#1A1A1A] pb-6">
-                 <div className="w-10 h-10 bg-[#FACC15]/10 rounded-xl flex items-center justify-center text-[#FACC15]">
-                   <UserIcon size={20} />
-                 </div>
-                 <h3 className="text-xl font-black text-white uppercase tracking-tight italic">DATA_NODE_GENERAL</h3>
-               </div>
-
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-3">
-                     <label className="text-[10px] font-black text-neutral-600 uppercase tracking-[0.3em] px-2 italic">Legal_Entity_Name</label>
-                     <input 
-                      className="w-full bg-black border-2 border-neutral-800 rounded-2xl px-6 py-4 text-white font-bold outline-none focus:border-[#FACC15]/40 transition-all placeholder:text-neutral-900"
-                      value={formData.name}
-                      onChange={e => { soundService.playClick(); setFormData({...formData, name: e.target.value}); }}
-                     />
-                  </div>
-                  <div className="space-y-3">
-                     <label className="text-[10px] font-black text-neutral-600 uppercase tracking-[0.3em] px-2 italic">Contact_Vector</label>
-                     <input 
-                      type="email"
-                      className="w-full bg-black border-2 border-neutral-800 rounded-2xl px-6 py-4 text-white font-bold outline-none focus:border-[#FACC15]/40 transition-all placeholder:text-neutral-900"
-                      value={formData.email}
-                      onChange={e => { soundService.playClick(); setFormData({...formData, email: e.target.value}); }}
-                     />
-                  </div>
-               </div>
-
-               <div className="space-y-3">
-                  <label className="text-[10px] font-black text-neutral-600 uppercase tracking-[0.3em] px-2 italic flex items-center gap-2">
-                    <MessageSquare size={14} className="text-[#FACC15]" /> Professional_Payload (Bio)
-                  </label>
-                  <textarea 
-                    rows={4}
-                    className="w-full bg-black border-2 border-neutral-800 rounded-[2rem] px-8 py-6 text-neutral-400 font-bold outline-none focus:border-[#FACC15]/40 transition-all resize-none italic"
-                    placeholder="ESTABLISH MARKET FOOTPRINT..."
-                    value={formData.bio}
-                    onChange={e => { soundService.playClick(); setFormData({...formData, bio: e.target.value}); }}
-                  />
-               </div>
-
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black text-neutral-600 uppercase tracking-[0.3em] px-2 italic">Industry_Sector</label>
-                    <div className="relative">
-                      <select 
-                        className="w-full bg-black border-2 border-neutral-800 rounded-2xl px-6 py-4 text-white font-bold outline-none focus:border-[#FACC15]/40 transition-all appearance-none cursor-pointer uppercase text-xs tracking-widest font-tactical"
-                        value={formData.industryFocus}
-                        onChange={e => { soundService.playClick(); setFormData({...formData, industryFocus: e.target.value}); }}
-                      >
-                        <option value="">SELECT_PROTOCOL</option>
-                        {Object.values(NICHE_PROTOCOLS).flat().sort().map(niche => (
-                          <option key={niche} value={niche}>{niche}</option>
-                        ))}
-                      </select>
-                      <Target size={16} className="absolute right-6 top-1/2 -translate-y-1/2 text-neutral-700 pointer-events-none" />
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                     <label className="text-[10px] font-black text-neutral-600 uppercase tracking-[0.3em] px-2 italic">Comms_Node (Phone)</label>
-                     <input 
-                      className="w-full bg-black border-2 border-neutral-800 rounded-2xl px-6 py-4 text-white font-bold outline-none focus:border-[#FACC15]/40 transition-all placeholder:text-neutral-900"
-                      placeholder="+1 000 000 0000"
-                      value={formData.phone}
-                      onChange={e => { soundService.playClick(); setFormData({...formData, phone: e.target.value}); }}
-                     />
-                  </div>
-               </div>
-            </div>
-          </div>
-
-          <div className="bg-[#1A1A1A] border border-white/5 rounded-[2.5rem] p-8 md:p-12 shadow-xl">
-             <div className="flex items-center gap-4 mb-8">
-               <div className="w-10 h-10 bg-black/40 rounded-xl flex items-center justify-center text-[#FACC15]">
-                 <Briefcase size={20} />
-               </div>
-               <h3 className="text-xl font-black text-white uppercase tracking-tight italic">BUSINESS_LOGIC_DEFAULTS</h3>
-             </div>
-             
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-3">
-                   <label className="text-[10px] font-black text-neutral-600 uppercase tracking-[0.3em] px-2 italic">Origin_Business_URL</label>
-                   <div className="relative">
-                      <Globe size={14} className="absolute left-6 top-1/2 -translate-y-1/2 text-neutral-700" />
-                      <input 
-                        type="url"
-                        className="w-full bg-black border border-[#1A1A1A] rounded-2xl pl-12 pr-6 py-4 text-[#FACC15] font-mono text-xs outline-none focus:border-[#FACC15]/50 transition-all"
-                        placeholder="https://hq.node.com"
-                        value={formData.defaultBusinessUrl}
-                        onChange={e => setFormData({...formData, defaultBusinessUrl: e.target.value})}
-                      />
-                   </div>
-                </div>
-                <div className="space-y-3">
-                   <label className="text-[10px] font-black text-neutral-600 uppercase tracking-[0.3em] px-2 italic">Target_Provision_API</label>
-                   <div className="relative">
-                      <Target size={14} className="absolute left-6 top-1/2 -translate-y-1/2 text-neutral-700" />
-                      <input 
-                        type="url"
-                        className="w-full bg-black border border-[#1A1A1A] rounded-2xl pl-12 pr-6 py-4 text-[#FACC15] font-mono text-xs outline-none focus:border-[#FACC15]/50 transition-all"
-                        placeholder="https://leads.crm-target.io"
-                        value={formData.defaultTargetUrl}
-                        onChange={e => setFormData({...formData, defaultTargetUrl: e.target.value})}
-                      />
-                   </div>
-                </div>
-             </div>
-          </div>
-        </div>
-
-        {/* RIGHT COLUMN: SECURITY & COMMITS (Col 3) */}
-        <div className="lg:col-span-3 space-y-8 flex flex-col">
-          <div className="bg-black p-8 rounded-[3rem] border border-[#1A1A1A] shadow-2xl flex flex-col flex-1 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity">
-              <Lock size={120} />
-            </div>
-
-            <div className="flex items-center gap-4 border-b border-[#1A1A1A] pb-6 mb-8">
-               <div className="w-10 h-10 bg-red-950/20 rounded-xl flex items-center justify-center text-red-500">
-                 <ShieldAlert size={20} />
-               </div>
-               <h3 className="text-xl font-black text-white uppercase tracking-tight italic">SECURITY_NODE</h3>
-            </div>
-
-            <div className="space-y-6">
-               <div className="space-y-3">
-                  <label className="text-[10px] font-black text-neutral-600 uppercase tracking-widest px-2">New_Access_Token</label>
-                  <input 
-                    type="password"
-                    className="w-full bg-black border-2 border-neutral-800 rounded-2xl px-6 py-4 text-white font-bold outline-none focus:border-red-500/40 transition-all"
-                    placeholder="••••••••"
-                    value={formData.newPassword}
-                    onChange={e => setFormData({...formData, newPassword: e.target.value})}
-                  />
-               </div>
-               <div className="space-y-3">
-                  <label className="text-[10px] font-black text-neutral-600 uppercase tracking-widest px-2">Verify_Token</label>
-                  <input 
-                    type="password"
-                    className="w-full bg-black border-2 border-neutral-800 rounded-2xl px-6 py-4 text-white font-bold outline-none focus:border-red-500/40 transition-all"
-                    placeholder="••••••••"
-                    value={formData.confirmPassword}
-                    onChange={e => setFormData({...formData, confirmPassword: e.target.value})}
-                  />
-               </div>
-            </div>
-
-            <div className="mt-10 p-6 bg-[#1A1A1A]/40 rounded-[2rem] border border-white/5 space-y-4">
-               <div className="flex items-center gap-3 text-emerald-500">
-                  <ShieldCheck size={16} />
-                  <span className="text-[10px] font-black uppercase tracking-widest">ENCRYPTION_AES_256</span>
-               </div>
-               <p className="text-[9px] text-neutral-600 font-medium leading-relaxed uppercase italic tracking-tighter">
-                 ALL_IDENTITY_CHANGES_ARE_FINALIZED_ON_THE_GLOBAL_LEDGER. TRACE_LOGS_ENABLED.
-               </p>
-            </div>
-
-            <div className="mt-auto pt-10">
+            <div className="pt-4 border-t border-neutral-800/40 relative z-10">
                <button 
                 type="submit"
                 disabled={isSaving}
-                className={`w-full py-6 rounded-[2rem] font-black text-2xl uppercase italic tracking-widest transition-all border-b-8 active:border-b-0 active:translate-y-2 shadow-2xl font-tactical flex items-center justify-center gap-4 ${
-                  isSaving 
-                    ? 'bg-neutral-800 text-neutral-600 border-black animate-pulse' 
-                    : 'bg-[#FACC15] text-black border-yellow-800 hover:bg-white'
-                }`}
+                className="w-full py-6 md:py-8 rounded-xl md:rounded-[2.5rem] font-black text-xl md:text-2xl transition-all transform active:scale-[0.98] border-b-8 md:border-b-[12px] font-tactical italic tracking-widest bg-black text-white border-neutral-800 hover:bg-neutral-900 shadow-[0_20px_50px_rgba(0,0,0,0.8)] flex items-center justify-center gap-4"
               >
-                {isSaving ? <LoaderIcon /> : <><Save size={24} /> COMMIT_SYNC</>}
+                {isSaving ? <RefreshCw className="animate-spin" size={24} /> : <Save size={24} />}
+                {isSaving ? 'SYNCING...' : 'COMMIT_DATA'}
               </button>
+            </div>
+          </div>
+
+          {/* SECURITY PROTOCOL SECTOR */}
+          <div className="bg-[#0f0f0f] p-8 rounded-[2.5rem] border-2 border-neutral-900 space-y-6 shadow-xl">
+            <h3 className="text-[10px] font-black text-neutral-600 uppercase tracking-widest flex items-center gap-3">
+              <Lock size={14} className="text-red-500" /> Sector_03 // Security_Sync
+            </h3>
+            
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-[9px] font-black text-neutral-700 uppercase tracking-widest px-1">NEW_SECURITY_TOKEN</label>
+                <input 
+                  type="password"
+                  autoComplete="new-password"
+                  className="w-full bg-black border border-neutral-800 rounded-xl px-5 py-3 text-neutral-400 focus:border-red-500/40 outline-none transition-all placeholder:text-neutral-900"
+                  placeholder="••••••••"
+                  value={formData.newPassword}
+                  onChange={e => setFormData({...formData, newPassword: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[9px] font-black text-neutral-700 uppercase tracking-widest px-1">VERIFY_TOKEN_SIGNATURE</label>
+                <input 
+                  type="password"
+                  className="w-full bg-black border border-neutral-800 rounded-xl px-5 py-3 text-neutral-400 focus:border-red-500/40 outline-none transition-all placeholder:text-neutral-900"
+                  placeholder="••••••••"
+                  value={formData.confirmPassword}
+                  onChange={e => setFormData({...formData, confirmPassword: e.target.value})}
+                />
+              </div>
+            </div>
+
+            <div className="p-4 bg-red-950/10 border border-red-900/20 rounded-2xl flex items-start gap-3">
+               <ShieldAlert size={14} className="text-red-500 shrink-0 mt-0.5" />
+               <p className="text-[8px] text-red-900 font-bold uppercase tracking-widest leading-relaxed italic">
+                 Modifying tokens triggers global logout of all secondary active nodes.
+               </p>
+            </div>
+          </div>
+
+          {/* PRESENCE SIGNATURE WIDGET */}
+          <div className="bg-blue-500/5 border border-blue-500/10 p-6 md:p-8 rounded-[2rem] space-y-6 shadow-sm">
+            <h4 className="text-[10px] font-black text-neutral-400 uppercase tracking-widest flex items-center gap-3 font-futuristic">
+              <Globe size={14} className="text-blue-500" /> Identity_Signature
+            </h4>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center group/item">
+                <span className="text-neutral-600 text-[9px] font-black uppercase tracking-widest">Node IP</span>
+                <span className="text-emerald-500 font-black text-[10px] font-mono tracking-widest">{telemetry.ip}</span>
+              </div>
+              <div className="flex justify-between items-start gap-4 group/item">
+                <span className="text-neutral-600 text-[9px] font-black uppercase tracking-widest whitespace-nowrap"><MonitorSmartphone size={10} /> Terminal</span>
+                <span className="text-neutral-400 font-bold text-[9px] text-right break-words tracking-tighter">{telemetry.device}</span>
+              </div>
+              <div className="pt-3 flex justify-between items-center border-t border-blue-500/10">
+                <span className="text-neutral-600 text-[9px] font-black uppercase tracking-widest">Status</span>
+                <span className="text-emerald-500 font-black text-[10px] tracking-widest flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]" />
+                  SECURE_HANDSHAKE
+                </span>
+              </div>
             </div>
           </div>
         </div>
       </form>
+
+      {/* FOOTER DISCLOSURE */}
+      <div className="bg-[#0f0f0f] border-2 border-neutral-900 p-6 md:p-8 rounded-2xl md:rounded-[2.5rem] flex items-start gap-4 md:gap-6 shadow-xl max-w-4xl mx-auto mt-8">
+        <Database className="text-neutral-700 shrink-0" size={20} md:size={24} />
+        <div>
+           <h4 className="text-[9px] md:text-[11px] font-black text-neutral-400 uppercase tracking-widest mb-1">DATA_PERSISTENCE_CONSENT</h4>
+           <p className="text-[8px] md:text-[10px] text-neutral-600 font-medium leading-relaxed uppercase italic tracking-tighter">
+             By committing these updates, you certify that the identity signature is accurate and compliant with the LeadBid transparency framework. Profile metadata is indexed for market routing and behavioral telemetry auditing.
+           </p>
+        </div>
+      </div>
     </div>
   );
 };
-
-const LoaderIcon = () => (
-  <div className="flex items-center gap-3">
-    <RefreshCw size={24} className="animate-spin" />
-    <span>SYNCING...</span>
-  </div>
-);
 
 export default ProfileSettings;
