@@ -1,27 +1,23 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Zap, 
+  Mail, 
   User as UserIcon, 
+  Lock, 
+  Phone, 
+  Globe, 
   Loader2, 
   ShieldCheck, 
-  Activity,
-  Fingerprint,
-  Monitor,
-  Mail,
-  ShieldAlert,
-  Rocket,
-  Cpu,
-  ChevronRight,
-  Chrome,
   Facebook,
-  ChevronLeft,
-  Globe,
-  Terminal
+  Terminal,
+  Cpu,
+  Activity,
+  Shield,
+  Fingerprint,
+  ArrowRight
 } from 'lucide-react';
 import { User, OAuthConfig } from '../types.ts';
 import { apiService } from '../services/apiService.ts';
-import { soundService } from '../services/soundService.ts';
 
 interface SignupProps {
   onSignup: (user: User) => void;
@@ -40,313 +36,380 @@ const Signup: React.FC<SignupProps> = ({ onSignup, onSwitchToLogin, authConfig }
   const [isSyncing, setIsSyncing] = useState(false);
   const [error, setError] = useState('');
 
-  // Initialize Social SDKs for Provisioning
   useEffect(() => {
-    // 1. Google Identity Services
     if (authConfig?.googleEnabled && authConfig.googleClientId) {
-      const initGoogle = () => {
-        if ((window as any).google) {
-          (window as any).google.accounts.id.initialize({
-            client_id: authConfig.googleClientId,
-            callback: handleGoogleResponse
-          });
-        }
-      };
-
-      if (!(window as any).google) {
+      if (!document.getElementById('google-jssdk')) {
         const script = document.createElement('script');
+        script.id = 'google-jssdk';
         script.src = "https://accounts.google.com/gsi/client";
         script.async = true;
         script.defer = true;
-        script.onload = initGoogle;
+        script.onload = () => {
+          (window as any).google?.accounts.id.initialize({
+            client_id: authConfig.googleClientId,
+            callback: handleSocialSync,
+          });
+        };
         document.head.appendChild(script);
-      } else {
-        initGoogle();
       }
     }
 
-    // 2. Facebook SDK
-    if (authConfig?.facebookEnabled && authConfig.facebookAppId) {
-      (window as any).fbAsyncInit = function() {
-        (window as any).FB.init({
-          appId      : authConfig.facebookAppId,
-          cookie     : true,
-          xfbml      : true,
-          version    : 'v18.0'
-        });
-      };
-
-      if (!(window as any).FB) {
+    if (authConfig?.facebookEnabled && authConfig.facebookAppId && !(window as any).FB) {
+      if (!document.getElementById('facebook-jssdk')) {
         const script = document.createElement('script');
+        script.id = 'facebook-jssdk';
         script.src = "https://connect.facebook.net/en_US/sdk.js";
         script.async = true;
         script.defer = true;
+        script.onload = () => {
+          (window as any).FB.init({
+            appId: authConfig.facebookAppId,
+            cookie: true,
+            xfbml: true,
+            version: 'v18.0'
+          });
+        };
         document.head.appendChild(script);
       }
     }
   }, [authConfig]);
 
-  const handleGoogleResponse = async (response: any) => {
+  const handleSocialSync = async (response: any) => {
     setIsSyncing(true);
-    soundService.playClick(true);
     try {
       const base64Url = response.credential.split('.')[1];
       const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
       const payload = JSON.parse(window.atob(base64));
-      
+
       const syncedUser = await apiService.socialSync({
         name: payload.name,
         email: payload.email,
         profileImage: payload.picture
       });
-      
-      onSignup({ ...syncedUser, location: "NODE_PROVISION_GOOGLE" } as User);
+
+      onSignup({ ...syncedUser, deviceInfo: getDeviceInfo() } as User);
     } catch (err) {
-      setError('PROVISION_ERROR: GOOGLE_SYNC_FAILED');
-    } finally {
+      setError('Social Handshake Failed');
       setIsSyncing(false);
     }
   };
 
-  const triggerSocialAuth = (provider: 'google' | 'meta') => {
-    soundService.playClick(true);
-    if (provider === 'google') {
-      if (!authConfig?.googleEnabled) {
-        setError('PROTOCOL_DISABLED: GOOGLE_SSO_OFFLINE');
-        return;
-      }
-      if ((window as any).google) {
-        (window as any).google.accounts.id.prompt();
-      } else {
-        setError('NETWORK_ERROR: GOOGLE_SDK_OFFLINE');
-      }
-    } else {
-      if (!authConfig?.facebookEnabled) {
-        setError('PROTOCOL_DISABLED: META_SSO_OFFLINE');
-        return;
-      }
-      
-      if (!(window as any).FB) {
-        // Simulation for Meta Handshake if script blocked
-        setIsSyncing(true);
-        setTimeout(async () => {
+  const handleFacebookSignup = () => {
+    if (!(window as any).FB) return;
+    setIsSyncing(true);
+    (window as any).FB.login(async (response: any) => {
+      if (response.authResponse) {
+        (window as any).FB.api('/me', { fields: 'name,email,picture' }, async (userData: any) => {
           try {
             const syncedUser = await apiService.socialSync({
-              name: "Meta Explorer",
-              email: "social.node@meta.internal",
-              profileImage: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop"
+              name: userData.name,
+              email: userData.email,
+              profileImage: userData.picture?.data?.url
             });
-            onSignup({ ...syncedUser, location: "NODE_PROVISION_META_SIM" } as User);
+            onSignup({ ...syncedUser, deviceInfo: getDeviceInfo() } as User);
           } catch (err) {
-            setError('PROVISION_ERROR: META_SYNC_FAILED');
+            setError('Meta Handshake Failed');
             setIsSyncing(false);
           }
-        }, 1500);
-        return;
+        });
+      } else {
+        setIsSyncing(false);
       }
+    }, { scope: 'public_profile,email' });
+  };
 
-      (window as any).FB.login(async (response: any) => {
-        if (response.authResponse) {
-          setIsSyncing(true);
-          (window as any).FB.api('/me', { fields: 'name,email,picture' }, async (userData: any) => {
-            try {
-              const syncedUser = await apiService.socialSync({
-                name: userData.name,
-                email: userData.email || `${userData.id}@meta.internal`,
-                profileImage: userData.picture?.data?.url
-              });
-              onSignup({ ...syncedUser, location: "NODE_PROVISION_META_LIVE" } as User);
-            } catch (err) {
-              setError('PROVISION_ERROR: META_DATA_EXTRACT_FAILED');
-              setIsSyncing(false);
-            }
-          });
-        } else {
-          setError('PROVISION_ABORTED: META_HANDSHAKE_CANCELLED');
-        }
-      }, { scope: 'public_profile,email' });
+  const fetchIpAddress = async (): Promise<string> => {
+    try {
+      const response = await fetch('https://api.ipify.org?format=json');
+      const data = await response.json();
+      return data.ip || '0.0.0.0';
+    } catch (err) {
+      return '127.0.0.1';
     }
+  };
+
+  const getDeviceInfo = () => {
+    const ua = navigator.userAgent;
+    let device = "Desktop";
+    if (/Mobi|Android/i.test(ua)) device = "Mobile";
+    return `${device} | ${navigator.platform}`;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSyncing(true);
     setError('');
-    soundService.playClick(true);
+
+    const ip = await fetchIpAddress();
+    const deviceInfo = getDeviceInfo();
 
     try {
       const newUser = await apiService.registerUser({
-        ...formData,
-        ipAddress: "PROVISION_NODE_AUTH",
-        deviceInfo: "CMD_TERMINAL_v9"
+        name: formData.name,
+        email: formData.email,
+        username: formData.username,
+        password: formData.password,
+        phone: formData.phone,
+        ipAddress: ip,
+        deviceInfo: deviceInfo
       });
       onSignup(newUser as User);
     } catch (error) {
-      setError("PROVISIONING_FAILED: NODE_CONFLICT");
+      setError("PROVISION_FAILED: CHECK_NETWORK_PROTOCOLS");
     } finally {
       setIsSyncing(false);
     }
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#000000] flex flex-col items-center justify-start py-12 px-4 md:px-24 overflow-y-auto font-rajdhani">
-      
-      {/* 1. TOP SECTION: BRANDING */}
-      <div className="w-full max-w-[1400px] flex flex-col md:flex-row justify-between items-start md:items-center mb-16">
-        <div>
-          <h1 className="text-6xl md:text-8xl font-logo italic text-white flex gap-4 items-baseline">
-            PROVISION <span className="text-neutral-700">NODE</span>
-          </h1>
-          <div className="flex flex-wrap items-center gap-4 mt-4">
-            <span className="bg-[#2DD4BF]/10 border border-[#2DD4BF]/20 text-[#2DD4BF] text-[10px] font-black uppercase tracking-[0.4em] px-4 py-1.5 rounded-full">
-              IDENTITY_REGISTRATION_V4
+    <div className="min-h-screen flex items-center justify-center bg-black p-4 md:p-12 relative overflow-hidden theme-transition font-rajdhani">
+      {/* Background Ambience */}
+      <div className="absolute inset-0 z-0">
+        <div className="absolute inset-0 bg-[#000] z-10 opacity-60" />
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-500/10 rounded-full blur-[120px] animate-pulse" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-orange-500/5 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '2s' }} />
+      </div>
+
+      <div className="w-full max-w-[1100px] mx-auto z-10 flex flex-col gap-6 md:gap-10 animate-in fade-in zoom-in-95 duration-700">
+        
+        {/* BRAND IDENTITY BAR */}
+        <div className="flex items-center gap-4 mb-2 animate-in slide-in-from-left duration-700">
+          <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center border-2 border-purple-400/40 shadow-[0_0_20px_rgba(192,132,252,0.2)] shrink-0">
+            <Zap className="text-purple-400 fill-purple-400/10" size={24} />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-2xl md:text-3xl font-futuristic text-white leading-none text-glow tracking-tighter">
+              LEADBID<span className="text-purple-400">PRO</span>
             </span>
-            <span className="text-neutral-600 text-[10px] font-black uppercase tracking-[0.5em] italic">
-              AWAITING_PILOT_SIGNATURE
-            </span>
+            <span className="text-[8px] text-neutral-600 font-black uppercase tracking-[0.6em] mt-1 italic">Enterprise_Market_Node</span>
           </div>
         </div>
 
-        <button 
-          onClick={onSwitchToLogin}
-          className="mt-8 md:mt-0 bg-[#0A0A0A] border border-neutral-800 p-6 rounded-2xl flex items-center gap-6 shadow-2xl hover:border-[#2DD4BF]/40 transition-all group"
-        >
-          <div className="w-12 h-12 bg-black rounded-xl border border-neutral-800 flex items-center justify-center text-neutral-600 group-hover:text-white transition-colors">
-            <ChevronLeft size={24} />
+        {/* LANDSCAPE HEADER - SALES FLOOR STYLE */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 md:gap-10 border-b-2 border-neutral-900 pb-8 md:pb-12">
+          <div className="relative">
+            <div className="absolute -left-4 md:-left-12 top-1/2 -translate-y-1/2 w-4 h-12 md:h-24 bg-purple-400 rounded-full blur-xl opacity-20" />
+            <h2 className="text-3xl md:text-4xl font-futuristic text-white italic uppercase flex items-center gap-4 md:gap-8 text-glow">
+              IDENTITY <span className="text-neutral-600 font-normal">PROVISION</span>
+            </h2>
+            <div className="flex flex-wrap items-center gap-3 md:gap-6 mt-4 md:mt-6">
+              <div className="px-3 md:px-4 py-1.5 bg-purple-400/10 border border-purple-400/30 rounded-full text-[8px] md:text-[10px] font-black text-purple-400 uppercase tracking-widest">REGISTRATION_TERMINAL_V4</div>
+              <span className="text-[10px] md:text-[12px] text-neutral-600 font-bold uppercase tracking-widest italic shrink-0">AWAITING_HANDSHAKE // 8ms</span>
+            </div>
           </div>
-          <div className="text-left">
-            <span className="text-[8px] font-black text-neutral-600 uppercase tracking-widest block mb-1">TERMINATE_PROVISION</span>
-            <span className="text-xl font-bold text-white tracking-widest font-futuristic uppercase">RETURN_TO_ACCESS</span>
-          </div>
-        </button>
-      </div>
-
-      {/* 2. MAIN REGISTRATION GRID */}
-      <div className="w-full max-w-[1400px] grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-        
-        {/* LEFT: REGISTRATION FORM */}
-        <form onSubmit={handleSubmit} className="lg:col-span-8 space-y-8">
-           
-           {/* Section 1: Personal Signature */}
-           <div className="bg-[#0A0A0A] border border-neutral-800 rounded-[2.5rem] p-10 shadow-xl space-y-8">
-              <div className="flex items-center gap-4 border-b border-neutral-800 pb-6">
-                 <UserIcon className="text-[#2DD4BF]" size={20} />
-                 <h3 className="text-xs font-black text-white uppercase tracking-[0.4em]">Section_01: PERSONAL_SIGNATURE</h3>
+          
+          <div className="flex items-center gap-4 md:gap-6 w-full md:w-auto">
+            <div className="flex-1 md:flex-none p-4 md:p-6 bg-[#0f0f0f] border-2 border-neutral-900 rounded-[1.5rem] md:rounded-3xl shadow-2xl flex items-center gap-4 md:gap-6 group transition-all cursor-default overflow-hidden">
+              <div className="w-10 md:w-14 h-10 md:h-14 bg-purple-400/10 rounded-xl md:rounded-2xl flex items-center justify-center text-purple-400 group-hover:scale-110 transition-transform shrink-0">
+                <Cpu size={24} className="md:w-7 md:h-7" />
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                 <div className="space-y-3">
-                    <label className="text-[9px] font-black text-neutral-600 uppercase tracking-[0.3em] px-4 italic">FULL_LEGAL_IDENTITY</label>
+              <div>
+                <span className="text-[8px] md:text-[10px] font-black text-neutral-600 uppercase tracking-widest block mb-1">CAPACITY</span>
+                <span className="text-xl md:text-3xl font-tactical text-white tracking-widest leading-none text-glow">99.2%_FREE</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-[#0f0f0f] border border-neutral-800/60 rounded-[1.5rem] p-4 md:p-6 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl">
+          <div className="flex items-center gap-8 md:gap-12 overflow-x-auto scrollbar-hide w-full">
+            <div className="flex flex-col shrink-0">
+              <span className="text-neutral-700 font-black uppercase text-[8px] tracking-widest mb-1">Global Nodes</span>
+              <div className="text-3xl md:text-4xl font-black text-white italic tracking-tighter flex items-baseline gap-2 font-tactical">
+                <span className="text-sm text-purple-400 opacity-40">#</span>42,891
+              </div>
+            </div>
+            <div className="hidden md:block h-10 w-px bg-neutral-800" />
+            <div className="flex items-center gap-6 md:gap-8 shrink-0">
+              <div>
+                <span className="text-neutral-700 font-black uppercase text-[8px] tracking-widest mb-1">Network Reliability</span>
+                <div className="text-base md:text-lg font-black text-emerald-500/80 italic flex items-center gap-2 md:gap-3 font-tactical tracking-widest">
+                  <Shield size={12} md:size={14} className="animate-pulse" /> 99.9%
+                </div>
+              </div>
+              <div className="hidden sm:block">
+                <span className="text-neutral-700 font-black uppercase text-[8px] tracking-widest mb-1">Compliance</span>
+                <div className="text-base md:text-lg font-black text-neutral-400 italic font-tactical tracking-widest uppercase">Verified</div>
+              </div>
+            </div>
+          </div>
+          <div className="hidden lg:flex items-center gap-4 bg-black/40 p-1.5 rounded-xl border border-neutral-800/40 shrink-0">
+            <div className="flex flex-col items-end px-3">
+              <span className="text-[7px] font-black text-neutral-600 uppercase tracking-widest">Identity Protocol</span>
+              <span className="text-[10px] font-bold text-neutral-400 font-mono uppercase tracking-widest">v4.0_GENESIS</span>
+            </div>
+            <div className="h-6 w-px bg-neutral-800/60" />
+            <div className="px-3 flex items-center gap-2">
+               <Activity size={14} className="text-purple-400/40" />
+               <span className="text-[10px] font-black text-purple-400 uppercase tracking-widest font-tactical">AWAITING_DATA</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div className="lg:col-span-7 space-y-6">
+            <div className="bg-[#0c0c0c]/90 rounded-[2.5rem] border-2 border-neutral-900 p-8 md:p-12 shadow-2xl relative overflow-hidden scanline-effect group">
+              <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity">
+                <Fingerprint size={120} />
+              </div>
+
+              <div className="flex bg-black/40 border border-neutral-900 rounded-2xl p-4 mb-10 w-full text-center">
+                 <h3 className="w-full text-[10px] md:text-[12px] font-black text-white uppercase tracking-widest italic">Initializing_Personal_Identity_Sector</h3>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[9px] md:text-[10px] font-black text-neutral-600 uppercase tracking-widest px-2 italic flex items-center gap-2">
+                      <UserIcon size={14} className="text-purple-400" /> Full_Name
+                    </label>
                     <input 
                       required
-                      className="w-full bg-[#EDF3FF] border-2 border-transparent rounded-2xl px-6 py-4 text-black font-bold outline-none focus:border-[#2DD4BF]/40 transition-all text-lg shadow-inner"
-                      placeholder="Enter Pilot Name"
-                      value={formData.name}
-                      onChange={e => setFormData({...formData, name: e.target.value})}
+                      className="w-full bg-black border-2 border-neutral-800 rounded-xl md:rounded-2xl px-6 py-4 text-neutral-200 font-bold outline-none focus:border-purple-400 transition-all font-tactical tracking-widest placeholder:text-neutral-900" 
+                      placeholder="IDENTITY_STRING" 
+                      value={formData.name} 
+                      onChange={e => setFormData({...formData, name: e.target.value})} 
                     />
-                 </div>
-                 <div className="space-y-3">
-                    <label className="text-[9px] font-black text-neutral-600 uppercase tracking-[0.3em] px-4 italic">COMM_RELAY (EMAIL)</label>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[9px] md:text-[10px] font-black text-neutral-600 uppercase tracking-widest px-2 italic flex items-center gap-2">
+                      <Mail size={14} className="text-purple-400" /> Contact_Vector
+                    </label>
                     <input 
-                      required
+                      required 
                       type="email"
-                      className="w-full bg-[#EDF3FF] border-2 border-transparent rounded-2xl px-6 py-4 text-black font-bold outline-none focus:border-[#2DD4BF]/40 transition-all text-lg shadow-inner"
-                      placeholder="pilot@node.net"
-                      value={formData.email}
-                      onChange={e => setFormData({...formData, email: e.target.value})}
+                      className="w-full bg-black border-2 border-neutral-800 rounded-xl md:rounded-2xl px-6 py-4 text-neutral-200 font-bold outline-none focus:border-purple-400 transition-all font-tactical tracking-widest placeholder:text-neutral-900" 
+                      placeholder="EMAIL@DOMAIN.NET" 
+                      value={formData.email} 
+                      onChange={e => setFormData({...formData, email: e.target.value})} 
                     />
-                 </div>
-              </div>
-           </div>
+                  </div>
+                </div>
 
-           {/* Section 2: Security & Callsign */}
-           <div className="bg-[#0A0A0A] border border-neutral-800 rounded-[2.5rem] p-10 shadow-xl space-y-8">
-              <div className="flex items-center gap-4 border-b border-neutral-800 pb-6">
-                 <Terminal className="text-[#2DD4BF]" size={20} />
-                 <h3 className="text-xs font-black text-white uppercase tracking-[0.4em]">Section_02: SECURITY_HANDSHAKE</h3>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                 <div className="space-y-3">
-                    <label className="text-[9px] font-black text-neutral-600 uppercase tracking-[0.3em] px-4 italic">NETWORK_CALLSIGN</label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[9px] md:text-[10px] font-black text-neutral-600 uppercase tracking-widest px-2 italic flex items-center gap-2">
+                      <Phone size={14} className="text-purple-400" /> Comm_Node
+                    </label>
                     <input 
                       required
-                      className="w-full bg-[#EDF3FF] border-2 border-transparent rounded-2xl px-6 py-4 text-black font-bold outline-none focus:border-[#2DD4BF]/40 transition-all text-lg shadow-inner"
-                      placeholder="Username_Node"
-                      value={formData.username}
-                      onChange={e => setFormData({...formData, username: e.target.value})}
+                      type="tel"
+                      className="w-full bg-black border-2 border-neutral-800 rounded-xl md:rounded-2xl px-6 py-4 text-neutral-200 font-bold outline-none focus:border-purple-400 transition-all font-tactical tracking-widest placeholder:text-neutral-900" 
+                      placeholder="+1-000-000-0000" 
+                      value={formData.phone} 
+                      onChange={e => setFormData({...formData, phone: e.target.value})} 
                     />
-                 </div>
-                 <div className="space-y-3">
-                    <label className="text-[9px] font-black text-neutral-600 uppercase tracking-[0.3em] px-4 italic">ACCESS_TOKEN</label>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[9px] md:text-[10px] font-black text-neutral-600 uppercase tracking-widest px-2 italic flex items-center gap-2">
+                      <Terminal size={14} className="text-purple-400" /> Username_ID
+                    </label>
                     <input 
                       required
-                      type="password"
-                      className="w-full bg-[#EDF3FF] border-2 border-transparent rounded-2xl px-6 py-4 text-black font-bold outline-none focus:border-[#2DD4BF]/40 transition-all text-lg shadow-inner"
-                      placeholder="••••••••"
-                      value={formData.password}
-                      onChange={e => setFormData({...formData, password: e.target.value})}
+                      className="w-full bg-black border-2 border-neutral-800 rounded-xl md:rounded-2xl px-6 py-4 text-neutral-200 font-bold outline-none focus:border-purple-400 transition-all font-tactical tracking-widest placeholder:text-neutral-900" 
+                      placeholder="USER_ALIAS" 
+                      value={formData.username} 
+                      onChange={e => setFormData({...formData, username: e.target.value})} 
                     />
-                 </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[9px] md:text-[10px] font-black text-neutral-600 uppercase tracking-widest px-2 italic flex items-center gap-2">
+                    <Lock size={14} className="text-purple-400" /> Security_Token
+                  </label>
+                  <input 
+                    required 
+                    type="password" 
+                    className="w-full bg-black border-2 border-neutral-800 rounded-xl md:rounded-2xl px-6 py-4 text-neutral-200 font-bold outline-none focus:border-purple-400 transition-all font-tactical tracking-widest placeholder:text-neutral-900" 
+                    placeholder="••••••••" 
+                    value={formData.password} 
+                    onChange={e => setFormData({...formData, password: e.target.value})} 
+                  />
+                </div>
+
+                {error && (
+                  <div className="bg-red-500/10 p-4 rounded-2xl flex items-center gap-4 border border-red-500/20 animate-shake">
+                    <Activity size={18} className="text-red-500" />
+                    <p className="text-red-600 text-[10px] font-black uppercase tracking-widest">{error}</p>
+                  </div>
+                )}
+
+                <button 
+                  type="submit" 
+                  disabled={isSyncing} 
+                  className={`w-full py-6 md:py-8 rounded-2xl md:rounded-[2.5rem] font-black text-xl md:text-3xl transition-all transform active:scale-[0.98] disabled:opacity-50 border-b-8 md:border-b-[12px] font-tactical italic tracking-widest bg-black text-white border-neutral-800 hover:bg-neutral-900 shadow-[0_20px_50px_rgba(0,0,0,0.8)]`}
+                >
+                  {isSyncing ? <Loader2 className="animate-spin mx-auto text-white" size={28} /> : 'INITIALIZE_PROVISION'}
+                </button>
+              </form>
+
+              <div className="mt-10 text-center">
+                 <button onClick={onSwitchToLogin} className="group text-neutral-600 text-[10px] md:text-[11px] font-black uppercase tracking-widest hover:text-white transition-all">
+                   ALREADY_PROVISIONED? <span className="text-white group-hover:underline">MOUNT_EXISTING_NODE</span>
+                 </button>
               </div>
-           </div>
-
-           {error && (
-             <div className="flex items-center gap-4 p-6 bg-red-500/10 rounded-2xl border border-red-500/20">
-                <ShieldAlert className="text-red-500" size={24} />
-                <span className="text-[10px] font-black text-red-500 uppercase tracking-widest">{error}</span>
-             </div>
-           )}
-
-           <button 
-             type="submit"
-             disabled={isSyncing}
-             className="w-full bg-black text-white py-8 rounded-[2.5rem] font-black text-3xl flex items-center justify-center gap-6 hover:bg-[#111] transition-all active:scale-95 shadow-2xl border border-neutral-800 font-futuristic italic tracking-widest"
-           >
-             {isSyncing ? <Loader2 className="animate-spin" size={32} /> : (
-               <>
-                 AUTHORIZE_PROVISION <ChevronRight size={32} />
-               </>
-             )}
-           </button>
-        </form>
-
-        {/* RIGHT: REQUIREMENTS & SSO */}
-        <div className="lg:col-span-4 space-y-8">
-          <div className="bg-[#0A0A0A] border border-neutral-800 rounded-[2.5rem] p-8 shadow-xl">
-            <h4 className="text-[11px] font-black text-neutral-500 uppercase tracking-[0.4em] mb-8 border-b border-neutral-800 pb-4">SSO_SYNC</h4>
-            <div className="space-y-4">
-              <button 
-                type="button" 
-                onClick={() => triggerSocialAuth('google')}
-                disabled={isSyncing}
-                className="w-full bg-black border border-neutral-800 p-5 rounded-2xl flex items-center gap-4 hover:border-[#2DD4BF]/40 transition-all text-neutral-500 hover:text-white disabled:opacity-50"
-              >
-                <Chrome size={20} />
-                <span className="text-[10px] font-black uppercase tracking-widest">Google_Link</span>
-              </button>
-              <button 
-                type="button" 
-                onClick={() => triggerSocialAuth('meta')}
-                disabled={isSyncing}
-                className="w-full bg-black border border-neutral-800 p-5 rounded-2xl flex items-center gap-4 hover:border-[#2DD4BF]/40 transition-all text-neutral-500 hover:text-white disabled:opacity-50"
-              >
-                <Facebook size={20} />
-                <span className="text-[10px] font-black uppercase tracking-widest">Meta_Link</span>
-              </button>
             </div>
           </div>
 
-          <div className="bg-[#0A0A0A] border border-neutral-800 rounded-[2rem] p-8 space-y-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-[#2DD4BF]/10 rounded-2xl flex items-center justify-center text-[#2DD4BF] border border-[#2DD4BF]/20">
-                <Cpu size={24} />
-              </div>
-              <span className="text-[10px] font-black text-white uppercase tracking-widest">NODE_REGULATIONS</span>
+          <div className="lg:col-span-5 space-y-8">
+            <div className="bg-[#0f0f0f] border-2 border-neutral-900 rounded-[2.5rem] p-8 space-y-8 shadow-2xl relative overflow-hidden">
+               <div className="flex justify-between items-center border-b border-neutral-800/40 pb-6 mb-2">
+                 <h4 className="text-[10px] font-black text-neutral-500 uppercase tracking-widest flex items-center gap-3 font-futuristic">
+                    <Globe size={16} className="text-purple-400" /> SSO_PROVISIONS
+                 </h4>
+                 <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_12px_#10b981]" />
+               </div>
+
+               <div className="grid grid-cols-1 gap-4">
+                  <button 
+                    onClick={() => (window as any).google?.accounts.id.prompt()} 
+                    disabled={!authConfig?.googleEnabled || isSyncing}
+                    className="w-full group bg-black/40 border-2 border-neutral-800 hover:border-blue-500/40 rounded-2xl md:rounded-3xl p-6 flex items-center gap-6 transition-all active:scale-[0.98] disabled:opacity-20"
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-black flex items-center justify-center border border-neutral-800 group-hover:border-blue-500/20 shrink-0">
+                      <img src="https://www.google.com/favicon.ico" className="w-5 h-5" />
+                    </div>
+                    <div className="text-left">
+                       <span className="text-[8px] font-black text-neutral-600 uppercase tracking-widest block mb-1">NODE_CONNECTOR_01</span>
+                       <span className="text-lg font-black text-white italic font-tactical tracking-widest">GOOGLE_SYNC</span>
+                    </div>
+                  </button>
+
+                  <button 
+                    onClick={handleFacebookSignup} 
+                    disabled={!authConfig?.facebookEnabled || isSyncing}
+                    className="w-full group bg-black/40 border-2 border-neutral-800 hover:border-[#1877F2]/40 rounded-2xl md:rounded-3xl p-6 flex items-center gap-6 transition-all active:scale-[0.98] disabled:opacity-20"
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-black flex items-center justify-center border border-neutral-800 group-hover:border-[#1877F2]/20 shrink-0">
+                      <Facebook size={20} className="text-[#1877F2]" fill="currentColor" />
+                    </div>
+                    <div className="text-left">
+                       <span className="text-[8px] font-black text-neutral-600 uppercase tracking-widest block mb-1">NODE_CONNECTOR_02</span>
+                       <span className="text-lg font-black text-white italic font-tactical tracking-widest">META_PROVISION</span>
+                    </div>
+                  </button>
+               </div>
             </div>
-            <p className="text-[9px] text-neutral-600 font-bold uppercase italic tracking-widest leading-relaxed">
-              Provisioning a new node requires biometric validation or dual-protocol SSO handshake. Once provisioned, the identity is hashed into the marketplace root ledger for permanent record.
-            </p>
+
+            <div className="bg-[#0f0f0f] border-2 border-neutral-900 p-8 rounded-[2.5rem] flex items-start gap-6 shadow-xl relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity">
+                <ShieldCheck size={80} />
+              </div>
+              <ShieldCheck className="text-purple-500 shrink-0" size={28} />
+              <div className="relative z-10">
+                 <h4 className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-2 font-futuristic">DATA_VERACITY_CONSENT</h4>
+                 <p className="text-[9px] text-neutral-600 font-medium leading-relaxed uppercase italic tracking-tighter">
+                   Identity creation establishes a permanent cryptographic leaf in the LeadBid ecosystem. By provisionally mounting this node, you consent to automated integrity auditing and behavioral telemetry routing for market transparency.
+                 </p>
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-center gap-4 py-4 opacity-20">
+               <div className="h-px bg-neutral-800 flex-1" />
+               <Zap size={16} className="text-white" />
+               <div className="h-px bg-neutral-800 flex-1" />
+            </div>
           </div>
         </div>
       </div>

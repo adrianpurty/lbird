@@ -6,9 +6,7 @@ export interface Lead {
   description: string;
   businessUrl: string;
   targetLeadUrl: string;
-  tollFreeNumber?: string;
   basePrice: number;
-  buyNowPrice?: number;
   currentBid: number;
   bidCount: number;
   timeLeft: string;
@@ -18,12 +16,6 @@ export interface Lead {
   countryCode: string;
   region: string;
   ownerId?: string;
-}
-
-export interface ChatMessage {
-  role: 'user' | 'model';
-  text: string;
-  timestamp: string;
 }
 
 export interface PurchaseRequest {
@@ -40,7 +32,6 @@ export interface PurchaseRequest {
   totalDailyCost: number;
   status: 'pending' | 'approved' | 'rejected';
   timestamp: string;
-  purchaseMode: 'bid' | 'buy_now';
 }
 
 export interface Invoice {
@@ -55,6 +46,16 @@ export interface Invoice {
   totalSettlement: number;
   timestamp: string;
   status: 'paid';
+}
+
+export interface WalletActivity {
+  id: string;
+  userId: string;
+  type: 'deposit' | 'withdrawal';
+  amount: number;
+  provider: string;
+  timestamp: string;
+  status: 'completed' | 'pending';
 }
 
 export interface PlatformAnalytics {
@@ -83,8 +84,8 @@ export interface User {
   balance: number;
   stripeConnected: boolean;
   role: UserRole;
-  status: 'active' | 'restricted';
-  totalSpend?: number;
+  status: 'active' | 'restricted'; 
+  totalSpend?: number; 
   username?: string;
   bio?: string;
   profileImage?: string;
@@ -122,7 +123,10 @@ export interface AIInsight {
 export interface GatewayAPI {
   id: string;
   name: string;
-  provider: 'stripe' | 'crypto' | 'upi' | 'paypal' | 'binance' | 'custom';
+  provider: 
+    | 'stripe' | 'paypal' | 'adyen' | 'braintree' | 'square' | 'authorize_net' 
+    | 'razorpay' | 'mollie' | 'paystack' | 'crypto' | 'binance' | 'upi' 
+    | 'skrill' | 'neteller' | 'klarna' | 'alipay' | 'wechat' | 'custom';
   publicKey: string;
   secretKey: string;
   fee: string;

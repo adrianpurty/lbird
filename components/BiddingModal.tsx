@@ -1,203 +1,216 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
-import { X, Globe, Target, Phone, Zap, ChevronRight, Calculator, AlertTriangle, Wallet, Info, ArrowRight, ShieldCheck, RefreshCw } from 'lucide-react';
-import { Lead, User, PurchaseRequest } from '../types.ts';
+import { X, Globe, Target, Phone, Zap, ChevronRight, Calculator, AlertTriangle, Wallet, Info } from 'lucide-react';
+import { Lead, User } from '../types.ts';
 
 interface BiddingModalProps {
   lead: Lead;
   user: User;
   onClose: () => void;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: BiddingFormData) => void;
   onRefill: () => void;
-  existingPurchase?: PurchaseRequest;
 }
 
-const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, onClose, onSubmit, onRefill, existingPurchase }) => {
-  const isEditMode = !!existingPurchase;
-  const minBid = isEditMode ? existingPurchase.bidAmount : lead.currentBid + 1;
-  
-  const [purchaseMode, setPurchaseMode] = useState<'bid' | 'buy_now'>(existingPurchase?.purchaseMode || 'bid');
-  const [formData, setFormData] = useState({
-    buyerBusinessUrl: existingPurchase?.buyerBusinessUrl || user.defaultBusinessUrl || user.companyWebsite || '',
-    buyerTargetLeadUrl: existingPurchase?.buyerTargetLeadUrl || user.defaultTargetUrl || '',
-    buyerTollFree: existingPurchase?.buyerTollFree || user.phone || '',
-    leadsPerDay: existingPurchase?.leadsPerDay || 50,
-    bidAmount: existingPurchase?.bidAmount || minBid
+export interface BiddingFormData {
+  buyerBusinessUrl: string;
+  buyerTargetLeadUrl: string;
+  buyerTollFree: string;
+  leadsPerDay: number;
+  bidAmount: number;
+  totalDailyCost: number;
+}
+
+const HelpTip = ({ text }: { text: string }) => (
+  <div className="group relative inline-block ml-1 align-middle">
+    <Info size={14} className="text-neutral-500 hover:text-[#00e5ff] cursor-help transition-colors" />
+    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-56 p-4 bg-black border-2 border-neutral-700 rounded-2xl text-[10px] text-neutral-300 font-bold uppercase tracking-widest leading-relaxed opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-[110] shadow-2xl backdrop-blur-md">
+      {text}
+    </div>
+  </div>
+);
+
+const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, onClose, onSubmit, onRefill }) => {
+  const minBid = lead.currentBid + 1;
+  const [formData, setFormData] = useState<Omit<BiddingFormData, 'totalDailyCost'>>({
+    buyerBusinessUrl: user.defaultBusinessUrl || '',
+    buyerTargetLeadUrl: user.defaultTargetUrl || '',
+    buyerTollFree: user.phone || '',
+    leadsPerDay: 50,
+    bidAmount: minBid
   });
 
-  const activePrice = useMemo(() => {
-    if (purchaseMode === 'buy_now' && lead.buyNowPrice) return lead.buyNowPrice;
-    return formData.bidAmount;
-  }, [purchaseMode, lead.buyNowPrice, formData.bidAmount]);
+  const totalDailyCost = useMemo(() => {
+    return formData.bidAmount * formData.leadsPerDay;
+  }, [formData.bidAmount, formData.leadsPerDay]);
 
-  const totalDailyCost = activePrice * formData.leadsPerDay;
+  const isBidTooLow = formData.bidAmount <= lead.currentBid;
   const hasInsufficientFunds = totalDailyCost > user.balance;
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isBidTooLow) return;
+    if (hasInsufficientFunds) {
+      onRefill();
+      return;
+    }
+    onSubmit({ ...formData, totalDailyCost });
+  };
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl animate-in fade-in duration-300">
-      <div className="w-full max-w-2xl bg-black border border-[#1A1A1A] rounded-[3rem] shadow-[0_50px_150px_-20px_rgba(0,0,0,1)] overflow-hidden flex flex-col animate-in zoom-in-95 duration-500 max-h-[95vh]">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl overflow-hidden">
+      <div className="w-full max-w-2xl max-h-[95vh] bg-[#1a1a1a] border-4 border-neutral-800 rounded-[3rem] shadow-[0_50px_150px_-20px_rgba(0,0,0,1)] flex flex-col animate-in zoom-in-95 duration-300">
         
-        {/* HUD HEADER */}
-        <div className="flex justify-between items-center p-8 border-b border-[#1A1A1A] bg-[#1A1A1A]/10">
-          <div className="flex items-center gap-6">
-            <div className="w-14 h-14 bg-[#1A1A1A] rounded-2xl flex items-center justify-center text-[#FACC15] shadow-lg border border-[#FACC15]/20">
-              {isEditMode ? <RefreshCw size={28} className="animate-spin-slow" /> : <Zap size={28} />}
+        <div className="flex justify-between items-center p-8 sm:p-10 border-b-2 border-neutral-800 bg-black/40 shrink-0">
+          <div className="flex items-center gap-5">
+            <div className="w-14 h-14 bg-[#00e5ff] rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(0,229,255,0.4)]">
+              <Zap className="text-black" size={28} fill="currentColor" />
             </div>
             <div>
-              <h2 className="text-2xl font-black text-white uppercase tracking-tighter italic leading-none font-futuristic">
-                {isEditMode ? 'RECONFIGURE' : 'ASSET'} <span className="text-[#FACC15]">SYNC</span>
-              </h2>
-              <p className="text-[9px] font-black uppercase tracking-[0.4em] mt-2 text-neutral-600">NODE_AUTH: {lead.id.slice(0, 12)}</p>
+              <h2 className="text-2xl font-black text-white uppercase tracking-tighter leading-none italic">Provision Lead Pipeline</h2>
+              <p className="text-[#00e5ff] text-[10px] font-black uppercase tracking-widest mt-2">Target Node: {lead.title.toUpperCase()}</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-3 hover:bg-white/5 rounded-full transition-all text-neutral-600 hover:text-white">
-            <X size={28} />
+          <button onClick={onClose} className="p-3 hover:bg-neutral-800 rounded-full transition-all text-neutral-500 hover:text-white active:scale-90">
+            <X size={32} />
           </button>
         </div>
 
-        <div className="p-8 space-y-8 overflow-y-auto scrollbar-hide">
-          {/* PURCHASE MODE TOGGLE */}
-          {!isEditMode && (
-            <div className="flex bg-[#0A0A0A] p-1.5 rounded-[2rem] border border-white/5">
-                <button 
-                onClick={() => setPurchaseMode('bid')}
-                className={`flex-1 py-3 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest transition-all ${purchaseMode === 'bid' ? 'bg-[#FACC15] text-black shadow-lg' : 'text-neutral-500 hover:text-neutral-300'}`}
-                >
-                BID_AUCTION
-                </button>
-                <button 
-                onClick={() => setPurchaseMode('buy_now')}
-                className={`flex-1 py-3 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest transition-all ${purchaseMode === 'buy_now' ? 'bg-[#FACC15] text-black shadow-lg' : 'text-neutral-500 hover:text-neutral-300'}`}
-                >
-                INSTANT_BUY
-                </button>
+        <form onSubmit={handleSubmit} className="p-8 sm:p-10 space-y-8 overflow-y-auto scrollbar-hide">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-6">
+            <div className="flex-1 bg-black p-6 rounded-3xl border-2 border-neutral-800 flex justify-between items-center shadow-inner">
+              <div>
+                <span className="text-neutral-500 text-[10px] font-black uppercase tracking-widest block leading-none mb-2">Protocol Floor</span>
+                <span className="text-[#00e5ff] text-2xl font-black italic tracking-tighter">${minBid.toLocaleString()} <span className="text-[11px] text-neutral-600 font-black uppercase not-italic ml-1">USD/EA</span></span>
+              </div>
             </div>
-          )}
-
-          {/* TELEMETRY READOUT */}
-          <div className="grid grid-cols-2 gap-6">
-            <div className="bg-[#0A0A0A] p-5 rounded-3xl border border-white/5">
-              <span className="text-neutral-600 text-[8px] font-black uppercase tracking-[0.4em] block mb-2">TARGET_UNIT_VAL</span>
-              <span className="text-[#FACC15] text-2xl font-black italic tracking-tighter font-tactical">
-                ${activePrice.toLocaleString()}
-              </span>
-            </div>
-            <div className="bg-[#0A0A0A] p-5 rounded-3xl border border-white/5">
-              <span className="text-neutral-600 text-[8px] font-black uppercase tracking-[0.4em] block mb-2">LIQUIDITY_BUFFER</span>
-              <span className="text-white text-2xl font-black italic tracking-tighter font-tactical">
-                ${user.balance.toLocaleString()}
-              </span>
+            <div className="flex-1 bg-[#00e5ff] p-6 rounded-3xl border-2 border-[#00b8cc] flex justify-between items-center shadow-lg group hover:shadow-[0_0_30px_rgba(0,229,255,0.2)] transition-all">
+              <div>
+                <span className="text-black/60 text-[10px] font-black uppercase tracking-widest block leading-none mb-2">Node Liquidity</span>
+                <span className="text-black text-2xl font-black italic tracking-tighter">${user.balance.toLocaleString()}</span>
+              </div>
+              <Wallet size={24} className="text-black/60" />
             </div>
           </div>
 
-          {/* FORM DATA: DELIVERY ENDPOINTS */}
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                    <label className="text-[9px] font-black text-neutral-600 uppercase tracking-[0.3em] px-2 flex items-center gap-2">
-                        <Globe size={12} className="text-[#FACC15]" /> OFFICIAL_BUSINESS_URL
-                    </label>
-                    <input 
-                        className="w-full bg-[#0A0A0A] border border-[#1A1A1A] rounded-xl px-5 py-4 text-[#FACC15] font-mono text-xs outline-none focus:border-[#FACC15]/40 transition-all placeholder:text-neutral-800"
-                        placeholder="https://your-business.com"
-                        value={formData.buyerBusinessUrl}
-                        onChange={e => setFormData({...formData, buyerBusinessUrl: e.target.value})}
-                    />
-                </div>
-                <div className="space-y-2">
-                    <label className="text-[9px] font-black text-neutral-600 uppercase tracking-[0.3em] px-2 flex items-center gap-2">
-                        <Phone size={12} className="text-[#FACC15]" /> TOLL_FREE_ROUTING
-                    </label>
-                    <input 
-                        className="w-full bg-[#0A0A0A] border border-[#1A1A1A] rounded-xl px-5 py-4 text-white font-mono text-xs outline-none focus:border-[#FACC15]/40 transition-all placeholder:text-neutral-800"
-                        placeholder="+1-800-000-0000"
-                        value={formData.buyerTollFree}
-                        onChange={e => setFormData({...formData, buyerTollFree: e.target.value})}
-                    />
-                </div>
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest flex items-center gap-2 px-2 italic">
+                  <Globe size={14} className="text-[#00e5ff]" /> Identity Origin
+                </label>
+                <input 
+                  required
+                  type="url"
+                  className="w-full bg-black border-2 border-neutral-800 rounded-2xl px-6 py-4 text-neutral-200 text-sm font-bold outline-none focus:border-[#00e5ff] transition-all shadow-inner"
+                  placeholder="https://official-hq.com"
+                  value={formData.buyerBusinessUrl}
+                  onChange={e => setFormData({...formData, buyerBusinessUrl: e.target.value})}
+                />
+              </div>
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest flex items-center gap-2 px-2 italic">
+                  <Phone size={14} className="text-[#00e5ff]" /> Endpoint ID
+                </label>
+                <input 
+                  required
+                  type="text"
+                  className="w-full bg-black border-2 border-neutral-800 rounded-2xl px-6 py-4 text-neutral-200 text-sm font-bold outline-none focus:border-[#00e5ff] transition-all shadow-inner"
+                  placeholder="e.g. 1-800-PROVISION"
+                  value={formData.buyerTollFree}
+                  onChange={e => setFormData({...formData, buyerTollFree: e.target.value})}
+                />
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[9px] font-black text-neutral-600 uppercase tracking-[0.3em] px-2 flex items-center gap-2">
-                <Target size={12} className="text-[#FACC15]" /> TARGET_POST_BACK_ENDPOINT
+            <div className="space-y-3">
+              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest flex items-center gap-2 px-2 italic">
+                <Target size={14} className="text-[#00e5ff]" /> POST-BACK TERMINAL (WEBHOOK)
               </label>
               <input 
-                className="w-full bg-[#0A0A0A] border border-[#1A1A1A] rounded-xl px-5 py-4 text-[#FACC15] font-mono text-xs outline-none focus:border-[#FACC15]/40 transition-all placeholder:text-neutral-800"
-                placeholder="https://your-crm.io/leads/ingest"
+                required
+                type="url"
+                className="w-full bg-black border-2 border-neutral-800 rounded-2xl px-6 py-4 text-neutral-200 text-sm font-bold outline-none focus:border-[#00e5ff] transition-all shadow-inner"
+                placeholder="https://api.crm.io/v1/ingest"
                 value={formData.buyerTargetLeadUrl}
                 onChange={e => setFormData({...formData, buyerTargetLeadUrl: e.target.value})}
               />
-              <p className="text-[8px] text-neutral-700 font-bold uppercase tracking-widest mt-1 px-2 italic">
-                * Specify the webhook or API endpoint where verified lead data will be delivered.
-              </p>
             </div>
+          </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                    <label className="text-[9px] font-black text-neutral-600 uppercase tracking-[0.3em] px-2">DAILY_VOLUME_NODES</label>
-                    <input 
-                        type="number"
-                        className="w-full bg-[#0A0A0A] border border-[#1A1A1A] rounded-xl px-5 py-4 text-white font-bold outline-none focus:border-[#FACC15]/40"
-                        value={formData.leadsPerDay}
-                        onChange={e => setFormData({...formData, leadsPerDay: parseInt(e.target.value) || 0})}
-                    />
+          <div className="space-y-6 pt-2 bg-black/60 p-8 rounded-[2.5rem] border-2 border-neutral-800 shadow-inner">
+            <div className="flex justify-between items-end mb-4">
+              <label className="text-xs font-black text-neutral-400 uppercase tracking-widest flex items-center gap-2 italic">
+                <Calculator size={18} className="text-[#00e5ff]" /> Daily Batch Protocol
+                <HelpTip text="Target nodes to process per 24h cycle. Adjusting this modifies your total daily clearing amount." />
+              </label>
+              <div className="text-right">
+                <span className="text-3xl font-black text-white italic tracking-tighter">{formData.leadsPerDay}</span>
+                <span className="text-[10px] font-black text-neutral-600 uppercase tracking-widest ml-3 italic">UNITS/DAY</span>
+              </div>
+            </div>
+            
+            <div className="relative h-12 flex items-center">
+              <input 
+                type="range"
+                min="1"
+                max="1000"
+                step="1"
+                className="w-full h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-[#00e5ff] hover:accent-[#22d3ee] transition-all"
+                value={formData.leadsPerDay}
+                onChange={e => setFormData({...formData, leadsPerDay: parseInt(e.target.value) || 1})}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest px-2 flex items-center gap-2 italic">
+              UNIT SETTLEMENT BID ($)
+              <HelpTip text="Your maximum bid for a single asset. Higher bids receive priority in the automated distribution waterfall." />
+            </label>
+            <div className="relative">
+              <input 
+                required
+                type="number"
+                min={minBid}
+                step="0.01"
+                className={`w-full bg-black border-4 ${isBidTooLow ? 'border-red-600' : 'border-[#00e5ff] shadow-[0_0_20px_rgba(0,229,255,0.1)]'} rounded-3xl px-8 py-6 text-4xl font-black text-white outline-none focus:ring-8 focus:ring-[#00e5ff]/10 transition-all text-center shadow-inner`}
+                value={formData.bidAmount}
+                onChange={e => setFormData({...formData, bidAmount: parseFloat(e.target.value) || 0})}
+              />
+            </div>
+          </div>
+
+          <div className={`${hasInsufficientFunds ? 'bg-red-600' : 'bg-[#222]'} border-4 ${hasInsufficientFunds ? 'border-red-800' : 'border-neutral-700'} rounded-[3rem] p-8 flex flex-col sm:flex-row items-center justify-between gap-6 transition-all duration-500 shadow-2xl`}>
+             <div className="flex items-center gap-6">
+                <div className={`w-16 h-16 rounded-2xl ${hasInsufficientFunds ? 'bg-black/20 text-white' : 'bg-[#00e5ff] text-black shadow-[0_0_20px_rgba(0,229,255,0.4)]'} flex items-center justify-center shrink-0`}>
+                  <Calculator size={32} />
                 </div>
-                {purchaseMode === 'bid' && (
-                    <div className="space-y-2">
-                        <label className="text-[9px] font-black text-neutral-600 uppercase tracking-[0.3em] px-2">BID_VALUATION ($)</label>
-                        <input 
-                            type="number"
-                            min={minBid}
-                            className="w-full bg-[#0A0A0A] border border-[#1A1A1A] rounded-xl px-5 py-4 text-[#FACC15] font-black outline-none focus:border-[#FACC15]/40"
-                            value={formData.bidAmount}
-                            onChange={e => setFormData({...formData, bidAmount: parseFloat(e.target.value) || 0})}
-                        />
-                    </div>
-                )}
-            </div>
+                <div>
+                  <span className={`${hasInsufficientFunds ? 'text-white/60' : 'text-neutral-500'} text-[10px] font-black uppercase tracking-widest block leading-none mb-2 italic`}>AGGREGATE DAILY BURN</span>
+                  <span className={`${hasInsufficientFunds ? 'text-white' : 'text-neutral-200'} text-3xl font-black tracking-widest italic`}>
+                    ${totalDailyCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+             </div>
+             {hasInsufficientFunds && (
+                <div className="text-white text-[11px] font-black uppercase flex items-center gap-2 animate-pulse bg-black/30 px-6 py-3 rounded-2xl border-2 border-white/20">
+                  <AlertTriangle size={18} /> INSUFFICIENT LIQUIDITY
+                </div>
+             )}
           </div>
 
-          {/* SETTLEMENT BLOCK */}
-          <div className="bg-[#1A1A1A]/40 border border-white/5 rounded-3xl p-6 space-y-4">
-             <div className="flex justify-between items-center text-[10px] font-black text-neutral-500 uppercase tracking-widest">
-                <span>ESTIMATED_DAILY_BURN</span>
-                <span className={hasInsufficientFunds ? 'text-red-500' : 'text-emerald-500'}>
-                    ${totalDailyCost.toLocaleString()}
-                </span>
-             </div>
-             <div className="w-full h-1 bg-black rounded-full overflow-hidden">
-                <div 
-                    className={`h-full transition-all duration-500 ${hasInsufficientFunds ? 'bg-red-500 shadow-[0_0_10px_red]' : 'bg-[#FACC15] shadow-[0_0_10px_#FACC15]'}`} 
-                    style={{ width: `${Math.min(100, (totalDailyCost / user.balance) * 100)}%` }} 
-                />
-             </div>
-          </div>
-
-          <div className="pt-4">
-            <button 
-              onClick={() => onSubmit({...formData, purchaseMode, totalDailyCost, id: existingPurchase?.id})}
-              disabled={hasInsufficientFunds}
-              className={`w-full py-6 rounded-[2rem] font-black text-xl uppercase italic tracking-widest transition-all border-b-8 active:border-b-0 active:translate-y-2 shadow-2xl font-tactical flex items-center justify-center gap-4 ${hasInsufficientFunds ? 'bg-white/5 text-neutral-800 border-black grayscale cursor-not-allowed' : 'bg-[#FACC15] text-black border-yellow-800 hover:bg-white'}`}
-            >
-              {hasInsufficientFunds ? <><AlertTriangle size={20} /> LIQUIDITY_ERROR</> : <><ShieldCheck size={20} /> {isEditMode ? 'COMMIT_RECONFIGURATION' : 'INITIALIZE_SYNC'}</>}
-            </button>
-            {hasInsufficientFunds && (
-              <button onClick={onRefill} className="w-full mt-6 text-[#FACC15] text-[10px] font-black uppercase tracking-[0.4em] hover:underline flex items-center justify-center gap-2">
-                <Wallet size={12} /> RECHARGE_VAULT_NODE
-              </button>
-            )}
-          </div>
-        </div>
+          <button 
+            type="submit"
+            disabled={isBidTooLow}
+            className={`w-full py-8 rounded-[3rem] font-black text-2xl sm:text-3xl transition-all flex items-center justify-center gap-6 active:scale-[0.98] mt-6 border-b-[10px] ${
+              isBidTooLow 
+              ? 'bg-neutral-800 text-neutral-600 border-neutral-900 cursor-not-allowed' 
+              : 'bg-black text-white border-neutral-800 hover:bg-neutral-900 shadow-[0_20px_50px_rgba(0,0,0,0.8)]'
+            }`}
+          >
+            {hasInsufficientFunds ? 'DEPOSIT FUNDS' : 'AUTHORIZE ACQUISITION'} <ChevronRight size={32} />
+          </button>
+        </form>
       </div>
-      <style>{`
-        @keyframes spin-slow {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        .animate-spin-slow {
-          animation: spin-slow 10s linear infinite;
-        }
-      `}</style>
     </div>
   );
 };

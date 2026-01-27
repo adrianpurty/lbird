@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   LayoutDashboard, 
@@ -15,9 +14,10 @@ import {
   User as UserIcon,
   Globe,
   Heart,
-  FileText
+  FileText,
+  Activity
 } from 'lucide-react';
-import { UserRole } from '../types.ts';
+import { UserRole, User } from '../types.ts';
 
 interface SidebarProps {
   activeTab: string;
@@ -25,17 +25,21 @@ interface SidebarProps {
   role: UserRole;
   onLogout: () => void;
   hasInbox?: boolean;
+  users?: User[];
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, role, onLogout, hasInbox }) => {
   const menuItems = [
-    { id: 'market', icon: LayoutDashboard, label: 'MARKET_FLOOR', roles: ['admin', 'user'] },
-    { id: 'profile', icon: UserIcon, label: 'IDENTITY', roles: ['admin', 'user'] },
-    { id: 'wishlist', icon: Heart, label: 'FAVORITES', roles: ['admin', 'user'] },
-    { id: 'create', icon: PlusCircle, label: 'PROVISION', roles: ['admin', 'user'] },
-    { id: 'ledger', icon: FileText, label: 'LEDGER', roles: ['admin', 'user'] },
-    { id: 'admin', icon: ShieldCheck, label: 'COMMAND', roles: ['admin'] },
-    { id: 'payment-config', icon: CreditCard, label: 'GATEWAYS', roles: ['admin'] },
+    { id: 'market', icon: LayoutDashboard, label: 'SALES_FLOOR', roles: ['admin', 'user'] },
+    { id: 'action-center', icon: Activity, label: 'ACTION_CENTER', roles: ['admin', 'user'] },
+    { id: 'profile', icon: UserIcon, label: 'IDENTITY_NODE', roles: ['admin', 'user'] },
+    { id: 'wishlist', icon: Heart, label: 'SAVED_ASSETS', roles: ['admin', 'user'] },
+    { id: 'create', icon: PlusCircle, label: 'ASSET_PROVISION', roles: ['admin', 'user'] },
+    { id: 'bids', icon: Gavel, label: 'PORTFOLIO_NODE', roles: ['admin', 'user'] },
+    { id: 'ledger', icon: FileText, label: 'FINANCE_LEDGER', roles: ['admin', 'user'] },
+    { id: 'inbox', icon: Inbox, label: 'AUDIT_LEDGER', roles: ['admin'], indicator: hasInbox },
+    { id: 'admin', icon: ShieldCheck, label: 'CONTROL_CENTER', roles: ['admin'] },
+    { id: 'payment-config', icon: CreditCard, label: 'GATEWAY_CONFIG', roles: ['admin'] },
     { id: 'auth-config', icon: Lock, label: 'AUTH_INFRA', roles: ['admin'] },
     { id: 'settings', icon: Wallet, label: 'VAULT_API', roles: ['admin', 'user'] },
   ];
@@ -43,59 +47,47 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, role, onLogou
   const visibleItems = menuItems.filter(item => item.roles.includes(role));
 
   return (
-    <aside className="w-64 bg-black border-r border-[#1A1A1A] flex flex-col h-screen theme-transition overflow-hidden">
-      <div className="p-8 border-b border-[#1A1A1A]">
-        <div className="flex items-center gap-4 group cursor-default">
-          <div className="w-10 h-10 bg-[#FACC15]/5 rounded-xl flex items-center justify-center border border-[#FACC15]/10 group-hover:border-[#FACC15]/50 transition-all">
-            <Zap className="text-[#FACC15] group-hover:text-white transition-colors" size={20} />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-xl font-futuristic text-white leading-none tracking-tighter">
-              LEAD<span className="text-[#FACC15]">BID</span>
-            </span>
-            <span className="text-[8px] text-neutral-600 font-bold uppercase tracking-[0.4em] mt-1.5">
-              {role === 'admin' ? 'ROOT_CMD' : 'TRADER'}
-            </span>
-          </div>
+    <aside className="w-60 bg-[#050505] border-r-2 border-neutral-900 flex flex-col h-screen theme-transition backdrop-blur-3xl overflow-hidden">
+      <div className="p-6 flex items-center gap-4 group cursor-default border-b-2 border-neutral-900/50">
+        <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center border-2 border-white/10 shadow-2xl shrink-0">
+          <Zap className="text-white fill-white/10" size={20} />
+        </div>
+        <div className="flex flex-col overflow-hidden">
+          <span className="text-xl font-futuristic text-white leading-none text-glow tracking-tighter truncate">
+            LEAD<span className="text-neutral-500">BID</span>
+          </span>
+          <span className="text-[8px] text-neutral-600 font-bold uppercase tracking-[0.4em] mt-1.5 truncate">
+            {role === 'admin' ? 'ROOT_ACCESS' : 'TRADER_NODE'}
+          </span>
         </div>
       </div>
 
-      <nav className="flex-1 px-4 space-y-1.5 py-8 overflow-y-auto scrollbar-hide">
+      <nav className="flex-1 px-3 space-y-1 py-4 overflow-y-auto scrollbar-hide">
         {visibleItems.map((item) => (
           <button
             key={item.id}
             onClick={() => onTabChange(item.id)}
-            className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-200 group relative border ${
+            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 group relative border-2 ${
               activeTab === item.id 
-                ? 'bg-[#1A1A1A] text-white border-[#FACC15]/30 shadow-[0_0_20px_rgba(250,204,21,0.05)]' 
-                : 'text-neutral-500 border-transparent hover:text-white hover:bg-[#1A1A1A]'
+                ? 'bg-white/10 text-white border-white/30' 
+                : 'text-neutral-500 border-transparent hover:text-white'
             }`}
           >
-            <item.icon 
-              size={18} 
-              className={`transition-colors ${
-                activeTab === item.id ? 'text-[#FACC15]' : 'text-neutral-700 group-hover:text-white'
-              }`} 
-            />
-            <span className={`text-[10px] tracking-[0.2em] uppercase font-black ${activeTab === item.id ? 'text-white' : ''}`}>
+            <item.icon size={18} className="shrink-0" />
+            <span className={`text-[10px] tracking-[0.15em] uppercase font-normal truncate`}>
               {item.label}
             </span>
-            
-            {/* Replaced undefined variable 'Thompson' with 'item.id' to correctly identify active tab */}
-            {activeTab === item.id ? (
-              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-[#FACC15] rounded-l-full shadow-[0_0_10px_#FACC15]" />
-            ) : null}
           </button>
         ))}
       </nav>
 
-      <div className="p-6 border-t border-[#1A1A1A]">
+      <div className="p-3 border-t-2 border-neutral-900 mt-auto">
         <button 
           onClick={onLogout}
-          className="w-full flex items-center gap-4 px-4 py-3.5 text-neutral-600 hover:text-white hover:bg-[#1A1A1A] rounded-xl transition-all border border-transparent hover:border-white/10"
+          className="w-full flex items-center gap-3 px-4 py-3 text-neutral-600 hover:text-red-500 rounded-lg transition-all"
         >
-          <LogOut size={18} />
-          <span className="font-black text-[9px] uppercase tracking-[0.3em]">HALT_SESSION</span>
+          <LogOut size={18} className="shrink-0" />
+          <span className="font-bold text-[9px] uppercase tracking-[0.3em]">SECURE_EXIT</span>
         </button>
       </div>
     </aside>
