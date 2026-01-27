@@ -18,7 +18,7 @@ const DashboardStats: React.FC<StatsProps> = ({ leads, user }) => {
         <div className="col-span-2 md:col-span-1 flex flex-col md:border-r md:border-neutral-800 md:pr-8">
           <span className="text-neutral-700 font-black uppercase text-[7px] md:text-[8px] tracking-[0.3em] mb-1">Market Volume</span>
           <div className="text-2xl md:text-3xl lg:text-4xl font-black text-white italic tracking-tighter flex items-baseline gap-1.5 font-tactical leading-none">
-            <span className="text-xs md:text-sm text-[#00e5ff]/50 opacity-40">$</span>
+            <span className="text-xs md:text-sm text-[#facc15]/50 opacity-40">$</span>
             {totalVolume.toLocaleString()}
           </div>
         </div>
@@ -26,21 +26,21 @@ const DashboardStats: React.FC<StatsProps> = ({ leads, user }) => {
         <div className="flex flex-col">
           <span className="text-neutral-700 font-black uppercase text-[7px] md:text-[8px] tracking-[0.3em] mb-1">Nodes</span>
           <div className="text-lg md:text-xl font-black text-white italic flex items-center gap-2 font-tactical tracking-widest leading-none">
-            <Activity size={12} className="text-[#00e5ff] animate-pulse" /> {activeLeads}
+            <Activity size={12} className="text-[#facc15] animate-pulse" /> {activeLeads}
           </div>
         </div>
 
         <div className="hidden xs:flex flex-col">
           <span className="text-neutral-700 font-black uppercase text-[7px] md:text-[8px] tracking-[0.3em] mb-1">Latency</span>
-          <div className="text-lg md:text-xl font-black text-cyan-400 italic flex items-center gap-2 font-tactical tracking-widest leading-none">
+          <div className="text-lg md:text-xl font-black text-amber-400 italic flex items-center gap-2 font-tactical tracking-widest leading-none">
             <Gauge size={12} /> 14.2ms
           </div>
         </div>
 
         <div className="col-span-2 md:col-span-1 md:ml-auto flex items-center gap-3 bg-black/40 p-2 rounded-xl border border-neutral-800/40 mt-2 md:mt-0">
            <div className="px-2 flex items-center gap-2">
-              <Database size={12} className="text-[#00e5ff]/40" />
-              <span className="text-[9px] font-black text-[#00e5ff] uppercase tracking-widest font-tactical">Node_HQ_01</span>
+              <Database size={12} className="text-[#facc15]/40" />
+              <span className="text-[9px] font-black text-[#facc15] uppercase tracking-widest font-tactical">Node_HQ_01</span>
            </div>
         </div>
 

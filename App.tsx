@@ -24,6 +24,7 @@ import UserManagement from './components/UserManagement.tsx';
 import { Lead, User, PurchaseRequest, Notification, PlatformAnalytics, OAuthConfig, Invoice, GatewayAPI, WalletActivity } from './types.ts';
 import { apiService } from './services/apiService.ts';
 import { soundService } from './services/soundService.ts';
+import { authService } from './services/authService.ts';
 
 const SESSION_KEY = 'lb_session_v3';
 const USER_DATA_KEY = 'lb_user_v3';
@@ -34,17 +35,7 @@ const MemoizedHeader = memo(Header);
 const MemoizedLeadGrid = memo(LeadGrid);
 
 const App: React.FC = () => {
-  const [authView, setAuthView] = useState<'login' | 'signup' | 'app'>(() => {
-    try {
-      const savedView = localStorage.getItem(AUTH_VIEW_KEY);
-      const sessionExists = localStorage.getItem(SESSION_KEY);
-      if (sessionExists) return 'app';
-      return (savedView as any) || 'login';
-    } catch {
-      return 'login';
-    }
-  });
-
+  const [authView, setAuthView] = useState<'login' | 'signup' | 'app'>('login');
   const [activeTab, setActiveTab] = useState<'market' | 'profile' | 'create' | 'settings' | 'bids' | 'admin' | 'inbox' | 'auth-config' | 'payment-config' | 'wishlist' | 'ledger' | 'action-center'>('market');
   
   const [marketData, setMarketData] = useState<{
@@ -72,15 +63,7 @@ const App: React.FC = () => {
     lastUpdate: ''
   });
 
-  const [user, setUser] = useState<User | null>(() => {
-    try {
-      const savedUser = localStorage.getItem(USER_DATA_KEY);
-      return savedUser ? JSON.parse(savedUser) : null;
-    } catch {
-      return null;
-    }
-  });
-
+  const [user, setUser] = useState<User | null>(null);
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     try { return (localStorage.getItem('lb-theme') as 'light' | 'dark') || 'dark'; } catch { return 'dark'; }
   });
@@ -94,6 +77,20 @@ const App: React.FC = () => {
 
   const isSyncing = useRef(false);
   const userRef = useRef<User | null>(null);
+
+  // Sync Firebase Auth State
+  useEffect(() => {
+    const unsubscribe = authService.onAuthStateChanged((appUser) => {
+      setUser(appUser);
+      if (appUser) {
+        setAuthView('app');
+      } else {
+        setAuthView(prev => prev === 'app' ? 'login' : prev);
+      }
+      setIsLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => { 
     userRef.current = user;
@@ -127,32 +124,24 @@ const App: React.FC = () => {
         lastUpdate: data.metadata?.last_updated,
         db_size: data.metadata?.db_size
       });
-
-      const activeId = localStorage.getItem(SESSION_KEY) || userRef.current?.id;
-      if (activeId) {
-        const currentUser = data.users?.find((u: User) => u.id === activeId);
-        if (currentUser) setUser(currentUser);
-      }
     } catch (error) { 
       console.warn('Sync Failed'); 
     } finally { 
       isSyncing.current = false; 
-      setIsLoading(false); 
     }
   }, []);
 
   useEffect(() => { 
-    fetchAppData();
-    const interval = setInterval(fetchAppData, 30000); 
-    return () => clearInterval(interval);
-  }, [fetchAppData]);
+    if (user) {
+      fetchAppData();
+      const interval = setInterval(fetchAppData, 30000); 
+      return () => clearInterval(interval);
+    }
+  }, [fetchAppData, user]);
 
   const toggleTheme = useCallback(() => setTheme(prev => prev === 'dark' ? 'light' : 'dark'), []);
 
   const handleLogin = (loggedUser: User) => {
-    localStorage.setItem(SESSION_KEY, loggedUser.id);
-    localStorage.setItem(USER_DATA_KEY, JSON.stringify(loggedUser));
-    localStorage.setItem(AUTH_VIEW_KEY, 'app');
     setUser(loggedUser);
     setAuthView('app');
     setActiveTab('market');
@@ -160,13 +149,16 @@ const App: React.FC = () => {
     showToast(`SESSION_AUTHORIZED: ${loggedUser.name.toUpperCase()}`);
   };
 
-  const handleLogout = useCallback(() => { 
-    localStorage.removeItem(SESSION_KEY);
-    localStorage.removeItem(USER_DATA_KEY);
-    localStorage.setItem(AUTH_VIEW_KEY, 'login');
-    setUser(null); 
-    setAuthView('login'); 
-  }, []);
+  const handleLogout = useCallback(async () => { 
+    try {
+      await authService.signOut();
+      setUser(null); 
+      setAuthView('login'); 
+      showToast("SESSION_TERMINATED", "info");
+    } catch (error) {
+      showToast("LOGOUT_FAILED", "error");
+    }
+  }, [showToast]);
 
   const activeBidIds = useMemo(() => 
     marketData.purchaseRequests
@@ -200,7 +192,7 @@ const App: React.FC = () => {
     [marketData.purchaseRequests, user?.id]
   );
 
-  if (isLoading && !user) return (
+  if (isLoading) return (
     <div className="h-screen flex items-center justify-center bg-black">
       <div className="flex flex-col items-center gap-10">
         <Server className="text-cyan-500 animate-pulse" size={100} />
@@ -209,8 +201,8 @@ const App: React.FC = () => {
     </div>
   );
 
-  if (authView === 'login') return <Login onLogin={handleLogin} onSwitchToSignup={() => setAuthView('signup')} authConfig={marketData.authConfig} />;
-  if (authView === 'signup') return <Signup onSignup={handleLogin} onSwitchToLogin={() => setAuthView('login')} authConfig={marketData.authConfig} />;
+  if (!user && authView === 'login') return <Login onLogin={handleLogin} onSwitchToSignup={() => setAuthView('signup')} authConfig={marketData.authConfig} />;
+  if (!user && authView === 'signup') return <Signup onSignup={handleLogin} onSwitchToLogin={() => setAuthView('login')} authConfig={marketData.authConfig} />;
 
   return (
     <div className="flex flex-col lg:flex-row h-screen bg-black text-white overflow-hidden theme-transition">

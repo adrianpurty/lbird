@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { User, OAuthConfig } from '../types.ts';
 import { apiService } from '../services/apiService.ts';
+import { authService } from '../services/authService.ts';
 
 interface LoginProps {
   onLogin: (user: User) => void;
@@ -29,111 +30,10 @@ const LAST_KNOWN_LOCATION_KEY = 'lb_last_known_loc';
 
 const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) => {
   const [activeMode, setActiveMode] = useState<'trader' | 'admin'>('trader');
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
-  const [isSdkLoaded, setIsSdkLoaded] = useState({ google: false, facebook: false });
-
-  useEffect(() => {
-    if (authConfig?.googleEnabled && authConfig.googleClientId) {
-      if (!document.getElementById('google-jssdk')) {
-        const script = document.createElement('script');
-        script.id = 'google-jssdk';
-        script.src = "https://accounts.google.com/gsi/client";
-        script.async = true;
-        script.defer = true;
-        script.onload = () => {
-          setIsSdkLoaded(prev => ({ ...prev, google: true }));
-          (window as any).google?.accounts.id.initialize({
-            client_id: authConfig.googleClientId,
-            callback: handleGoogleResponse,
-          });
-        };
-        document.head.appendChild(script);
-      }
-    }
-
-    if (authConfig?.facebookEnabled && authConfig.facebookAppId) {
-      if (!document.getElementById('facebook-jssdk')) {
-        const script = document.createElement('script');
-        script.id = 'facebook-jssdk';
-        script.src = "https://connect.facebook.net/en_US/sdk.js";
-        script.async = true;
-        script.defer = true;
-        script.onload = () => {
-          setIsSdkLoaded(prev => ({ ...prev, facebook: true }));
-          (window as any).FB.init({
-            appId: authConfig.facebookAppId,
-            cookie: true,
-            xfbml: true,
-            version: 'v18.0'
-          });
-        };
-        document.head.appendChild(script);
-      }
-    }
-  }, [authConfig]);
-
-  const handleGoogleResponse = async (response: any) => {
-    setIsSyncing(true);
-    try {
-      const base64Url = response.credential.split('.')[1];
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      const payload = JSON.parse(window.atob(base64));
-
-      const syncedUser = await apiService.socialSync({
-        name: payload.name,
-        email: payload.email,
-        profileImage: payload.picture
-      });
-
-      const location = await requestLocation();
-      onLogin({ ...syncedUser, location, deviceInfo: getDeviceInfo() } as User);
-    } catch (err) {
-      setError('Google Sync Failed');
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
-  const handleFacebookLogin = () => {
-    if (!(window as any).FB) {
-      setError('Meta SDK Not Ready');
-      return;
-    }
-
-    setIsSyncing(true);
-    (window as any).FB.login(async (response: any) => {
-      if (response.authResponse) {
-        (window as any).FB.api('/me', { fields: 'name,email,picture' }, async (userData: any) => {
-          try {
-            const syncedUser = await apiService.socialSync({
-              name: userData.name,
-              email: userData.email,
-              profileImage: userData.picture?.data?.url
-            });
-            const location = await requestLocation();
-            onLogin({ ...syncedUser, location, deviceInfo: getDeviceInfo() } as User);
-          } catch (err) {
-            setError('Meta Sync Failed');
-            setIsSyncing(false);
-          }
-        });
-      } else {
-        setError('Meta Login Canceled');
-        setIsSyncing(false);
-      }
-    }, { scope: 'public_profile,email' });
-  };
-
-  const handleGoogleClick = () => {
-    if (!(window as any).google) {
-      setError('Google SDK Not Ready');
-      return;
-    }
-    (window as any).google.accounts.id.prompt();
-  };
 
   const requestLocation = async (): Promise<string> => {
     return new Promise((resolve) => {
@@ -173,21 +73,12 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
     setError('');
     
     try {
-      const user = await apiService.authenticateUser(username, password);
-      if (user) {
-        if (activeMode === 'admin' && user.role !== 'admin') {
-          setError('Access Denied');
-          setIsSyncing(false);
-          return;
-        }
-        const location = await requestLocation();
-        const deviceInfo = getDeviceInfo();
-        onLogin({ ...user, location, deviceInfo } as User);
-      } else {
-        setError('Invalid Auth');
-      }
-    } catch (err) {
-      setError('System Error');
+      const user = await authService.signIn(email, password);
+      const location = await requestLocation();
+      const deviceInfo = getDeviceInfo();
+      onLogin({ ...user, location, deviceInfo } as User);
+    } catch (err: any) {
+      setError(err.message || 'System Error');
     } finally {
       setIsSyncing(false);
     }
@@ -306,16 +197,17 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <label className="text-[10px] md:text-[11px] font-black text-neutral-600 uppercase tracking-widest px-2 italic flex items-center gap-2">
-                      <Fingerprint size={14} className="text-cyan-400" /> Identity_Signature
+                      <Fingerprint size={14} className="text-cyan-400" /> Identity_Signature (Email)
                     </label>
                     <div className="relative group">
                       <UserIcon className="absolute left-6 top-1/2 -translate-y-1/2 text-neutral-700 group-focus-within:text-cyan-400 transition-colors" size={20} />
                       <input 
                         required 
+                        type="email"
                         className="w-full bg-black border-2 border-neutral-800 rounded-2xl md:rounded-[2rem] pl-16 pr-8 py-5 md:py-6 text-xl md:text-2xl font-bold text-white outline-none focus:border-cyan-400 transition-all font-tactical tracking-widest placeholder:text-neutral-900" 
-                        placeholder="USERNAME_ID" 
-                        value={username} 
-                        onChange={e => setUsername(e.target.value)} 
+                        placeholder="EMAIL_ID@MARKET.IO" 
+                        value={email} 
+                        onChange={e => setEmail(e.target.value)} 
                       />
                     </div>
                   </div>
@@ -367,45 +259,6 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
           </div>
 
           <div className="lg:col-span-5 space-y-8">
-            <div className="bg-[#0f0f0f] border-2 border-neutral-900 rounded-[2.5rem] p-8 space-y-8 shadow-2xl relative overflow-hidden">
-               <div className="flex justify-between items-center border-b border-neutral-800/40 pb-6 mb-2">
-                 <h4 className="text-[10px] font-black text-neutral-500 uppercase tracking-widest flex items-center gap-3 font-futuristic">
-                    <Globe size={16} className="text-cyan-400" /> SSO_PROTOCOLS
-                 </h4>
-                 <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_12px_#10b981]" />
-               </div>
-
-               <div className="grid grid-cols-1 gap-4">
-                  <button 
-                    onClick={handleGoogleClick} 
-                    disabled={!authConfig?.googleEnabled || isSyncing}
-                    className="w-full group bg-black/40 border-2 border-neutral-800 hover:border-blue-500/40 rounded-2xl md:rounded-3xl p-6 flex items-center gap-6 transition-all active:scale-[0.98] disabled:opacity-20"
-                  >
-                    <div className="w-12 h-12 rounded-xl bg-black flex items-center justify-center border border-neutral-800 group-hover:border-blue-500/20 shrink-0">
-                      <img src="https://www.google.com/favicon.ico" className="w-5 h-5" />
-                    </div>
-                    <div className="text-left">
-                       <span className="text-[8px] font-black text-neutral-600 uppercase tracking-widest block mb-1">AUTH_PROVIDER_01</span>
-                       <span className="text-lg font-black text-white italic font-tactical tracking-widest">GOOGLE_HANDSHAKE</span>
-                    </div>
-                  </button>
-
-                  <button 
-                    onClick={handleFacebookLogin} 
-                    disabled={!authConfig?.facebookEnabled || isSyncing}
-                    className="w-full group bg-black/40 border-2 border-neutral-800 hover:border-[#1877F2]/40 rounded-2xl md:rounded-3xl p-6 flex items-center gap-6 transition-all active:scale-[0.98] disabled:opacity-20"
-                  >
-                    <div className="w-12 h-12 rounded-xl bg-black flex items-center justify-center border border-neutral-800 group-hover:border-[#1877F2]/20 shrink-0">
-                      <Facebook size={20} className="text-[#1877F2]" fill="currentColor" />
-                    </div>
-                    <div className="text-left">
-                       <span className="text-[8px] font-black text-neutral-600 uppercase tracking-widest block mb-1">AUTH_PROVIDER_02</span>
-                       <span className="text-lg font-black text-white italic font-tactical tracking-widest">META_IDENTITY</span>
-                    </div>
-                  </button>
-               </div>
-            </div>
-
             <div className="bg-[#0f0f0f] border-2 border-neutral-900 p-8 rounded-[2.5rem] flex items-start gap-6 shadow-xl relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity">
                 <Activity size={80} />

@@ -6,7 +6,7 @@ import {
   Heart, ChevronLeft, ChevronRight, ChevronDown, 
   Cpu, Target, Database, Activity, MapPin, Gauge, ArrowRight,
   Fingerprint, Clock, Star, Zap, ShieldAlert, Layers, XCircle,
-  Settings as GearIcon, Edit3
+  Settings as GearIcon, Edit3, Globe, BarChart3
 } from 'lucide-react';
 import { soundService } from '../services/soundService.ts';
 
@@ -45,226 +45,135 @@ const MemoizedLeadCard = memo(({
 
   const getIcon = (category: string) => {
     const cat = category.toLowerCase();
-    if (cat.includes('flight')) return <PlaneTakeoff size={32} />;
-    if (cat.includes('cruise')) return <Ship size={32} />;
-    if (cat.includes('hotel')) return <Hotel size={32} />;
-    if (cat.includes('real estate')) return <Building2 size={32} />;
-    if (cat.includes('crypto')) return <Coins size={32} />;
-    if (cat.includes('insurance')) return <Shield size={32} />;
-    if (cat.includes('medical')) return <Stethoscope size={32} />;
-    return <BriefcaseBusiness size={32} />;
+    if (cat.includes('flight')) return <PlaneTakeoff size={14} />;
+    if (cat.includes('cruise')) return <Ship size={14} />;
+    if (cat.includes('hotel')) return <Hotel size={14} />;
+    if (cat.includes('real estate')) return <Building2 size={14} />;
+    if (cat.includes('crypto')) return <Coins size={14} />;
+    if (cat.includes('insurance')) return <Shield size={14} />;
+    if (cat.includes('medical')) return <Stethoscope size={14} />;
+    return <BriefcaseBusiness size={14} />;
   };
 
   const getStatusColor = (status: string) => {
     switch(status) {
-      case 'approved': return 'text-emerald-500 border-emerald-500/20';
-      case 'rejected': return 'text-red-500 border-red-500/20';
-      default: return 'text-cyan-400 border-cyan-400/20';
+      case 'approved': return 'bg-emerald-500';
+      case 'rejected': return 'bg-red-500';
+      default: return 'bg-amber-400';
     }
+  };
+
+  // Helper for stylized country flag using emoji or stylized text
+  const getFlag = (code: string) => {
+    return (
+      <div className="flex items-center gap-1.5 bg-neutral-900 px-1.5 py-0.5 rounded-md border border-neutral-800">
+        <span className="text-[10px] grayscale opacity-70">🚩</span>
+        <span className="text-[9px] font-mono font-black text-neutral-400">{code}</span>
+      </div>
+    );
   };
 
   return (
     <div 
-      className={`group relative bg-[#0c0c0c] border-2 rounded-[2rem] transition-all duration-500 overflow-hidden cursor-pointer flex flex-col shadow-2xl hover:-translate-y-2 scanline-effect ${
-        isSelected ? 'border-white ring-4 ring-white/10 scale-[1.02]' : 
-        isUserEngaged ? 'border-[#00e5ff] active-border-pulse' : 'border-neutral-900 hover:border-neutral-700'
+      className={`group relative bg-[#0a0a0a] border-2 rounded-[1rem] transition-all duration-300 overflow-hidden cursor-pointer flex flex-col shadow-xl hover:border-amber-400/40 ${
+        isSelected ? 'border-amber-400 ring-4 ring-amber-400/10 scale-[1.02]' : 
+        isUserEngaged ? 'border-amber-400 active-border-pulse' : 'border-neutral-900/60 hover:bg-[#0c0c0c]'
       }`}
       onClick={() => canEdit ? onEdit?.(lead) : onBid(lead.id)}
     >
-      {/* CARD HEADER: ID STRIPE */}
-      <div className="bg-neutral-900/50 p-4 border-b border-neutral-800/50 flex justify-between items-center relative overflow-hidden">
-        <div className="flex items-center gap-2 relative z-10">
-           <Cpu size={14} className="text-neutral-600" />
-           <span className="text-[8px] font-black text-neutral-500 uppercase tracking-[0.2em] font-futuristic">Market_Protocol_Identity</span>
-        </div>
-        <div className="flex items-center gap-3 relative z-10">
-          {isAdmin && (
-            <div className="flex items-center gap-2 mr-2 bg-white/5 px-2 py-0.5 rounded-full border border-white/10 animate-pulse">
-               <Edit3 size={10} className="text-white/40" />
-               <span className="text-[7px] font-black text-white/40 uppercase tracking-widest">ROOT_EDIT</span>
-            </div>
-          )}
-          <div className="w-6 h-4 bg-gradient-to-br from-yellow-600 to-yellow-900 rounded-sm border border-yellow-500/30 opacity-60 shadow-[0_0_10px_rgba(234,179,8,0.1)]" title="Cryptographic Chip" />
-          <span className="text-[9px] font-mono text-neutral-700 font-bold">#{lead.id.split('_')[1]?.toUpperCase() || lead.id.slice(-4).toUpperCase()}</span>
-        </div>
-        {/* Holographic background sweep */}
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.02] to-transparent -translate-x-full group-hover:translate-x-full duration-[2000ms] transition-transform" />
+      {/* ID BADGE SIDE STRIP (MAG-STRIPE) */}
+      <div className="absolute left-0 top-0 bottom-0 w-2.5 bg-neutral-900 flex flex-col items-center justify-between py-4 opacity-50 group-hover:opacity-100 transition-opacity">
+        <div className="w-1 h-1 rounded-full bg-neutral-700" />
+        <div className="w-1 h-12 bg-neutral-800 rounded-full" />
+        <div className="w-1 h-1 rounded-full bg-neutral-700" />
       </div>
 
-      {/* CARD BODY: IDENTITY PROFILE */}
-      <div className="p-6 space-y-6">
-        
-        {/* PHOTO ID SECTOR */}
-        <div className="flex gap-5">
-           <div className="w-24 h-24 rounded-2xl bg-black border-2 border-neutral-800 flex items-center justify-center relative overflow-hidden shrink-0 group-hover:border-[#00e5ff]/40 transition-all">
-              <div className="absolute inset-0 bg-[#00e5ff]/5 animate-pulse" />
-              <div className="text-neutral-700 group-hover:text-[#00e5ff] transition-colors relative z-10 drop-shadow-[0_0_10px_currentColor]">
-                {getIcon(lead.category)}
-              </div>
-              {/* Corner deco */}
-              <div className="absolute top-1 left-1 w-2 h-2 border-t border-l border-neutral-700" />
-              <div className="absolute bottom-1 right-1 w-2 h-2 border-b border-r border-neutral-700" />
-           </div>
-           
-           <div className="flex-1 space-y-3 min-w-0">
-              <div className="space-y-1">
-                 <span className="text-[7px] font-black text-neutral-600 uppercase tracking-widest block">Asset_Name</span>
-                 <h3 className="text-sm font-black text-white uppercase tracking-wider truncate group-hover:text-[#00e5ff] transition-colors font-futuristic leading-tight">
-                    {lead.title}
-                 </h3>
-              </div>
-              <div className="space-y-1">
-                 <span className="text-[7px] font-black text-neutral-600 uppercase tracking-widest block">Sector_ID</span>
-                 <p className="text-[10px] font-bold text-neutral-400 uppercase italic truncate">{lead.category}</p>
-              </div>
-              <div className="space-y-1">
-                 <span className="text-[7px] font-black text-neutral-600 uppercase tracking-widest block">Origin_Node</span>
-                 <div className="flex items-center gap-1.5">
-                    <MapPin size={10} className="text-red-500/60" />
-                    <span className="text-[10px] font-black text-neutral-300 uppercase tracking-widest">{lead.countryCode} // {lead.region || 'Global'}</span>
-                 </div>
-              </div>
-           </div>
+      <div className="pl-6 p-4 flex flex-col gap-4">
+        {/* HEADER: ORIGIN & ID */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {getFlag(lead.countryCode)}
+            <span className="text-[8px] font-black text-neutral-600 uppercase tracking-tighter italic">L_SIGNATURE_{lead.id.slice(-4).toUpperCase()}</span>
+          </div>
+          <div className={`w-2 h-2 rounded-full ${getStatusColor(lead.status)} shadow-[0_0_8px_currentColor]`} />
         </div>
 
-        {/* DESCRIPTION FIELD */}
-        <div className="bg-black/40 border border-neutral-800/40 rounded-xl p-3 relative">
-           <span className="absolute -top-2 left-3 px-2 bg-[#0c0c0c] text-[6px] font-black text-neutral-600 uppercase tracking-[0.3em]">Manifest_Brief</span>
-           <p className="text-[10px] text-neutral-500 leading-relaxed font-rajdhani line-clamp-2 italic">
-              {lead.description || "No manifest provisioned for this asset node."}
-           </p>
-        </div>
-
-        {/* TECHNICAL GAUGES */}
-        <div className="grid grid-cols-2 gap-4">
-           <div className="bg-neutral-900/30 border border-neutral-800/50 rounded-2xl p-3 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-black border border-neutral-800 flex items-center justify-center text-emerald-500/80">
-                 <Gauge size={14} />
-              </div>
-              <div>
-                 <span className="text-[7px] font-black text-neutral-600 uppercase tracking-widest block mb-0.5">Integrity</span>
-                 <span className="text-xs font-black text-emerald-500 italic font-tactical leading-none">{lead.qualityScore}%</span>
-              </div>
-           </div>
-           <div className="bg-neutral-900/30 border border-neutral-800/50 rounded-2xl p-3 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-black border border-neutral-800 flex items-center justify-center text-yellow-500/80">
-                 <Star size={14} />
-              </div>
-              <div>
-                 <span className="text-[7px] font-black text-neutral-600 uppercase tracking-widest block mb-0.5">Reputation</span>
-                 <span className="text-xs font-black text-yellow-500 italic font-tactical leading-none">{lead.sellerRating}</span>
-              </div>
-           </div>
-        </div>
-
-        {/* TIME REMAINING HUD */}
-        <div className="flex items-center justify-between px-2 text-neutral-600">
-           <div className="flex items-center gap-2">
-              <Clock size={10} />
-              <span className="text-[8px] font-black uppercase tracking-widest">Expiration_Window</span>
-           </div>
-           <span className="text-[9px] font-mono font-bold text-neutral-400 group-hover:text-cyan-400 transition-colors">{lead.timeLeft || '24:00:00'}</span>
-        </div>
-      </div>
-
-      {/* FOOTER: SETTLEMENT STRIPE */}
-      <div className="mt-auto bg-black p-5 border-t-2 border-neutral-900 flex items-center justify-between group-hover:bg-[#080808] transition-colors relative">
+        {/* CORE: IDENTITY TITLE */}
         <div className="space-y-1">
-          <span className="text-[8px] font-black text-neutral-700 uppercase tracking-widest block">Live_Valuation</span>
-          <div className={`text-3xl font-black italic tracking-tighter font-tactical leading-none transition-all ${isAdmin ? 'text-[#00e5ff] group-hover:text-white' : 'text-white group-hover:text-glow-neon'}`}>
-            ${lead.currentBid.toLocaleString()}
+          <div className="flex items-center gap-2 mb-1">
+             <div className="p-1.5 rounded bg-amber-400/10 text-amber-400 border border-amber-400/20">
+               {getIcon(lead.category)}
+             </div>
+             <span className="text-[8px] font-black text-neutral-500 uppercase tracking-[0.2em]">{lead.category}</span>
           </div>
-          {isAdmin && (
-             <span className="text-[6px] font-black text-[#00e5ff]/60 uppercase tracking-[0.3em] block animate-pulse">OVERRIDE_ENABLED</span>
-          )}
+          <h3 className="text-[13px] font-black text-white italic uppercase tracking-tighter leading-tight font-futuristic line-clamp-2 group-hover:text-amber-400 transition-colors">
+            {lead.title}
+          </h3>
         </div>
-        
-        <div className="text-right space-y-1">
-           <span className="text-[8px] font-black text-neutral-700 uppercase tracking-widest block">Active_Nodes</span>
-           <div className="flex items-center justify-end gap-2">
-              <Layers size={12} className="text-[#00e5ff]/40" />
-              <span className="text-lg font-black text-neutral-400 italic font-tactical leading-none">{lead.bidCount}</span>
+
+        {/* DATA BLOCK: BID & QUALITY */}
+        <div className="grid grid-cols-2 gap-3 pt-2 border-t border-neutral-900">
+           <div className="flex flex-col gap-0.5">
+              <span className="text-[7px] font-black text-neutral-700 uppercase tracking-widest leading-none">NODE_VALUATION</span>
+              <div className="text-xl font-black text-white italic tracking-tighter font-tactical leading-none">
+                 <span className="text-[10px] text-amber-500/50 not-italic mr-0.5">$</span>{lead.currentBid.toLocaleString()}
+              </div>
+           </div>
+           <div className="flex flex-col gap-1 text-right items-end">
+              <span className="text-[7px] font-black text-neutral-700 uppercase tracking-widest leading-none">INTEGRITY_INDEX</span>
+              <div className="flex items-center gap-1.5">
+                 <div className="w-10 h-1 bg-neutral-900 rounded-full overflow-hidden">
+                    <div className="h-full bg-emerald-500" style={{ width: `${lead.qualityScore}%` }} />
+                 </div>
+                 <span className="text-[10px] font-black text-emerald-500 font-tactical italic leading-none">{lead.qualityScore}%</span>
+              </div>
            </div>
         </div>
-
-        {/* HOLOGRAPHIC STATUS SEAL */}
-        <div className={`absolute top-0 right-8 -translate-y-1/2 px-4 py-1.5 rounded-full border-2 bg-black text-[9px] font-black uppercase tracking-[0.2em] italic shadow-2xl z-20 transition-all group-hover:scale-110 ${getStatusColor(lead.status)}`}>
-           {lead.status === 'approved' && <Shield size={10} className="inline mr-2" />}
-           {lead.status === 'rejected' && <ShieldAlert size={10} className="inline mr-2" />}
-           {lead.status}
-        </div>
-
-        {/* Admin Quick Entry Icon */}
-        {isAdmin && (
-          <div className="absolute -top-10 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-[#00e5ff] text-black p-2 rounded-full shadow-[0_0_15px_rgba(0,229,255,0.4)]">
-             <GearIcon size={14} className="animate-spin-slow" />
-          </div>
-        )}
       </div>
 
-      {/* OVERLAY ACTIONS: TRIGGERED BY HOVER ON MOBILE/DESKTOP */}
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-8 gap-4 z-30">
-         <div className="w-16 h-px bg-white/20 mb-2" />
-         
-         {isAdmin ? (
-            <button 
-              onClick={(e) => { e.stopPropagation(); onEdit?.(lead); }}
-              className="w-full bg-white text-black py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-[0_0_30px_rgba(255,255,255,0.2)]"
-            >
-              <Cpu size={16} /> REVISE_ASSET_NODE
-            </button>
-         ) : (
-            <button 
-              onClick={(e) => { e.stopPropagation(); onBid(lead.id); }}
-              className="w-full bg-[#00e5ff] text-black py-4 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-[0_0_30px_rgba(0,229,255,0.4)]"
-            >
-              <Zap size={16} fill="currentColor" /> Initialize_Acquisition
-            </button>
-         )}
-         
-         {isAdmin ? (
-            <div className="flex gap-3 w-full">
-              <button 
-                onClick={(e) => { e.stopPropagation(); soundService.playClick(true); onAdminApprove?.(lead.id); }}
-                className="flex-1 bg-emerald-600/20 border-2 border-emerald-500/40 text-emerald-500 p-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 hover:text-white transition-all flex items-center justify-center gap-2"
-              >
-                <CheckCircle2 size={14} /> AUTHORIZE
-              </button>
-              <button 
-                onClick={(e) => { e.stopPropagation(); soundService.playClick(true); onAdminReject?.(lead.id); }}
-                className="flex-1 bg-red-600/20 border-2 border-red-500/40 text-red-500 p-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all flex items-center justify-center gap-2"
-              >
-                <XCircle size={14} /> REVOKE
-              </button>
-            </div>
-         ) : (
-            <div className="flex gap-3 w-full">
-                <button 
-                  onClick={(e) => { e.stopPropagation(); onToggleWishlist?.(lead.id); }}
-                  className={`flex-1 p-4 rounded-2xl border-2 transition-all flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest ${
-                    isInWishlist ? 'bg-red-500/10 border-red-500/40 text-red-500' : 'bg-white/5 border-white/10 text-white hover:bg-white/10'
-                  }`}
-                >
-                  <Heart size={14} fill={isInWishlist ? "currentColor" : "none"} /> {isInWishlist ? 'Saved' : 'Vault'}
-                </button>
-            </div>
-         )}
+      {/* TACTICAL OVERLAY */}
+      <div className="absolute inset-0 bg-black/95 backdrop-blur-md opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-center p-6 gap-3 z-30">
+        <div className="text-center space-y-1 mb-2">
+           <p className="text-[8px] font-black text-amber-400 uppercase tracking-[0.4em] italic leading-none">ENCRYPTED_ASSET</p>
+           <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest font-mono">READY_FOR_HANDSHAKE</p>
+        </div>
 
-         {isAdmin && (
-            <button 
-              onClick={(e) => { e.stopPropagation(); onToggleSelect?.(lead.id); }}
-              className={`w-full p-4 rounded-2xl border-2 transition-all flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-widest ${
-                isSelected ? 'bg-white border-white text-black' : 'bg-white/5 border-white/10 text-white hover:bg-white/10'
+        {isAdmin ? (
+          <button 
+            onClick={(e) => { e.stopPropagation(); onEdit?.(lead); }}
+            className="w-full py-2.5 bg-white text-black rounded-lg font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-amber-400 transition-all active:scale-95"
+          >
+            <Edit3 size={14} /> RECONFIGURE
+          </button>
+        ) : (
+          <button 
+            onClick={(e) => { e.stopPropagation(); onBid(lead.id); }}
+            className="w-full py-2.5 bg-amber-400 text-black rounded-lg font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(250,204,21,0.3)] hover:scale-105 active:scale-95 transition-all"
+          >
+            <Zap size={14} fill="currentColor" /> MOUNT_PIPELINE
+          </button>
+        )}
+
+        <div className="flex gap-2 w-full">
+           <button 
+              onClick={(e) => { e.stopPropagation(); onToggleWishlist?.(lead.id); }}
+              className={`flex-1 p-2.5 rounded-lg border transition-all flex items-center justify-center ${
+                 isInWishlist ? 'bg-red-500/10 border-red-500/40 text-red-500' : 'bg-neutral-900 border-neutral-800 text-neutral-500 hover:text-white'
               }`}
-            >
-              <CheckCircle2 size={16} /> {isSelected ? 'BATCH_SELECTED' : 'SELECT_FOR_BATCH'}
-            </button>
-         )}
-
-         <div className="w-16 h-px bg-white/20 mt-2" />
-         <p className="text-[8px] font-black text-neutral-500 uppercase tracking-[0.4em] italic mt-4">
-            {isAdmin ? 'ROOT_SECURITY_OVERRIDE_ENABLED' : 'Security_Clearance_Active'}
-         </p>
+           >
+              <Heart size={14} fill={isInWishlist ? "currentColor" : "none"} />
+           </button>
+           {isAdmin && (
+             <button 
+                onClick={(e) => { e.stopPropagation(); onToggleSelect?.(lead.id); }}
+                className={`flex-1 p-2.5 rounded-lg border transition-all flex items-center justify-center ${
+                   isSelected ? 'bg-amber-400 border-amber-400 text-black' : 'bg-neutral-900 border-neutral-800 text-neutral-500 hover:text-white'
+                }`}
+             >
+                <CheckCircle2 size={14} />
+             </button>
+           )}
+        </div>
       </div>
     </div>
   );
@@ -278,7 +187,7 @@ const LeadGrid: React.FC<LeadGridProps> = ({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   
   const deferredCategory = useDeferredValue(selectedCategory);
-  const ITEMS_PER_PAGE = 6; 
+  const ITEMS_PER_PAGE = 16; 
 
   const categories = useMemo(() => Array.from(new Set(leads.map(l => l.category))).sort(), [leads]);
   
@@ -298,60 +207,51 @@ const LeadGrid: React.FC<LeadGridProps> = ({
     setSelectedIds(next);
   };
 
-  const handleBulkApprove = () => {
-    soundService.playClick(true);
-    onBulkApprove?.(Array.from(selectedIds));
-    setSelectedIds(new Set());
-  };
-
-  const handleBulkReject = () => {
-    soundService.playClick(true);
-    onBulkReject?.(Array.from(selectedIds));
-    setSelectedIds(new Set());
-  };
-
   return (
     <div className="space-y-8">
       {/* FILTER HUD */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-6 p-2">
-        <div className="flex items-center gap-4 w-full sm:w-auto">
-          <div className="relative group w-full sm:w-[280px]">
-             <ListFilter className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-600 group-hover:text-[#00e5ff] transition-colors" size={14} />
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-3 bg-neutral-900/40 rounded-2xl border border-neutral-800/60 backdrop-blur-md">
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="relative group w-full sm:w-[220px]">
+             <ListFilter className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-600 group-hover:text-amber-400 transition-colors" size={14} />
              <select 
                value={selectedCategory}
                onChange={(e) => { setSelectedCategory(e.target.value); setCurrentPage(1); }}
-               className="w-full bg-[#0a0a0a] border-2 border-neutral-800 rounded-2xl pl-12 pr-10 py-3.5 text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 outline-none focus:border-[#00e5ff]/40 transition-all appearance-none cursor-pointer"
+               className="w-full bg-black border border-neutral-800 rounded-xl pl-10 pr-8 py-2.5 text-[10px] font-black uppercase tracking-widest text-neutral-400 outline-none focus:border-amber-400/40 transition-all appearance-none cursor-pointer"
              >
-               <option value="">Filter_Sector_Nodes</option>
+               <option value="">ALL_SECTORS</option>
                {categories.map(c => <option key={c} value={c}>{c.toUpperCase()}</option>)}
              </select>
              <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-700 pointer-events-none" />
           </div>
 
           {selectedIds.size > 0 && userRole === 'admin' && (
-            <div className="flex items-center gap-3 animate-in slide-in-from-left duration-300">
+            <div className="flex items-center gap-2 animate-in slide-in-from-left duration-300">
               <button 
-                onClick={handleBulkApprove}
+                onClick={() => { onBulkApprove?.(Array.from(selectedIds)); setSelectedIds(new Set()); }}
                 className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-emerald-500 transition-all"
               >
-                BULK_AUTHORIZE ({selectedIds.size})
+                AUTH ({selectedIds.size})
               </button>
               <button 
-                onClick={handleBulkReject}
+                onClick={() => { onBulkReject?.(Array.from(selectedIds)); setSelectedIds(new Set()); }}
                 className="bg-red-600 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-red-500 transition-all"
               >
-                BULK_REVOKE
+                REVOKE
               </button>
             </div>
           )}
         </div>
-        <div className="flex items-center gap-6">
-           <span className="text-[10px] font-black text-neutral-700 uppercase tracking-[0.4em]">{filteredLeads.length} Nodes_Synchronized</span>
+        <div className="hidden md:flex items-center gap-6">
+           <div className="flex items-center gap-2">
+              <Activity size={12} className="text-emerald-500" />
+              <span className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em]">{filteredLeads.length} NODES_ACTIVE</span>
+           </div>
         </div>
       </div>
 
-      {/* ID CARD GRID */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+      {/* GRID: 4 PER ROW ON DESKTOP */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
         {currentLeads.length > 0 ? (
           currentLeads.map((lead) => (
             <MemoizedLeadCard 
@@ -372,43 +272,42 @@ const LeadGrid: React.FC<LeadGridProps> = ({
             />
           ))
         ) : (
-          <div className="col-span-full py-32 text-center bg-[#050505] border-2 border-neutral-800/40 border-dashed rounded-[3rem]">
-            <Database className="mx-auto text-neutral-900 mb-8 opacity-20" size={100} />
-            <h4 className="text-neutral-700 font-futuristic text-2xl uppercase tracking-[0.5em]">No_Active_Manifests</h4>
-            <p className="text-neutral-800 text-[10px] font-black uppercase tracking-widest mt-4">Protocol Idle // Awaiting Asset Stream</p>
+          <div className="col-span-full py-32 text-center bg-[#050505] border-2 border-neutral-900 border-dashed rounded-[3rem]">
+            <Database className="mx-auto text-neutral-900 mb-6 opacity-20" size={64} />
+            <h4 className="text-neutral-700 font-futuristic text-xl uppercase tracking-[0.3em]">NO_DATA_NODES_FOUND</h4>
           </div>
         )}
       </div>
 
-      {/* PAGINATION HUD */}
+      {/* PAGINATION */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-8 pt-12 border-t border-neutral-900">
+        <div className="flex items-center justify-center gap-6 pt-10 border-t border-neutral-900/50">
           <button 
             disabled={currentPage === 1} 
-            onClick={() => setCurrentPage(currentPage - 1)} 
-            className="w-12 h-12 rounded-2xl border-2 border-neutral-800 text-neutral-600 hover:text-[#00e5ff] hover:border-[#00e5ff]/40 transition-all disabled:opacity-20 flex items-center justify-center bg-black/40"
+            onClick={() => { soundService.playClick(); setCurrentPage(currentPage - 1); }} 
+            className="w-12 h-12 rounded-2xl border border-neutral-800 text-neutral-600 hover:text-amber-400 hover:border-amber-400/40 transition-all disabled:opacity-20 flex items-center justify-center bg-neutral-900/40 shadow-xl"
           >
             <ChevronLeft size={20} />
           </button>
           <div className="flex items-center gap-3">
             {[...Array(totalPages)].map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setCurrentPage(i + 1)}
-                    className={`w-10 h-10 rounded-xl text-[10px] font-black transition-all border-2 ${
-                      currentPage === i + 1 
-                        ? 'bg-[#00e5ff] text-black border-[#00e5ff] shadow-[0_0_20px_rgba(0,229,255,0.3)]' 
-                        : 'bg-transparent text-neutral-700 border-neutral-900 hover:border-neutral-700 hover:text-neutral-400'
-                    }`}
-                  >
-                    {i + 1}
-                  </button>
+              <button
+                key={i}
+                onClick={() => { soundService.playClick(); setCurrentPage(i + 1); }}
+                className={`w-10 h-10 rounded-xl text-[10px] font-black transition-all border ${
+                  currentPage === i + 1 
+                    ? 'bg-amber-400 text-black border-amber-400 shadow-[0_0_20px_rgba(250,204,21,0.2)]' 
+                    : 'bg-transparent text-neutral-600 border-neutral-900 hover:border-neutral-700 hover:text-neutral-300'
+                }`}
+              >
+                {i + 1}
+              </button>
             ))}
           </div>
           <button 
             disabled={currentPage === totalPages} 
-            onClick={() => setCurrentPage(currentPage + 1)} 
-            className="w-12 h-12 rounded-2xl border-2 border-neutral-800 text-neutral-600 hover:text-[#00e5ff] hover:border-[#00e5ff]/40 transition-all disabled:opacity-20 flex items-center justify-center bg-black/40"
+            onClick={() => { soundService.playClick(); setCurrentPage(currentPage + 1); }} 
+            className="w-12 h-12 rounded-2xl border border-neutral-800 text-neutral-600 hover:text-amber-400 hover:border-amber-400/40 transition-all disabled:opacity-20 flex items-center justify-center bg-neutral-900/40 shadow-xl"
           >
             <ChevronRight size={20} />
           </button>

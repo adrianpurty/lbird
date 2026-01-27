@@ -1,23 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   Zap, 
   Mail, 
   User as UserIcon, 
   Lock, 
-  Phone, 
-  Globe, 
   Loader2, 
   ShieldCheck, 
-  Facebook,
   Terminal,
   Cpu,
   Activity,
-  Shield,
-  Fingerprint,
-  ArrowRight
+  Fingerprint
 } from 'lucide-react';
 import { User, OAuthConfig } from '../types.ts';
-import { apiService } from '../services/apiService.ts';
+import { authService } from '../services/authService.ts';
 
 interface SignupProps {
   onSignup: (user: User) => void;
@@ -29,104 +24,10 @@ const Signup: React.FC<SignupProps> = ({ onSignup, onSwitchToLogin, authConfig }
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    username: '',
-    password: '',
-    phone: ''
+    password: ''
   });
   const [isSyncing, setIsSyncing] = useState(false);
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    if (authConfig?.googleEnabled && authConfig.googleClientId) {
-      if (!document.getElementById('google-jssdk')) {
-        const script = document.createElement('script');
-        script.id = 'google-jssdk';
-        script.src = "https://accounts.google.com/gsi/client";
-        script.async = true;
-        script.defer = true;
-        script.onload = () => {
-          (window as any).google?.accounts.id.initialize({
-            client_id: authConfig.googleClientId,
-            callback: handleSocialSync,
-          });
-        };
-        document.head.appendChild(script);
-      }
-    }
-
-    if (authConfig?.facebookEnabled && authConfig.facebookAppId && !(window as any).FB) {
-      if (!document.getElementById('facebook-jssdk')) {
-        const script = document.createElement('script');
-        script.id = 'facebook-jssdk';
-        script.src = "https://connect.facebook.net/en_US/sdk.js";
-        script.async = true;
-        script.defer = true;
-        script.onload = () => {
-          (window as any).FB.init({
-            appId: authConfig.facebookAppId,
-            cookie: true,
-            xfbml: true,
-            version: 'v18.0'
-          });
-        };
-        document.head.appendChild(script);
-      }
-    }
-  }, [authConfig]);
-
-  const handleSocialSync = async (response: any) => {
-    setIsSyncing(true);
-    try {
-      const base64Url = response.credential.split('.')[1];
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      const payload = JSON.parse(window.atob(base64));
-
-      const syncedUser = await apiService.socialSync({
-        name: payload.name,
-        email: payload.email,
-        profileImage: payload.picture
-      });
-
-      onSignup({ ...syncedUser, deviceInfo: getDeviceInfo() } as User);
-    } catch (err) {
-      setError('Social Handshake Failed');
-      setIsSyncing(false);
-    }
-  };
-
-  const handleFacebookSignup = () => {
-    if (!(window as any).FB) return;
-    setIsSyncing(true);
-    (window as any).FB.login(async (response: any) => {
-      if (response.authResponse) {
-        (window as any).FB.api('/me', { fields: 'name,email,picture' }, async (userData: any) => {
-          try {
-            const syncedUser = await apiService.socialSync({
-              name: userData.name,
-              email: userData.email,
-              profileImage: userData.picture?.data?.url
-            });
-            onSignup({ ...syncedUser, deviceInfo: getDeviceInfo() } as User);
-          } catch (err) {
-            setError('Meta Handshake Failed');
-            setIsSyncing(false);
-          }
-        });
-      } else {
-        setIsSyncing(false);
-      }
-    }, { scope: 'public_profile,email' });
-  };
-
-  const fetchIpAddress = async (): Promise<string> => {
-    try {
-      const response = await fetch('https://api.ipify.org?format=json');
-      const data = await response.json();
-      return data.ip || '0.0.0.0';
-    } catch (err) {
-      return '127.0.0.1';
-    }
-  };
 
   const getDeviceInfo = () => {
     const ua = navigator.userAgent;
@@ -140,22 +41,17 @@ const Signup: React.FC<SignupProps> = ({ onSignup, onSwitchToLogin, authConfig }
     setIsSyncing(true);
     setError('');
 
-    const ip = await fetchIpAddress();
     const deviceInfo = getDeviceInfo();
 
     try {
-      const newUser = await apiService.registerUser({
-        name: formData.name,
-        email: formData.email,
-        username: formData.username,
-        password: formData.password,
-        phone: formData.phone,
-        ipAddress: ip,
-        deviceInfo: deviceInfo
-      });
-      onSignup(newUser as User);
-    } catch (error) {
-      setError("PROVISION_FAILED: CHECK_NETWORK_PROTOCOLS");
+      const newUser = await authService.signUp(
+        formData.email, 
+        formData.password, 
+        formData.name
+      );
+      onSignup({ ...newUser, deviceInfo } as User);
+    } catch (err: any) {
+      setError(err.message || "PROVISION_FAILED: CHECK_NETWORK_PROTOCOLS");
     } finally {
       setIsSyncing(false);
     }
@@ -224,24 +120,9 @@ const Signup: React.FC<SignupProps> = ({ onSignup, onSwitchToLogin, authConfig }
               <div>
                 <span className="text-neutral-700 font-black uppercase text-[8px] tracking-widest mb-1">Network Reliability</span>
                 <div className="text-base md:text-lg font-black text-emerald-500/80 italic flex items-center gap-2 md:gap-3 font-tactical tracking-widest">
-                  <Shield size={12} md:size={14} className="animate-pulse" /> 99.9%
+                  <Activity size={12} md:size={14} className="animate-pulse" /> 99.9%
                 </div>
               </div>
-              <div className="hidden sm:block">
-                <span className="text-neutral-700 font-black uppercase text-[8px] tracking-widest mb-1">Compliance</span>
-                <div className="text-base md:text-lg font-black text-neutral-400 italic font-tactical tracking-widest uppercase">Verified</div>
-              </div>
-            </div>
-          </div>
-          <div className="hidden lg:flex items-center gap-4 bg-black/40 p-1.5 rounded-xl border border-neutral-800/40 shrink-0">
-            <div className="flex flex-col items-end px-3">
-              <span className="text-[7px] font-black text-neutral-600 uppercase tracking-widest">Identity Protocol</span>
-              <span className="text-[10px] font-bold text-neutral-400 font-mono uppercase tracking-widest">v4.0_GENESIS</span>
-            </div>
-            <div className="h-6 w-px bg-neutral-800/60" />
-            <div className="px-3 flex items-center gap-2">
-               <Activity size={14} className="text-purple-400/40" />
-               <span className="text-[10px] font-black text-purple-400 uppercase tracking-widest font-tactical">AWAITING_DATA</span>
             </div>
           </div>
         </div>
@@ -273,7 +154,7 @@ const Signup: React.FC<SignupProps> = ({ onSignup, onSwitchToLogin, authConfig }
                   </div>
                   <div className="space-y-2">
                     <label className="text-[9px] md:text-[10px] font-black text-neutral-600 uppercase tracking-widest px-2 italic flex items-center gap-2">
-                      <Mail size={14} className="text-purple-400" /> Contact_Vector
+                      <Mail size={14} className="text-purple-400" /> Contact_Vector (Email)
                     </label>
                     <input 
                       required 
@@ -286,37 +167,9 @@ const Signup: React.FC<SignupProps> = ({ onSignup, onSwitchToLogin, authConfig }
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-[9px] md:text-[10px] font-black text-neutral-600 uppercase tracking-widest px-2 italic flex items-center gap-2">
-                      <Phone size={14} className="text-purple-400" /> Comm_Node
-                    </label>
-                    <input 
-                      required
-                      type="tel"
-                      className="w-full bg-black border-2 border-neutral-800 rounded-xl md:rounded-2xl px-6 py-4 text-neutral-200 font-bold outline-none focus:border-purple-400 transition-all font-tactical tracking-widest placeholder:text-neutral-900" 
-                      placeholder="+1-000-000-0000" 
-                      value={formData.phone} 
-                      onChange={e => setFormData({...formData, phone: e.target.value})} 
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[9px] md:text-[10px] font-black text-neutral-600 uppercase tracking-widest px-2 italic flex items-center gap-2">
-                      <Terminal size={14} className="text-purple-400" /> Username_ID
-                    </label>
-                    <input 
-                      required
-                      className="w-full bg-black border-2 border-neutral-800 rounded-xl md:rounded-2xl px-6 py-4 text-neutral-200 font-bold outline-none focus:border-purple-400 transition-all font-tactical tracking-widest placeholder:text-neutral-900" 
-                      placeholder="USER_ALIAS" 
-                      value={formData.username} 
-                      onChange={e => setFormData({...formData, username: e.target.value})} 
-                    />
-                  </div>
-                </div>
-
                 <div className="space-y-2">
                   <label className="text-[9px] md:text-[10px] font-black text-neutral-600 uppercase tracking-widest px-2 italic flex items-center gap-2">
-                    <Lock size={14} className="text-purple-400" /> Security_Token
+                    <Lock size={14} className="text-purple-400" /> Security_Token (Password)
                   </label>
                   <input 
                     required 
@@ -353,45 +206,6 @@ const Signup: React.FC<SignupProps> = ({ onSignup, onSwitchToLogin, authConfig }
           </div>
 
           <div className="lg:col-span-5 space-y-8">
-            <div className="bg-[#0f0f0f] border-2 border-neutral-900 rounded-[2.5rem] p-8 space-y-8 shadow-2xl relative overflow-hidden">
-               <div className="flex justify-between items-center border-b border-neutral-800/40 pb-6 mb-2">
-                 <h4 className="text-[10px] font-black text-neutral-500 uppercase tracking-widest flex items-center gap-3 font-futuristic">
-                    <Globe size={16} className="text-purple-400" /> SSO_PROVISIONS
-                 </h4>
-                 <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_12px_#10b981]" />
-               </div>
-
-               <div className="grid grid-cols-1 gap-4">
-                  <button 
-                    onClick={() => (window as any).google?.accounts.id.prompt()} 
-                    disabled={!authConfig?.googleEnabled || isSyncing}
-                    className="w-full group bg-black/40 border-2 border-neutral-800 hover:border-blue-500/40 rounded-2xl md:rounded-3xl p-6 flex items-center gap-6 transition-all active:scale-[0.98] disabled:opacity-20"
-                  >
-                    <div className="w-12 h-12 rounded-xl bg-black flex items-center justify-center border border-neutral-800 group-hover:border-blue-500/20 shrink-0">
-                      <img src="https://www.google.com/favicon.ico" className="w-5 h-5" />
-                    </div>
-                    <div className="text-left">
-                       <span className="text-[8px] font-black text-neutral-600 uppercase tracking-widest block mb-1">NODE_CONNECTOR_01</span>
-                       <span className="text-lg font-black text-white italic font-tactical tracking-widest">GOOGLE_SYNC</span>
-                    </div>
-                  </button>
-
-                  <button 
-                    onClick={handleFacebookSignup} 
-                    disabled={!authConfig?.facebookEnabled || isSyncing}
-                    className="w-full group bg-black/40 border-2 border-neutral-800 hover:border-[#1877F2]/40 rounded-2xl md:rounded-3xl p-6 flex items-center gap-6 transition-all active:scale-[0.98] disabled:opacity-20"
-                  >
-                    <div className="w-12 h-12 rounded-xl bg-black flex items-center justify-center border border-neutral-800 group-hover:border-[#1877F2]/20 shrink-0">
-                      <Facebook size={20} className="text-[#1877F2]" fill="currentColor" />
-                    </div>
-                    <div className="text-left">
-                       <span className="text-[8px] font-black text-neutral-600 uppercase tracking-widest block mb-1">NODE_CONNECTOR_02</span>
-                       <span className="text-lg font-black text-white italic font-tactical tracking-widest">META_PROVISION</span>
-                    </div>
-                  </button>
-               </div>
-            </div>
-
             <div className="bg-[#0f0f0f] border-2 border-neutral-900 p-8 rounded-[2.5rem] flex items-start gap-6 shadow-xl relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity">
                 <ShieldCheck size={80} />
@@ -403,12 +217,6 @@ const Signup: React.FC<SignupProps> = ({ onSignup, onSwitchToLogin, authConfig }
                    Identity creation establishes a permanent cryptographic leaf in the LeadBid ecosystem. By provisionally mounting this node, you consent to automated integrity auditing and behavioral telemetry routing for market transparency.
                  </p>
               </div>
-            </div>
-            
-            <div className="flex items-center justify-center gap-4 py-4 opacity-20">
-               <div className="h-px bg-neutral-800 flex-1" />
-               <Zap size={16} className="text-white" />
-               <div className="h-px bg-neutral-800 flex-1" />
             </div>
           </div>
         </div>

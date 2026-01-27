@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { PurchaseRequest, User } from '../types.ts';
 import { 
@@ -79,11 +78,11 @@ const ActionCenter: React.FC<ActionCenterProps> = ({ requests = [] }) => {
       default:
         return {
           label: 'SYNCING_PROTOCOL',
-          color: 'text-cyan-400',
-          bg: 'bg-cyan-400/10',
-          border: 'border-cyan-400/30',
+          color: 'text-amber-400',
+          bg: 'bg-amber-400/10',
+          border: 'border-amber-400/30',
           icon: RefreshCw,
-          glow: 'shadow-[0_0_20px_rgba(0,229,255,0.2)]'
+          glow: 'shadow-[0_0_20px_rgba(250,204,21,0.2)]'
         };
     }
   };
@@ -108,18 +107,18 @@ const ActionCenter: React.FC<ActionCenterProps> = ({ requests = [] }) => {
       {/* HUD HEADER */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 md:gap-10 border-b-2 border-neutral-900 pb-8 md:pb-12">
         <div className="relative">
-          <div className="absolute -left-4 md:-left-12 top-1/2 -translate-y-1/2 w-4 h-12 md:h-24 bg-cyan-400 rounded-full blur-xl opacity-20" />
+          <div className="absolute -left-4 md:-left-12 top-1/2 -translate-y-1/2 w-4 h-12 md:h-24 bg-amber-400 rounded-full blur-xl opacity-20" />
           <h2 className="text-3xl md:text-4xl font-futuristic text-white italic uppercase flex items-center gap-4 md:gap-8 text-glow">
             DEPLOYMENT <span className="text-neutral-600 font-normal">CENTER</span>
           </h2>
           <div className="flex flex-wrap items-center gap-3 md:gap-6 mt-4 md:mt-6">
-            <div className="px-3 md:px-4 py-1.5 bg-cyan-400/10 border border-cyan-400/30 rounded-full text-[8px] md:text-[10px] font-black text-cyan-400 uppercase tracking-widest">CAMPAIGN_TRACKER_v4.2</div>
+            <div className="px-3 md:px-4 py-1.5 bg-amber-400/10 border border-amber-400/30 rounded-full text-[8px] md:text-[10px] font-black text-amber-400 uppercase tracking-widest">CAMPAIGN_TRACKER_v4.2</div>
             <span className="text-[10px] md:text-[12px] text-neutral-600 font-bold uppercase tracking-widest italic shrink-0">STABLE_CONNECTION // 0ms_LATENCY</span>
           </div>
         </div>
         <div className="flex items-center gap-4 md:gap-6 w-full md:w-auto">
-          <div className="flex-1 md:flex-none p-4 md:p-6 bg-[#0f0f0f] border-2 border-neutral-900 rounded-[1.5rem] md:rounded-3xl shadow-2xl flex items-center gap-4 md:gap-6 group hover:border-cyan-400/50 transition-all cursor-default overflow-hidden">
-            <div className="w-10 md:w-14 h-10 md:h-14 bg-cyan-400/10 rounded-xl md:rounded-2xl flex items-center justify-center text-cyan-400 group-hover:scale-110 transition-transform shrink-0">
+          <div className="flex-1 md:flex-none p-4 md:p-6 bg-[#0f0f0f] border-2 border-neutral-900 rounded-[1.5rem] md:rounded-3xl shadow-2xl flex items-center gap-4 md:gap-6 group hover:border-amber-400/50 transition-all cursor-default overflow-hidden">
+            <div className="w-10 md:w-14 h-10 md:h-14 bg-amber-400/10 rounded-xl md:rounded-2xl flex items-center justify-center text-amber-400 group-hover:scale-110 transition-transform shrink-0">
               <Terminal size={24} className="md:w-7 md:h-7" />
             </div>
             <div>
@@ -132,7 +131,7 @@ const ActionCenter: React.FC<ActionCenterProps> = ({ requests = [] }) => {
 
       {/* TACTICAL STATS BAR */}
       <div className="bg-[#0f0f0f] border border-neutral-800/60 rounded-[1.5rem] md:rounded-[2rem] p-4 md:p-6 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-400/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
+        <div className="absolute top-0 right-0 w-64 h-64 bg-amber-400/5 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
         
         <div className="flex items-center gap-8 md:gap-16 overflow-x-auto scrollbar-hide w-full">
           <div className="flex flex-col shrink-0">
@@ -230,7 +229,7 @@ const ActionCenter: React.FC<ActionCenterProps> = ({ requests = [] }) => {
                         <div className="h-px flex-1 bg-neutral-900" />
                         <span className="text-[8px] text-neutral-700 font-mono italic">#{req?.id?.split('_')[1] || '---'}</span>
                       </div>
-                      <h3 className="text-xl md:text-2xl font-black text-white italic tracking-tighter uppercase font-futuristic leading-none truncate group-hover:text-cyan-400 transition-colors">{req?.leadTitle || 'DATA_ASSET'}</h3>
+                      <h3 className="text-xl md:text-2xl font-black text-white italic tracking-tighter uppercase font-futuristic leading-none truncate group-hover:text-amber-400 transition-colors">{req?.leadTitle || 'DATA_ASSET'}</h3>
                       <div className="flex items-center gap-3 mt-3">
                          <div className={`px-3 py-1 rounded-lg text-[8px] md:text-[9px] font-black uppercase tracking-widest border transition-all ${config.bg} ${config.border} ${config.color}`}>
                            {config.label}
@@ -253,7 +252,7 @@ const ActionCenter: React.FC<ActionCenterProps> = ({ requests = [] }) => {
                         <span className="text-[10px] md:text-[11px] font-bold text-neutral-400 truncate max-w-[200px] font-mono">
                           {safeUrl(req?.buyerTargetLeadUrl)}
                         </span>
-                        <ArrowRight size={12} className="text-neutral-800 group-hover/uri:text-cyan-400 transition-colors" />
+                        <ArrowRight size={12} className="text-neutral-800 group-hover/uri:text-amber-400 transition-colors" />
                       </div>
                       <div className="flex items-center gap-2">
                          <span className="text-[7px] font-black text-neutral-800 uppercase tracking-widest">OFFICIAL_BIZ_URL:</span>
@@ -271,7 +270,7 @@ const ActionCenter: React.FC<ActionCenterProps> = ({ requests = [] }) => {
                         </div>
                         <div className="flex-1 h-1 bg-neutral-900 rounded-full mb-1.5 overflow-hidden">
                            <div 
-                            className={`h-full transition-all duration-1000 ${req?.status === 'approved' ? 'bg-emerald-500 w-full' : 'bg-cyan-400 w-1/2 animate-pulse'}`} 
+                            className={`h-full transition-all duration-1000 ${req?.status === 'approved' ? 'bg-emerald-500 w-full' : 'bg-amber-400 w-1/2 animate-pulse'}`} 
                            />
                         </div>
                       </div>
@@ -299,7 +298,7 @@ const ActionCenter: React.FC<ActionCenterProps> = ({ requests = [] }) => {
                         </button>
                         <button 
                           onClick={() => handleOpenHUD(req, 'identity')}
-                          className="p-2.5 bg-neutral-950 hover:bg-white/5 border border-neutral-800 rounded-xl text-neutral-600 hover:text-cyan-400 transition-all group/btn"
+                          className="p-2.5 bg-neutral-950 hover:bg-white/5 border border-neutral-800 rounded-xl text-neutral-600 hover:text-amber-400 transition-all group/btn"
                         >
                            <Search size={16} />
                         </button>
@@ -310,8 +309,8 @@ const ActionCenter: React.FC<ActionCenterProps> = ({ requests = [] }) => {
                 {/* Processing Overlay Effect */}
                 {req?.status === 'pending' && (
                   <div className="h-1 w-full bg-neutral-900 relative">
-                    <div className="absolute inset-0 bg-cyan-400/20 animate-pulse" />
-                    <div className="h-full bg-cyan-400 shadow-[0_0_15px_#22d3ee] animate-packet-sync" style={{ width: '25%' }} />
+                    <div className="absolute inset-0 bg-amber-400/20 animate-pulse" />
+                    <div className="h-full bg-amber-400 shadow-[0_0_15px_#facc15] animate-packet-sync" style={{ width: '25%' }} />
                   </div>
                 )}
               </div>
@@ -328,8 +327,8 @@ const ActionCenter: React.FC<ActionCenterProps> = ({ requests = [] }) => {
               {/* HUD Header */}
               <div className="flex justify-between items-center p-6 md:p-10 bg-black/40 border-b-2 border-neutral-900 shrink-0">
                  <div className="flex items-center gap-6">
-                    <div className="w-14 h-14 bg-cyan-400/10 rounded-2xl flex items-center justify-center border border-cyan-400/30 shadow-lg shadow-cyan-400/5">
-                      <Terminal className="text-cyan-400" size={28} />
+                    <div className="w-14 h-14 bg-amber-400/10 rounded-2xl flex items-center justify-center border border-amber-400/30 shadow-lg shadow-amber-400/5">
+                      <Terminal className="text-amber-400" size={28} />
                     </div>
                     <div>
                       <h2 className="text-2xl font-black text-white italic uppercase tracking-tighter leading-none">
@@ -341,7 +340,7 @@ const ActionCenter: React.FC<ActionCenterProps> = ({ requests = [] }) => {
                             <span className="text-[10px] font-black text-neutral-500 uppercase tracking-widest truncate max-w-[150px]">Order: {inspectingOrder.req.id}</span>
                          </div>
                          <span className="w-1 h-1 bg-neutral-800 rounded-full" />
-                         <span className="text-[10px] font-black text-cyan-400 uppercase tracking-widest italic animate-pulse">STATE: {inspectingOrder.req.status}</span>
+                         <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest italic animate-pulse">STATE: {inspectingOrder.req.status}</span>
                       </div>
                     </div>
                  </div>
@@ -386,7 +385,7 @@ const ActionCenter: React.FC<ActionCenterProps> = ({ requests = [] }) => {
                     <div className="bg-[#0c0c0c] border-2 border-neutral-800 p-8 rounded-[2.5rem] space-y-6 relative overflow-hidden">
                        <div className="absolute top-0 right-0 p-8 opacity-5"><Globe size={100} /></div>
                        <h3 className="text-xs font-black text-neutral-500 uppercase tracking-[0.3em] flex items-center gap-3">
-                         <LinkIcon size={16} className="text-cyan-400" /> ROUTING_MANIFEST
+                         <LinkIcon size={16} className="text-amber-400" /> ROUTING_MANIFEST
                        </h3>
                        <div className="space-y-4 relative z-10">
                           <div className="flex flex-col gap-2">
@@ -397,17 +396,17 @@ const ActionCenter: React.FC<ActionCenterProps> = ({ requests = [] }) => {
                           </div>
                           <div className="flex flex-col gap-2">
                              <span className="text-[8px] font-black text-neutral-700 uppercase tracking-widest px-2">RECIPIENT_WEBHOOK</span>
-                             <div className="bg-black border border-neutral-800 px-4 py-3 rounded-xl font-mono text-xs text-cyan-400">
+                             <div className="bg-black border border-neutral-800 px-4 py-3 rounded-xl font-mono text-xs text-amber-400">
                                 {inspectingOrder.req.buyerTargetLeadUrl}
                              </div>
                           </div>
                        </div>
                     </div>
 
-                    <div className="bg-cyan-500/5 border-2 border-cyan-500/20 p-8 rounded-[2.5rem] flex items-start gap-6">
-                       <Activity className="text-cyan-400 shrink-0" size={32} />
+                    <div className="bg-amber-500/5 border-2 border-amber-500/20 p-8 rounded-[2.5rem] flex items-start gap-6">
+                       <Activity className="text-amber-400 shrink-0" size={32} />
                        <div className="space-y-2">
-                          <h4 className="text-xs font-black text-cyan-400 uppercase tracking-widest">LIVE_TELEMETRY_LOG</h4>
+                          <h4 className="text-xs font-black text-amber-400 uppercase tracking-widest">LIVE_TELEMETRY_LOG</h4>
                           <p className="text-[10px] text-neutral-400 leading-relaxed font-bold uppercase tracking-tight italic">
                             Protocol Handshake: SUCCESS // Sync Status: STABLE // Network Integrity: 99.8% // Packets Routed: {Math.floor(Math.random() * 1000)} // Latency: 12ms
                           </p>
@@ -421,7 +420,7 @@ const ActionCenter: React.FC<ActionCenterProps> = ({ requests = [] }) => {
                        
                        {/* Source Node (Marketplace/Owner) */}
                        <div className="flex-1 w-full md:w-auto bg-black/40 border-2 border-neutral-800 p-8 rounded-[2.5rem] flex flex-col items-center text-center space-y-4 group">
-                          <div className="w-20 h-20 rounded-3xl bg-neutral-900 border-2 border-neutral-800 flex items-center justify-center text-neutral-700 group-hover:border-cyan-400/40 transition-all shadow-2xl">
+                          <div className="w-20 h-20 rounded-3xl bg-neutral-900 border-2 border-neutral-800 flex items-center justify-center text-neutral-700 group-hover:border-amber-400/40 transition-all shadow-2xl">
                              <Server size={32} />
                           </div>
                           <div>
@@ -432,19 +431,19 @@ const ActionCenter: React.FC<ActionCenterProps> = ({ requests = [] }) => {
                        </div>
 
                        <div className="shrink-0 flex flex-col items-center gap-2">
-                          <div className="w-12 h-12 bg-cyan-400/10 rounded-full flex items-center justify-center border border-cyan-400/30 animate-pulse">
-                             <ArrowRight size={24} className="text-cyan-400" />
+                          <div className="w-12 h-12 bg-amber-400/10 rounded-full flex items-center justify-center border border-amber-400/30 animate-pulse">
+                             <ArrowRight size={24} className="text-amber-400" />
                           </div>
                           <span className="text-[8px] font-black text-neutral-800 uppercase tracking-widest">TRANS_VERIFIED</span>
                        </div>
 
                        {/* Recipient Node (Buyer) */}
-                       <div className="flex-1 w-full md:w-auto bg-[#0c0c0c] border-2 border-cyan-400/20 p-8 rounded-[2.5rem] flex flex-col items-center text-center space-y-4 group">
-                          <div className="w-20 h-20 rounded-3xl bg-cyan-400/5 border-2 border-cyan-400/40 flex items-center justify-center text-cyan-400 shadow-[0_0_30px_rgba(0,229,255,0.1)] transition-all">
+                       <div className="flex-1 w-full md:w-auto bg-[#0c0c0c] border-2 border-amber-400/20 p-8 rounded-[2.5rem] flex flex-col items-center text-center space-y-4 group">
+                          <div className="w-20 h-20 rounded-3xl bg-amber-400/5 border-2 border-amber-400/40 flex items-center justify-center text-amber-400 shadow-[0_0_30px_rgba(250,204,21,0.1)] transition-all">
                              <UserIcon size={32} />
                           </div>
                           <div>
-                             <span className="text-[8px] font-black text-cyan-400 uppercase tracking-widest block mb-1">RECIPIENT_NODE</span>
+                             <span className="text-[8px] font-black text-amber-400 uppercase tracking-widest block mb-1">RECIPIENT_NODE</span>
                              <h4 className="text-xl font-black text-white italic uppercase tracking-tighter">{inspectingOrder.req.userName || 'IDENTITY_HIDDEN'}</h4>
                              <p className="text-[9px] text-neutral-600 font-bold uppercase mt-1 tracking-widest">ID: {inspectingOrder.req.userId.substr(0, 12)}...</p>
                           </div>
@@ -455,7 +454,7 @@ const ActionCenter: React.FC<ActionCenterProps> = ({ requests = [] }) => {
                     <div className="bg-[#0f0f0f] border-2 border-neutral-900 rounded-[2.5rem] p-8 md:p-10 shadow-xl space-y-8">
                        <div className="flex justify-between items-center border-b border-neutral-800 pb-4">
                           <h3 className="text-xs font-black text-neutral-500 uppercase tracking-[0.3em] flex items-center gap-3">
-                            <Database size={16} className="text-cyan-400" /> SETTLEMENT_LEDGER
+                            <Database size={16} className="text-amber-400" /> SETTLEMENT_LEDGER
                           </h3>
                           <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">FUNDS_SECURED</span>
                        </div>
@@ -471,7 +470,7 @@ const ActionCenter: React.FC<ActionCenterProps> = ({ requests = [] }) => {
                           </div>
                           <div className="col-span-2 text-right">
                              <span className="text-[7px] font-black text-neutral-700 uppercase tracking-widest block mb-2">AGGREGATE_DAILY_BURN</span>
-                             <span className="text-4xl font-tactical text-cyan-400 italic">${inspectingOrder.req.totalDailyCost.toLocaleString()} <span className="text-xs text-neutral-600 not-italic uppercase">USD</span></span>
+                             <span className="text-4xl font-tactical text-amber-400 italic">${inspectingOrder.req.totalDailyCost.toLocaleString()} <span className="text-xs text-neutral-600 not-italic uppercase">USD</span></span>
                           </div>
                        </div>
                     </div>
