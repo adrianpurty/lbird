@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { PurchaseRequest, User } from '../types.ts';
 import { 
@@ -24,7 +25,8 @@ import {
   ShieldAlert,
   Server,
   Link as LinkIcon,
-  Search
+  Search,
+  Calendar
 } from 'lucide-react';
 import { soundService } from '../services/soundService.ts';
 
@@ -356,6 +358,48 @@ const ActionCenter: React.FC<ActionCenterProps> = ({ requests = [] }) => {
               <div className="flex-1 overflow-y-auto p-6 md:p-12 space-y-8 scrollbar-hide">
                 {inspectingOrder.mode === 'manifest' ? (
                   <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+                    
+                    {/* Schedule Section */}
+                    <div className="bg-black/60 border-2 border-neutral-800 p-8 rounded-[2.5rem] space-y-6">
+                       <div className="flex items-center gap-3">
+                          <Calendar size={16} className="text-amber-400" />
+                          <h3 className="text-xs font-black text-neutral-400 uppercase tracking-[0.3em]">Operational_Availability</h3>
+                       </div>
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                          <div className="space-y-4">
+                             <span className="text-[8px] font-black text-neutral-700 uppercase tracking-widest block">ACTIVE_WINDOW</span>
+                             <div className="flex items-center gap-4">
+                                <div className="bg-neutral-900/60 border border-neutral-800 px-4 py-2 rounded-xl flex items-center gap-3">
+                                   <Clock size={12} className="text-amber-400/60" />
+                                   <span className="text-xs font-mono text-white">{(inspectingOrder.req as any).officeHoursStart || '09:00'}</span>
+                                </div>
+                                <span className="text-neutral-700">—</span>
+                                <div className="bg-neutral-900/60 border border-neutral-800 px-4 py-2 rounded-xl flex items-center gap-3">
+                                   <Clock size={12} className="text-amber-400/60" />
+                                   <span className="text-xs font-mono text-white">{(inspectingOrder.req as any).officeHoursEnd || '17:00'}</span>
+                                </div>
+                             </div>
+                          </div>
+                          <div className="space-y-4">
+                             <span className="text-[8px] font-black text-neutral-700 uppercase tracking-widest block">OPERATIONAL_DAYS</span>
+                             <div className="flex gap-2">
+                                {['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].map(day => (
+                                   <div 
+                                    key={day}
+                                    className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-[9px] uppercase border transition-all ${
+                                      (inspectingOrder.req as any).operationalDays?.includes(day)
+                                        ? 'bg-amber-400 text-black border-amber-400'
+                                        : 'bg-transparent text-neutral-800 border-neutral-900'
+                                    }`}
+                                   >
+                                      {day[0]}
+                                   </div>
+                                ))}
+                             </div>
+                          </div>
+                       </div>
+                    </div>
+
                     {/* Technical Specs Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                        <div className="bg-black/40 border-2 border-neutral-800 p-6 rounded-3xl space-y-3">

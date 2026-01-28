@@ -1,11 +1,9 @@
 
-import React, { useState, useMemo, memo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, memo } from 'react';
 import { Lead, UserRole } from '../types.ts';
 import { 
-  Zap, Heart, ChevronLeft, ChevronRight, 
-  Search, FilterX, ShieldAlert, Target,
-  ArrowUpRight, Activity, LayoutGrid, Database, Star,
-  MoveHorizontal, Clock, Globe, Plane, Home, Car, Palmtree, Briefcase
+  PlaneTakeoff, Ship, Hotel, Building2, Coins, Shield, Stethoscope, BriefcaseBusiness,
+  ListFilter, Activity, Edit3, Target, Globe, Star, Info, Database, Gavel, Layers, Heart
 } from 'lucide-react';
 import { soundService } from '../services/soundService.ts';
 
@@ -13,201 +11,204 @@ interface LeadGridProps {
   leads: Lead[];
   onBid: (id: string) => void;
   onEdit?: (lead: Lead) => void;
-  onToggleWishlist?: (id: string) => void;
   userRole: UserRole;
   currentUserId: string;
   activeBids?: string[];
-  wishlist?: string[];
+  wishlist: string[];
+  onToggleWishlist: (id: string) => void;
 }
 
-const getCategoryIcon = (category: string) => {
-  const cat = category.toLowerCase();
-  if (cat.includes('flight')) return <Plane size={24} className="text-[#2DD4BF]" />;
-  if (cat.includes('resort') || cat.includes('safari') || cat.includes('cruise')) return <Palmtree size={24} className="text-[#2DD4BF]" />;
-  if (cat.includes('hotel')) return <Home size={24} className="text-[#2DD4BF]" />;
-  if (cat.includes('car')) return <Car size={24} className="text-[#2DD4BF]" />;
-  if (cat.includes('professional') || cat.includes('support')) return <Briefcase size={24} className="text-[#2DD4BF]" />;
-  return <Target size={24} className="text-[#2DD4BF]" />;
-};
+interface TacticalCardProps {
+  lead: Lead;
+  userRole: UserRole;
+  onBid: (id: string) => void;
+  onEdit: (lead: Lead) => void;
+  nicheCount: number;
+  isWishlisted: boolean;
+  onToggleWishlist: (id: string) => void;
+  compact?: boolean;
+}
 
-const MemoizedLeadCard = memo(({ 
-  lead, isUserEngaged, isInWishlist, isOwner, userRole, onBid, onEdit, onToggleWishlist 
-}: any) => {
+// Named export for direct access
+export const TacticalLeadCard = memo(({ lead, userRole, onBid, onEdit, nicheCount, isWishlisted, onToggleWishlist, compact }: TacticalCardProps) => {
   const isAdmin = userRole === 'admin';
-  const canEdit = isAdmin || isOwner;
+  const integrityColor = lead.qualityScore > 80 ? 'text-emerald-400' : lead.qualityScore > 50 ? 'text-amber-400' : 'text-red-400';
+
+  const getIcon = (category: string) => {
+    const cat = category.toLowerCase();
+    if (cat.includes('flight')) return <PlaneTakeoff size={20} />;
+    if (cat.includes('cruise')) return <Ship size={20} />;
+    if (cat.includes('hotel')) return <Hotel size={20} />;
+    if (cat.includes('property')) return <Building2 size={20} />;
+    if (cat.includes('crypto')) return <Coins size={20} />;
+    return <BriefcaseBusiness size={20} />;
+  };
 
   return (
     <div 
-      className="group relative bg-[#0D0D0D] rounded-2xl border border-white/5 overflow-hidden flex flex-col p-6 h-full transition-all hover:border-white/20"
-      onClick={() => canEdit ? onEdit?.(lead) : onBid(lead.id)}
+      className={`group relative bg-[#0a0a0a] border rounded-2xl overflow-hidden hover:bg-white/[0.03] transition-all duration-500 flex flex-col h-[200px] shadow-2xl cursor-pointer ${
+        isWishlisted ? 'border-[#00e5ff]/40 shadow-[#00e5ff]/5' : 'border-white/15'
+      }`}
+      onClick={() => { soundService.playClick(); onBid(lead.id); }}
     >
-      {/* Top Header Row */}
-      <div className="flex justify-between items-start mb-6">
-        <div className="flex flex-col">
-          <div className="bg-[#1A1608] px-2.5 py-1 rounded text-[10px] font-black text-[#FACC15] uppercase tracking-widest mb-2 inline-block">
-            {lead.category.replace('Bookings', '').replace('Inquiries', '').toUpperCase()}
-          </div>
-          <span className="text-[8px] font-bold text-neutral-600 uppercase tracking-widest">VERIFIED GLOBAL SOURCE</span>
+      {/* Dynamic Background Accent */}
+      <div className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl -mr-16 -mt-16 transition-all ${
+        isWishlisted ? 'bg-[#00e5ff]/10' : 'bg-white/[0.02] group-hover:bg-white/[0.05]'
+      }`} />
+      
+      {/* TOP STRIPE: ID & ADMIN */}
+      <div className="flex justify-between items-center px-5 py-2.5 border-b border-white/15 shrink-0">
+        <div className="flex items-center gap-2">
+          <div className={`w-1.5 h-1.5 rounded-full ${isWishlisted ? 'bg-[#00e5ff] shadow-[0_0_8px_#00e5ff]' : 'bg-emerald-500 shadow-[0_0_8px_#10b981]'}`} />
+          <span className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em] font-mono">NODE_{lead.id.slice(-4).toUpperCase()}</span>
         </div>
-        <div className="flex items-center gap-1.5 bg-black/40 px-2 py-1 rounded-lg">
-          <Star size={12} className="text-[#FACC15] fill-current" />
-          <span className="text-[11px] font-bold text-white">{lead.sellerRating.toFixed(1)}</span>
+        <div className="flex items-center gap-4">
+           {/* NICHE CAPACITY INDICATOR */}
+           <div className="flex items-center gap-1.5 px-2 py-0.5 bg-white/[0.03] border border-white/15 rounded">
+              <Layers size={8} className="text-white/20" />
+              <span className="text-[7px] font-black text-white/40 uppercase tracking-widest whitespace-nowrap">
+                CAPACITY: <span className="text-white">{nicheCount}</span>
+              </span>
+           </div>
+           
+           <button 
+             onClick={(e) => { e.stopPropagation(); onToggleWishlist(lead.id); }}
+             className={`p-1.5 rounded transition-all ${isWishlisted ? 'text-[#00e5ff]' : 'text-white/20 hover:text-white/60'}`}
+           >
+             <Heart size={12} fill={isWishlisted ? "currentColor" : "none"} />
+           </button>
+
+           {isAdmin && (
+            <button 
+                onClick={(e) => { e.stopPropagation(); onEdit(lead); }} 
+                className="p-1.5 hover:bg-white/10 rounded transition-all text-white/40 hover:text-white"
+            >
+                <Edit3 size={12} />
+            </button>
+           )}
         </div>
       </div>
 
-      {/* Title & Description */}
-      <div className="mb-6 flex gap-4">
-        <div className="shrink-0 w-12 h-12 bg-black/40 rounded-xl flex items-center justify-center border border-white/5">
-          {getCategoryIcon(lead.category)}
+      {/* MAIN BODY: HORIZONTAL CONTENT */}
+      <div className="flex-1 p-5 flex gap-5 overflow-hidden items-center">
+        {/* Left Aspect: Icon & Score */}
+        <div className="flex flex-col items-center gap-2 shrink-0">
+          <div className="w-14 h-14 rounded-2xl bg-white/[0.03] border border-white/15 flex items-center justify-center text-white/60 shadow-inner group-hover:scale-105 group-hover:border-white/20 transition-all duration-500">
+            {getIcon(lead.category)}
+          </div>
+          <div className="text-center">
+            <span className="text-[7px] font-black text-white/20 uppercase tracking-widest block">Integrity</span>
+            <span className={`text-[10px] font-black italic ${integrityColor}`}>{lead.qualityScore}%</span>
+          </div>
         </div>
-        <div className="min-w-0">
-          <h3 className="text-lg font-bold text-white leading-snug mb-2 group-hover:text-[#FACC15] transition-colors truncate">
-            {lead.title}
-          </h3>
-          <p className="text-[11px] text-neutral-500 font-medium leading-relaxed line-clamp-2">
-            "{lead.description}"
+
+        {/* Center Aspect: Title & Category */}
+        <div className="flex-1 min-w-0 space-y-2">
+          <div>
+            <h3 className="text-sm font-black text-white uppercase tracking-tight truncate font-futuristic leading-none mb-1 group-hover:text-white transition-colors">
+              {lead.title}
+            </h3>
+            <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest truncate">
+              {lead.category}
+            </p>
+          </div>
+          <p className="text-[10px] text-white/25 leading-relaxed italic line-clamp-2 pr-2">
+            {lead.description}
           </p>
         </div>
-      </div>
 
-      {/* Stat Boxes */}
-      <div className="grid grid-cols-2 gap-3 mb-8">
-        <div className="bg-black/60 p-3 rounded-xl border border-white/5">
-           <span className="text-[8px] font-bold text-neutral-600 uppercase tracking-widest block mb-1">INTENT SCORE</span>
-           <div className="flex items-center gap-2">
-              <Zap size={10} className="text-[#FACC15] fill-current" />
-              <span className="text-xs font-bold text-white tracking-tighter">{lead.qualityScore}%</span>
-           </div>
-        </div>
-        <div className="bg-black/60 p-3 rounded-xl border border-white/5">
-           <span className="text-[8px] font-bold text-neutral-600 uppercase tracking-widest block mb-1">MARKET SCOPE</span>
-           <span className="text-xs font-bold text-white tracking-tighter truncate block">Global / Web</span>
-        </div>
-      </div>
-
-      {/* Bottom Row */}
-      <div className="flex justify-between items-end mb-6 px-1">
-        <div>
-           <span className="text-[9px] font-bold text-neutral-600 uppercase tracking-widest block mb-1">FLOOR PRICE / CPA</span>
-           <div className="text-2xl font-black text-white italic tracking-tighter font-tactical">${lead.currentBid.toLocaleString()}</div>
-        </div>
-        <div className="text-right">
-           <span className="text-[9px] font-bold text-neutral-600 uppercase tracking-widest block mb-1 flex items-center justify-end gap-1.5">
-             <Clock size={10} /> AUCTION END
-           </span>
-           <div className="text-sm font-black text-red-500 font-mono tracking-widest">{lead.timeLeft.toUpperCase()}</div>
+        {/* Right Aspect: Price & Action */}
+        <div className="flex flex-col items-end justify-between shrink-0 h-full border-l border-white/15 pl-5">
+          <div className="text-right">
+            <span className="text-[7px] font-black text-white/20 uppercase tracking-widest block mb-1">Valuation</span>
+            <div className="text-2xl font-black text-white italic tracking-tighter leading-none font-tactical">
+              ${lead.currentBid}
+            </div>
+            <div className="flex items-center gap-1 justify-end mt-1 text-white/40">
+              <Activity size={8} />
+              <span className="text-[8px] font-mono">{lead.bidCount}</span>
+            </div>
+          </div>
+          
+          <button 
+            className={`px-4 py-2 rounded-lg font-black text-[9px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg ${
+              isWishlisted ? 'bg-[#00e5ff] text-black' : 'bg-white text-black'
+            }`}
+          >
+            BID
+          </button>
         </div>
       </div>
 
-      {/* Large Yellow Action Button */}
-      <button 
-        className="w-full bg-[#FACC15] hover:bg-white text-black py-4 rounded-xl font-bold text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all transform active:scale-95 shadow-lg group/btn"
-      >
-        <Zap size={16} fill="currentColor" className="group-hover/btn:scale-110 transition-transform" />
-        BUY / PLACE BID
-      </button>
-
-      {/* Hover Wishlist Button */}
-      <button
-        onClick={(e) => { e.stopPropagation(); onToggleWishlist?.(lead.id); }}
-        className={`absolute top-4 right-4 w-8 h-8 rounded-full border transition-all flex items-center justify-center opacity-0 group-hover:opacity-100 ${isInWishlist ? 'bg-rose-600 border-rose-500 text-white' : 'bg-black/40 border-white/10 text-neutral-500 hover:text-white'}`}
-      >
-        <Heart size={14} fill={isInWishlist ? "currentColor" : "none"} />
-      </button>
+      {/* BOTTOM DECORATION */}
+      <div className="h-0.5 w-full bg-white/15 relative">
+        <div 
+          className={`absolute h-full transition-all duration-1000 ease-out ${isWishlisted ? 'bg-[#00e5ff]/50' : 'bg-white/20'}`} 
+          style={{ width: `${lead.qualityScore}%` }}
+        />
+      </div>
     </div>
   );
 });
 
-const LeadGrid: React.FC<LeadGridProps> = ({ 
-  leads, onBid, onEdit, onToggleWishlist, userRole, currentUserId, activeBids = [], wishlist = []
-}) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const ITEMS_PER_PAGE = 8; 
-  
-  const filteredLeads = useMemo(() => {
-    return leads.filter(l => 
-      l.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      l.category.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [leads, searchTerm]);
+// Fix: Define a custom type for LeadGrid that includes the TacticalLeadCard property to satisfy TypeScript
+interface LeadGridComponent extends React.FC<LeadGridProps> {
+  TacticalLeadCard: typeof TacticalLeadCard;
+}
 
-  const currentLeads = useMemo(() => filteredLeads.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE), [filteredLeads, currentPage]);
-  const totalPages = Math.ceil(filteredLeads.length / ITEMS_PER_PAGE);
+const LeadGrid: LeadGridComponent = ({ leads, onBid, onEdit, userRole, wishlist, onToggleWishlist }) => {
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  
+  const nicheCounts = useMemo(() => {
+    return leads.reduce((acc, lead) => {
+      acc[lead.category] = (acc[lead.category] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+  }, [leads]);
+
+  const filtered = useMemo(() => selectedCategory ? leads.filter(l => l.category === selectedCategory) : leads, [leads, selectedCategory]);
+  const categories = useMemo(() => Array.from(new Set(leads.map(l => l.category))), [leads]);
 
   return (
-    <div className="space-y-12">
-      {/* Simplified Search Header */}
-      <div className="flex items-center gap-4 mb-8">
-        <div className="bg-[#1A1608] w-6 h-6 rounded-md flex items-center justify-center">
-          <Database size={14} className="text-[#FACC15]" />
+    <div className="space-y-8">
+      {/* FILTER HUD */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-white/15 pb-6">
+        <div className="flex items-center gap-4">
+          <div className="bg-white/5 border border-white/10 rounded-lg px-4 py-2 flex items-center gap-3">
+            <ListFilter size={14} className="text-white/40" />
+            <select 
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="bg-transparent text-[10px] font-black uppercase tracking-[0.1em] text-white/60 outline-none appearance-none pr-6 cursor-pointer"
+            >
+              <option value="" className="bg-[#0c0c0c]">ALL_SECTORS</option>
+              {categories.map(c => <option key={c} value={c} className="bg-[#0c0c0c]">{c.toUpperCase()}</option>)}
+            </select>
+          </div>
         </div>
-        <h2 className="text-sm font-black text-white uppercase tracking-widest">ALL LIVE ASSETS</h2>
+        <div className="text-[9px] font-black text-white/20 uppercase tracking-[0.3em]">
+           {filtered.length} ACTIVE_NODES
+        </div>
       </div>
 
-      {/* MODULE GRID */}
-      <div 
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-      >
-        {currentLeads.length > 0 ? (
-          currentLeads.map((lead) => (
-            <MemoizedLeadCard 
-              key={lead.id}
-              lead={lead}
-              isUserEngaged={activeBids.includes(lead.id)}
-              isInWishlist={wishlist.includes(lead.id)}
-              isOwner={lead.ownerId === currentUserId}
-              userRole={userRole}
-              onBid={onBid}
-              onEdit={onEdit}
-              onToggleWishlist={onToggleWishlist}
-            />
-          ))
-        ) : (
-          <div className="col-span-full py-40 text-center bg-[#030303] border-2 border-neutral-800/40 border-dashed rounded-[4rem] w-full">
-             <ShieldAlert size={80} className="mx-auto text-neutral-800 mb-8 opacity-20" />
-             <h4 className="text-neutral-500 font-futuristic text-2xl uppercase tracking-[0.5em]">Inventory Empty</h4>
-          </div>
-        )}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filtered.map(lead => (
+          <TacticalLeadCard 
+            key={lead.id}
+            lead={lead}
+            userRole={userRole}
+            onBid={onBid}
+            onEdit={onEdit!}
+            nicheCount={nicheCounts[lead.category] || 0}
+            isWishlisted={wishlist.includes(lead.id)}
+            onToggleWishlist={onToggleWishlist}
+          />
+        ))}
       </div>
-
-      {/* PAGINATION */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-12 pt-16 pb-10 border-t border-white/5">
-          <button 
-            disabled={currentPage === 1} 
-            onClick={() => { soundService.playClick(); setCurrentPage(prev => prev - 1); }}
-            className="flex items-center gap-4 text-neutral-600 hover:text-yellow-500 disabled:opacity-20 transition-all font-black text-[10px] uppercase tracking-[0.4em]"
-          >
-            <div className="w-12 h-12 rounded-xl border border-neutral-800 flex items-center justify-center bg-[#080808]">
-              <ChevronLeft size={24} />
-            </div>
-          </button>
-
-          <div className="flex items-center gap-4">
-            {[...Array(totalPages)].map((_, i) => (
-              <button
-                key={i}
-                onClick={() => { soundService.playClick(true); setCurrentPage(i + 1); }}
-                className={`w-2.5 h-2.5 rounded-full transition-all border ${currentPage === i + 1 ? 'bg-[#FACC15] border-[#FACC15]' : 'bg-neutral-800 border-transparent'}`}
-              />
-            ))}
-          </div>
-
-          <button 
-            disabled={currentPage === totalPages} 
-            onClick={() => { soundService.playClick(); setCurrentPage(prev => prev + 1); }}
-            className="flex items-center gap-4 text-neutral-600 hover:text-yellow-500 disabled:opacity-20 transition-all font-black text-[10px] uppercase tracking-[0.4em]"
-          >
-            <div className="w-12 h-12 rounded-xl border border-neutral-800 flex items-center justify-center bg-[#080808]">
-              <ChevronRight size={24} />
-            </div>
-          </button>
-        </div>
-      )}
     </div>
   );
 };
+
+LeadGrid.TacticalLeadCard = TacticalLeadCard;
 
 export default LeadGrid;

@@ -1,23 +1,20 @@
-
 import React, { useState, useEffect } from 'react';
-import { Lead, AIInsight } from '../types.ts';
-import { analyzeLeadQuality } from '../services/geminiService.ts';
+import { Lead } from '../types.ts';
 import { apiService, NICHE_PROTOCOLS } from '../services/apiService.ts';
 import { 
-  Sparkles, 
-  Loader2, 
-  Globe, 
-  DollarSign, 
+  Zap, 
   Target, 
-  ChevronDown, 
-  ListFilter, 
-  Cpu,
-  Zap,
-  Activity,
-  Database,
-  ArrowRight,
+  Globe, 
+  Cpu, 
+  Activity, 
+  Database, 
+  ArrowRight, 
+  ShieldCheck, 
   Radar,
-  Phone
+  ListFilter,
+  DollarSign,
+  MapPin,
+  RefreshCw
 } from 'lucide-react';
 import { soundService } from '../services/soundService.ts';
 
@@ -32,15 +29,11 @@ const LeadSubmissionForm: React.FC<LeadSubmissionFormProps> = ({ onSubmit }) => 
     description: '',
     businessUrl: '',
     targetLeadUrl: '',
-    tollFreeNumber: '',
     basePrice: 50,
-    buyNowPrice: 150,
     countryCode: 'US',
     region: 'Remote'
   });
   const [categories, setCategories] = useState<Record<string, string[]>>({});
-  const [aiInsight, setAiInsight] = useState<AIInsight | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
 
   useEffect(() => {
@@ -57,245 +50,236 @@ const LeadSubmissionForm: React.FC<LeadSubmissionFormProps> = ({ onSubmit }) => 
     fetchCategories();
   }, []);
 
-  const handleAnalyze = async () => {
-    if (!formData.businessUrl || !formData.targetLeadUrl) return;
-    setIsAnalyzing(true);
-    soundService.playClick(true);
-    const result = await analyzeLeadQuality(formData.businessUrl, formData.targetLeadUrl);
-    setAiInsight(result);
-    setIsAnalyzing(false);
-    soundService.playClick(false);
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.category) {
-      alert("ERROR: SELECT LEAD NICHE");
+      alert("CRITICAL: SELECT TARGET NICHE PROTOCOL.");
       return;
     }
     soundService.playClick(true);
-    onSubmit({
-      ...formData,
-      qualityScore: aiInsight?.relevance || 0
-    });
+    onSubmit(formData);
   };
 
   return (
-    <div className="max-w-[1400px] mx-auto space-y-10 pb-32 animate-in fade-in duration-700">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-10 border-b border-[#1A1A1A] pb-12">
-        <div>
-          <h2 className="text-3xl md:text-5xl font-futuristic font-black text-white uppercase tracking-tighter leading-none">
-            LEAD <span className="text-[#FACC15]">PROVISION</span>
-          </h2>
-          <p className="text-[10px] md:text-[12px] text-neutral-600 font-bold uppercase tracking-[0.6em] mt-4">STABLE_CONNECTION // AI_AUDIT_ENABLED</p>
+    <div className="max-w-[1600px] mx-auto space-y-10 pb-32 animate-in fade-in duration-700 font-rajdhani">
+      
+      {/* HEADER HUD */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-neutral-900/60 pb-10">
+        <div className="space-y-6">
+          <h1 className="text-6xl font-futuristic italic font-black uppercase tracking-tighter">
+            ASSET <span className="text-transparent" style={{ WebkitTextStroke: '2px #ffffff', opacity: 0.3 }}>PROVISION</span>
+          </h1>
+          <div className="flex items-center gap-6">
+            <div className="px-4 py-1.5 bg-[#00e5ff]/10 border border-[#00e5ff]/40 rounded-lg shadow-[0_0_15px_rgba(0,229,255,0.1)]">
+              <span className="text-[10px] font-black text-[#00e5ff] uppercase tracking-[0.2em]">PROVISIONING_NODE_V4</span>
+            </div>
+            <span className="text-[10px] text-neutral-600 font-bold uppercase tracking-[0.3em] italic">STABLE_CONNECTION // 12MS</span>
+          </div>
         </div>
-        
-        <div className="flex items-center gap-6 bg-black border border-[#1A1A1A] rounded-3xl p-6 shadow-2xl">
-          <div className="w-12 h-12 bg-[#1A1A1A] rounded-2xl flex items-center justify-center text-[#FACC15]">
-            <Cpu size={28} />
+
+        {/* SYSTEM RELIABILITY WIDGET */}
+        <div className="bg-[#0c0c0c] border-2 border-neutral-800 p-4 md:p-6 rounded-[2rem] flex items-center gap-6 shadow-2xl group hover:border-[#00e5ff]/30 transition-all cursor-default">
+          <div className="w-12 h-12 bg-[#00e5ff]/10 rounded-xl flex items-center justify-center text-[#00e5ff] shrink-0 group-hover:scale-110 transition-transform">
+            <Cpu size={24} />
           </div>
           <div>
-            <span className="text-[9px] font-black text-neutral-600 uppercase tracking-widest block mb-1">SYSTEM_HEALTH</span>
-            <span className="text-2xl font-tactical text-white tracking-widest leading-none">99.8%_ACTIVE</span>
+            <span className="text-[9px] font-black text-neutral-600 uppercase tracking-widest block mb-1">SYSTEM_RELIABILITY</span>
+            <span className="text-3xl font-tactical text-white tracking-widest leading-none">99.8%</span>
           </div>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-        <div className="lg:col-span-8 space-y-8">
-          <div className="bg-[#1A1A1A] rounded-[2.5rem] border border-white/5 p-10 shadow-2xl space-y-10 relative overflow-hidden group">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-              <div className="space-y-3">
-                <label className="text-[10px] font-black text-neutral-600 uppercase tracking-[0.4em] px-2 flex items-center gap-2">
-                  <Zap size={14} className="text-[#FACC15]" /> Campaign Node
-                </label>
-                <input 
-                  required
-                  className="w-full bg-black border border-[#1A1A1A] rounded-2xl px-6 py-5 text-white font-bold outline-none focus:border-[#FACC15]/50 transition-all placeholder:text-neutral-800 text-lg"
-                  placeholder="e.g. SOLAR_INBOUND_V4"
-                  value={formData.title}
-                  onChange={e => setFormData({...formData, title: e.target.value})}
-                />
+      <form onSubmit={handleSubmit} className="space-y-10">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+          
+          {/* LEFT COLUMN: DATA INPUT */}
+          <div className="lg:col-span-8 space-y-8">
+            <div className="bg-[#0c0c0c] border border-neutral-800/40 rounded-[3rem] p-10 shadow-2xl relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity">
+                <Database size={120} />
               </div>
-              <div className="space-y-3 relative">
-                <label className="text-[10px] font-black text-neutral-600 uppercase tracking-[0.4em] px-2 flex items-center gap-2">
-                  <Target size={14} className="text-[#FACC15]" /> Sector Protocol
-                </label>
-                <div className="relative">
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mb-10">
+                <div className="space-y-4">
+                  <label className="text-[10px] font-black text-neutral-600 uppercase tracking-widest px-2 flex items-center gap-3">
+                    <Zap size={14} className="text-[#00e5ff]" /> CAMPAIGN_NODE
+                  </label>
+                  <input 
+                    required
+                    className="w-full bg-black/40 border-2 border-neutral-800 rounded-2xl px-6 py-5 text-neutral-200 font-bold outline-none focus:border-[#00e5ff]/60 transition-all placeholder:text-neutral-900"
+                    placeholder="E.G. HIGH-TICKET SOLAR_IA_INBOUND"
+                    value={formData.title}
+                    onChange={e => setFormData({...formData, title: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-4">
+                  <label className="text-[10px] font-black text-neutral-600 uppercase tracking-widest px-2 flex items-center gap-3">
+                    <Target size={14} className="text-[#00e5ff]" /> SECTOR_PROTOCOL
+                  </label>
                   <select 
                     required
-                    className="w-full bg-black border border-[#1A1A1A] rounded-2xl px-6 py-5 text-white font-bold outline-none focus:border-[#FACC15]/50 transition-all appearance-none cursor-pointer uppercase text-sm tracking-widest"
+                    className="w-full bg-black/40 border-2 border-neutral-800 rounded-2xl px-6 py-5 text-white font-bold outline-none focus:border-[#00e5ff]/60 transition-all appearance-none cursor-pointer uppercase text-sm tracking-widest"
                     value={formData.category}
                     onChange={e => setFormData({...formData, category: e.target.value})}
                   >
-                    <option value="">SELECT SEGMENT</option>
+                    <option value="" disabled>SELECT SEGMENT</option>
                     {Object.entries(categories).map(([group, items]) => (
-                      <optgroup key={group} label={group.toUpperCase()} className="bg-black text-[#FACC15]">
+                      <optgroup key={group} label={group.toUpperCase()} className="bg-black">
                         {(items as string[]).map(cat => (
-                          <option key={cat} value={cat} className="text-white">{cat}</option>
+                          <option key={cat} value={cat}>{cat}</option>
                         ))}
                       </optgroup>
                     ))}
                   </select>
-                  <ChevronDown size={20} className="absolute right-6 top-1/2 -translate-y-1/2 text-neutral-700 pointer-events-none" />
+                </div>
+              </div>
+
+              <div className="space-y-4 mb-10">
+                <label className="text-[10px] font-black text-neutral-600 uppercase tracking-widest px-2 flex items-center gap-3">
+                  <ListFilter size={14} className="text-[#00e5ff]" /> MANIFEST_DESCRIPTION
+                </label>
+                <textarea 
+                  required
+                  rows={5}
+                  className="w-full bg-black/40 border-2 border-neutral-800 rounded-3xl px-8 py-6 text-neutral-300 outline-none focus:border-[#00e5ff]/60 transition-all resize-none italic placeholder:text-neutral-900 text-lg leading-relaxed"
+                  placeholder="Document traffic integrity, intent signals, and verification layers..."
+                  value={formData.description}
+                  onChange={e => setFormData({...formData, description: e.target.value})}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                <div className="space-y-4">
+                  <label className="text-[10px] font-black text-neutral-600 uppercase tracking-widest px-2 flex items-center gap-3">
+                    <Globe size={14} className="text-[#00e5ff]" /> IDENTITY_ORIGIN_URL
+                  </label>
+                  <input 
+                    required
+                    type="url"
+                    className="w-full bg-black/40 border-2 border-neutral-800 rounded-xl px-6 py-4 text-neutral-400 font-mono text-xs outline-none focus:border-[#00e5ff]/60 transition-all"
+                    placeholder="HTTPS://HQ.PROVISION.COM"
+                    value={formData.businessUrl}
+                    onChange={e => setFormData({...formData, businessUrl: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-4">
+                  <label className="text-[10px] font-black text-neutral-700 uppercase tracking-widest px-2 flex items-center gap-3">
+                    <Target size={14} className="text-[#00e5ff]" /> TRAFFIC_TERMINAL_URL
+                  </label>
+                  <input 
+                    required
+                    type="url"
+                    className="w-full bg-black/40 border-2 border-neutral-800 rounded-xl px-6 py-4 text-neutral-400 font-mono text-xs outline-none focus:border-[#00e5ff]/60 transition-all"
+                    placeholder="AD_NODE_DESTINATION"
+                    value={formData.targetLeadUrl}
+                    onChange={e => setFormData({...formData, targetLeadUrl: e.target.value})}
+                  />
                 </div>
               </div>
             </div>
 
-            <div className="space-y-3">
-              <label className="text-[10px] font-black text-neutral-600 uppercase tracking-[0.4em] px-2 flex items-center gap-2">
-                <ListFilter size={14} className="text-[#FACC15]" /> Data Manifest
-              </label>
-              <textarea 
-                required
-                rows={4}
-                className="w-full bg-black border border-[#1A1A1A] rounded-[2rem] px-8 py-6 text-neutral-300 outline-none focus:border-[#FACC15]/50 transition-all resize-none text-lg"
-                placeholder="Detail verification layers and intent signals..."
-                value={formData.description}
-                onChange={e => setFormData({...formData, description: e.target.value})}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-              <div className="space-y-3">
-                <label className="text-[10px] font-black text-neutral-600 uppercase tracking-[0.4em] px-2">Source URL</label>
-                <input 
-                  required
-                  type="url"
-                  className="w-full bg-black border border-[#1A1A1A] rounded-2xl px-6 py-5 text-[#FACC15] font-mono text-sm outline-none focus:border-[#FACC15]/50 transition-all"
-                  placeholder="https://origin-node.com"
-                  value={formData.businessUrl}
-                  onChange={e => setFormData({...formData, businessUrl: e.target.value})}
-                />
+            {/* VALUATION ROW */}
+            <div className="bg-[#0c0c0c] border border-neutral-800/40 rounded-[2.5rem] p-8 flex flex-col md:flex-row items-center justify-between gap-10 shadow-xl">
+              <div className="space-y-4 w-full md:w-80">
+                <label className="text-[10px] font-black text-neutral-600 uppercase tracking-widest px-2 flex items-center gap-3">
+                  <DollarSign size={16} className="text-[#00e5ff]" /> NODE_VALUATION ($)
+                </label>
+                <div className="relative">
+                  <input 
+                    type="number"
+                    className="w-full bg-black border-2 border-neutral-800 rounded-2xl px-12 py-5 text-4xl font-black text-white outline-none focus:border-[#00e5ff] transition-all font-tactical tracking-widest"
+                    value={formData.basePrice}
+                    onChange={e => setFormData({...formData, basePrice: parseInt(e.target.value)})}
+                  />
+                  <span className="absolute left-6 top-1/2 -translate-y-1/2 text-neutral-700 font-black text-2xl italic font-tactical">$</span>
+                </div>
               </div>
-              <div className="space-y-3">
-                <label className="text-[10px] font-black text-neutral-600 uppercase tracking-[0.4em] px-2">Target API</label>
-                <input 
-                  required
-                  type="url"
-                  className="w-full bg-black border border-[#1A1A1A] rounded-2xl px-6 py-5 text-[#FACC15] font-mono text-sm outline-none focus:border-[#FACC15]/50 transition-all"
-                  placeholder="https://delivery-endpoint.net"
-                  value={formData.targetLeadUrl}
-                  onChange={e => setFormData({...formData, targetLeadUrl: e.target.value})}
-                />
+              
+              <div className="flex-1 flex items-center justify-center border-2 border-neutral-900 border-dashed rounded-[2rem] p-10 group cursor-pointer hover:border-[#00e5ff]/20 transition-colors">
+                <div className="flex items-center gap-4 text-neutral-700 group-hover:text-neutral-500 transition-colors">
+                  <ShieldCheck size={20} />
+                  <span className="text-[11px] font-black uppercase tracking-[0.3em]">VALIDATE_TRAFFIC_NODE</span>
+                </div>
               </div>
-            </div>
-
-            <div className="space-y-3">
-              <label className="text-[10px] font-black text-neutral-600 uppercase tracking-[0.4em] px-2 flex items-center gap-2">
-                <Phone size={14} className="text-[#FACC15]" /> Voice Relay (Toll-Free Number)
-              </label>
-              <input 
-                type="text"
-                className="w-full bg-black border border-[#1A1A1A] rounded-2xl px-6 py-5 text-white font-mono text-lg outline-none focus:border-[#FACC15]/50 transition-all placeholder:text-neutral-800"
-                placeholder="+1-800-000-0000 (Optional)"
-                value={formData.tollFreeNumber}
-                onChange={e => setFormData({...formData, tollFreeNumber: e.target.value})}
-              />
             </div>
           </div>
 
-          <div className="bg-[#1A1A1A] border border-white/5 rounded-[2.5rem] p-10 grid grid-cols-1 md:grid-cols-2 gap-10 shadow-xl">
-            <div className="space-y-3">
-              <label className="text-[10px] font-black text-neutral-600 uppercase tracking-[0.4em] px-2 flex items-center gap-2">
-                <DollarSign size={14} className="text-[#FACC15]" /> Floor Price ($/EA)
-              </label>
-              <div className="relative">
-                <input 
-                  required
-                  type="number"
-                  className="w-full bg-black border border-[#1A1A1A] rounded-2xl px-12 py-6 text-4xl font-tactical text-white outline-none focus:border-[#FACC15] transition-all"
-                  value={formData.basePrice}
-                  onChange={e => setFormData({...formData, basePrice: parseFloat(e.target.value) || 0})}
-                />
-                <span className="absolute left-6 top-1/2 -translate-y-1/2 text-neutral-800 font-black text-2xl font-tactical">$</span>
+          {/* RIGHT COLUMN: DIAGNOSTICS */}
+          <div className="lg:col-span-4 space-y-8 h-full">
+            <div className="bg-[#0c0c0c] border border-neutral-800/40 rounded-[3rem] p-10 h-full flex flex-col shadow-2xl relative overflow-hidden group">
+              <div className="flex items-center gap-4 mb-16">
+                 <Activity size={18} className="text-[#00e5ff]" />
+                 <h3 className="text-sm font-black text-white italic uppercase tracking-[0.3em]">DIAGNOSTIC_NODE</h3>
+                 <div className="ml-auto w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_10px_#10b981]" />
               </div>
-            </div>
-            
-            <div className="space-y-3">
-              <label className="text-[10px] font-black text-neutral-600 uppercase tracking-[0.4em] px-2 flex items-center gap-2">
-                <Zap size={14} className="text-[#FACC15]" /> Buy Now Price ($/EA)
-              </label>
-              <div className="relative">
-                <input 
-                  required
-                  type="number"
-                  className="w-full bg-black border border-[#1A1A1A] rounded-2xl px-12 py-6 text-4xl font-tactical text-[#FACC15] outline-none focus:border-[#FACC15] transition-all"
-                  value={formData.buyNowPrice}
-                  onChange={e => setFormData({...formData, buyNowPrice: parseFloat(e.target.value) || 0})}
-                />
-                <span className="absolute left-6 top-1/2 -translate-y-1/2 text-neutral-800 font-black text-2xl font-tactical">$</span>
+
+              <div className="flex-1 flex flex-col items-center justify-center text-center space-y-8 py-20">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-[#00e5ff]/5 rounded-full blur-3xl animate-pulse" />
+                  <Radar size={120} className="text-neutral-900 relative z-10 animate-spin-slow" strokeWidth={0.5} />
+                </div>
+                <div className="space-y-2">
+                  <h4 className="text-[10px] font-black text-neutral-700 uppercase tracking-[0.4em]">AWAITING_INPUT_SCAN</h4>
+                  <p className="text-[8px] text-neutral-800 font-black uppercase tracking-widest">PROVIDE URLS TO INITIALIZE AUDIT</p>
+                </div>
+              </div>
+
+              <div className="space-y-10 mt-auto">
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <span className="text-[8px] font-black text-neutral-700 uppercase tracking-widest block mb-1">REGION_ID</span>
+                    <div className="bg-black/60 border border-neutral-800 p-4 rounded-xl flex items-center gap-3">
+                      <MapPin size={12} className="text-neutral-700" />
+                      <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">REMOTE</span>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <span className="text-[8px] font-black text-neutral-700 uppercase tracking-widest block mb-1">COUNTRY_CODE</span>
+                    <div className="bg-black/60 border border-neutral-800 p-4 rounded-xl text-center">
+                      <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">US</span>
+                    </div>
+                  </div>
+                </div>
+
+                <button 
+                  type="submit"
+                  className="w-full bg-black text-white rounded-[2rem] py-8 md:py-10 flex flex-col items-center justify-center gap-4 transition-all group/btn border-b-[12px] border-neutral-950 shadow-2xl hover:bg-neutral-900 active:translate-y-1 active:border-b-4 overflow-hidden relative"
+                >
+                  <div className="flex items-center gap-6 relative z-10">
+                    <span className="text-3xl font-black italic tracking-widest uppercase font-tactical">BROADCAST_ASSET</span>
+                    <ArrowRight size={32} className="group-hover/btn:translate-x-2 transition-transform" />
+                  </div>
+                  <div className="absolute inset-0 bg-white/5 opacity-0 group-hover/btn:opacity-100 transition-opacity pointer-events-none" />
+                </button>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="lg:col-span-4 space-y-10">
-          <div className="bg-[#1A1A1A] p-10 rounded-[3rem] border border-white/5 h-full flex flex-col shadow-2xl relative overflow-hidden">
-            <div className="flex justify-between items-center border-b border-[#1A1A1A] pb-6 mb-10">
-               <h4 className="text-[11px] font-black text-neutral-500 uppercase tracking-[0.4em] flex items-center gap-3">
-                  <Activity size={16} className="text-[#FACC15]" /> Audit Engine
-               </h4>
-               <div className="w-2 h-2 bg-[#FACC15] rounded-full animate-pulse shadow-[0_0_12px_#FACC15]" />
-            </div>
-
-            <div className="flex-1 space-y-10">
-              {aiInsight ? (
-                <div className="space-y-10 animate-in zoom-in-95 duration-500">
-                  <div className="flex items-center gap-6 p-6 bg-black rounded-[2rem] border border-[#FACC15]/20 shadow-xl relative overflow-hidden">
-                    <div className="w-16 h-16 rounded-2xl border border-[#FACC15]/40 flex items-center justify-center text-glow-brand">
-                      <span className="text-3xl font-tactical text-[#FACC15]">{aiInsight.relevance}%</span>
-                    </div>
-                    <div>
-                      <span className="text-[9px] font-black text-neutral-600 uppercase tracking-[0.4em] block mb-1">LEAD_INTEGRITY</span>
-                      <span className="text-[11px] font-black text-[#FACC15] uppercase tracking-widest">VERIFIED_PROTOCOL</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-6">
-                    <div className="bg-black/40 p-6 rounded-2xl border border-[#1A1A1A] group hover:border-[#FACC15]/30 transition-all">
-                      <span className="text-[10px] text-[#FACC15] font-black uppercase tracking-[0.4em] block mb-3">CONVERSION_NODE</span>
-                      <p className="text-neutral-400 text-[11px] leading-relaxed font-bold uppercase tracking-tight">{aiInsight.conversionPotential}</p>
-                    </div>
-                    
-                    <div className="bg-black/40 p-6 rounded-2xl border border-[#1A1A1A] group hover:border-[#FACC15]/30 transition-all">
-                      <span className="text-[10px] text-[#FACC15] font-black uppercase tracking-[0.4em] block mb-3">CPL_INSIGHT</span>
-                      <p className="text-neutral-400 text-[11px] leading-relaxed font-bold uppercase tracking-tight">{aiInsight.marketTrend}</p>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6 opacity-30">
-                  <Radar size={80} className="text-[#FACC15] animate-pulse" />
-                  <div>
-                    <p className="text-[11px] font-black text-neutral-600 uppercase tracking-[0.5em]">AWAITING_SCAN</p>
-                    <p className="text-[9px] text-neutral-800 font-bold mt-2 uppercase">Input URLs for integrity audit</p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="mt-10 space-y-6 pt-10 border-t border-[#1A1A1A]">
-              <button 
-                type="button"
-                onClick={handleAnalyze}
-                disabled={isAnalyzing || !formData.businessUrl || !formData.targetLeadUrl}
-                className="w-full bg-[#1A1A1A] hover:bg-black border border-white/10 text-white py-6 rounded-[2rem] font-black text-[12px] uppercase tracking-[0.4em] flex items-center justify-center gap-4 transition-all disabled:opacity-20 shadow-2xl"
-              >
-                {isAnalyzing ? <Loader2 className="animate-spin text-[#FACC15]" size={20} /> : <Radar className="text-[#FACC15]" size={20} />}
-                {isAnalyzing ? 'AUDITING...' : 'VALIDATE_NODE'}
-              </button>
-
-              <button 
-                type="submit"
-                className="w-full bg-[#FACC15] text-black py-6 rounded-[2rem] font-black text-2xl hover:bg-white transition-all transform active:scale-[0.98] shadow-[0_20px_50px_-10px_rgba(250,204,21,0.4)] border-b-8 border-yellow-700 active:border-b-0 active:translate-y-2 flex items-center justify-center gap-6 font-tactical tracking-widest"
-              >
-                BROADCAST_ASSET <ArrowRight size={28} />
-              </button>
-            </div>
+        {/* INTEGRITY FOOTER */}
+        <div className="bg-[#0f0f0f] border-2 border-neutral-900 p-8 rounded-[3rem] shadow-xl flex items-start gap-8 max-w-5xl mx-auto group hover:border-[#00e5ff]/20 transition-all">
+          <div className="w-14 h-14 bg-[#00e5ff]/5 border border-[#00e5ff]/20 rounded-2xl flex items-center justify-center text-[#00e5ff] shrink-0 group-hover:scale-110 transition-transform">
+            <ShieldCheck size={28} />
+          </div>
+          <div>
+             <h4 className="text-xs font-black text-white italic uppercase tracking-[0.3em] mb-3 font-futuristic">PROVISIONING_INTEGRITY_HANDSHAKE</h4>
+             <p className="text-[9px] text-neutral-600 font-medium leading-relaxed uppercase italic tracking-tighter">
+               By broadcasting this asset, you certify that the traffic nodes are verified and the manifest is compliant with marketplace transparency protocols. High-integrity assets receive priority sync in the global distribution waterfall.
+             </p>
           </div>
         </div>
       </form>
+
+      <style>{`
+        .animate-spin-slow {
+          animation: spin 15s linear infinite;
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+
     </div>
   );
 };

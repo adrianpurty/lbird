@@ -1,125 +1,126 @@
-
 import React, { useState } from 'react';
 import { 
   Zap, 
+  Mail, 
+  User as UserIcon, 
+  Lock, 
   Loader2, 
-  ChevronRight,
-  ChevronLeft,
-  ShieldAlert,
-  Mail,
-  Lock
+  Globe,
+  Facebook,
+  AlertTriangle
 } from 'lucide-react';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../services/firebase.ts';
-import { soundService } from '../services/soundService.ts';
+import { User, OAuthConfig } from '../types.ts';
+import { authService } from '../services/authService.ts';
 
 interface SignupProps {
-  onSignup: (user: any) => void;
+  onSignup: (user: User) => void;
   onSwitchToLogin: () => void;
+  authConfig?: OAuthConfig;
 }
 
-const Signup: React.FC<SignupProps> = ({ onSignup, onSwitchToLogin }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+const Signup: React.FC<SignupProps> = ({ onSignup, onSwitchToLogin, authConfig }) => {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: ''
+  });
   const [isSyncing, setIsSyncing] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSignup = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSyncing(true);
     setError('');
-    soundService.playClick(true);
-
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      onSignup(userCredential.user);
+      const newUser = await authService.signUp(
+        formData.email, 
+        formData.password, 
+        formData.name
+      );
+      onSignup(newUser);
     } catch (err: any) {
-      if (err.code === 'auth/email-already-in-use') {
-        setError('User already exists. Please sign in');
-      } else {
-        setError('Provisioning failed. Please check your credentials.');
-      }
+      setError(err.message || "Registration Failed");
     } finally {
       setIsSyncing(false);
     }
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#000000] flex flex-col items-center justify-start py-12 px-4 md:px-24 overflow-y-auto font-rajdhani">
-      
-      <div className="w-full max-w-[1400px] flex flex-col md:flex-row justify-between items-start md:items-center mb-16">
-        <div>
-          <h1 className="text-6xl md:text-8xl font-logo italic text-white flex gap-4 items-baseline">
-            PROVISION <span className="text-neutral-700">NODE</span>
+    <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden">
+      {/* PS5 Dynamic Background */}
+      <div className="ps5-bg">
+        <div className="ps5-liquid" />
+        <div className="ps5-liquid-2" />
+      </div>
+
+      <div className="w-full max-w-[480px] mx-auto z-10 animate-in fade-in zoom-in-95 duration-1000">
+        
+        <div className="text-center mb-12">
+          <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-full mx-auto flex items-center justify-center border border-white/20 mb-4">
+            <Zap className="text-white fill-white" size={32} />
+          </div>
+          <h1 className="text-3xl font-futuristic text-white tracking-[0.2em] uppercase">
+            LEAD<span className="opacity-40">BID</span> PRO
           </h1>
         </div>
 
-        <button 
-          onClick={onSwitchToLogin}
-          className="mt-8 md:mt-0 bg-[#0A0A0A] border border-neutral-800 p-6 rounded-2xl flex items-center gap-6 shadow-2xl hover:border-[#2DD4BF]/40 transition-all group"
-        >
-          <div className="w-12 h-12 bg-black rounded-xl border border-neutral-800 flex items-center justify-center text-neutral-600 group-hover:text-white transition-colors">
-            <ChevronLeft size={24} />
+        <div className="glass-panel rounded-[2rem] p-10 md:p-12">
+          <div className="mb-10 text-center">
+            <h2 className="text-4xl font-bold text-white tracking-tight mb-2">Sign Up</h2>
+            <p className="text-neutral-400 text-sm font-medium">Join the high-stakes marketplace.</p>
           </div>
-          <div className="text-left">
-            <span className="text-[8px] font-black text-neutral-600 uppercase tracking-widest block mb-1">TERMINATE_PROVISION</span>
-            <span className="text-xl font-bold text-white tracking-widest font-futuristic uppercase">RETURN_TO_ACCESS</span>
-          </div>
-        </button>
-      </div>
 
-      <div className="w-full max-w-2xl">
-        <form onSubmit={handleSignup} className="space-y-8">
-           <div className="bg-[#0A0A0A] border border-neutral-800 rounded-[2.5rem] p-10 shadow-xl space-y-8">
-              <div className="space-y-6">
-                 <div className="space-y-3">
-                    <label className="text-[9px] font-black text-neutral-600 uppercase tracking-[0.3em] px-4 italic flex items-center gap-2">
-                       <Mail size={12} className="text-[#2DD4BF]" /> EMAIL_ENDPOINT
-                    </label>
-                    <input 
-                      required
-                      type="email"
-                      className="w-full bg-[#EDF3FF] border-2 border-transparent rounded-2xl px-6 py-4 text-black font-bold outline-none focus:border-[#2DD4BF]/40 transition-all text-lg shadow-inner"
-                      placeholder="pilot@node.net"
-                      value={email}
-                      onChange={e => setEmail(e.target.value)}
-                    />
-                 </div>
-                 <div className="space-y-3">
-                    <label className="text-[9px] font-black text-neutral-600 uppercase tracking-[0.3em] px-4 italic flex items-center gap-2">
-                       <Lock size={12} className="text-[#2DD4BF]" /> ACCESS_TOKEN
-                    </label>
-                    <input 
-                      required
-                      type="password"
-                      className="w-full bg-[#EDF3FF] border-2 border-transparent rounded-2xl px-6 py-4 text-black font-bold outline-none focus:border-[#2DD4BF]/40 transition-all text-lg shadow-inner"
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={e => setPassword(e.target.value)}
-                    />
-                 </div>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-4">
+              <input 
+                required
+                className="ps-input w-full rounded-2xl px-6 py-4 text-white text-lg outline-none placeholder:text-neutral-600" 
+                placeholder="Display Name" 
+                value={formData.name} 
+                onChange={e => setFormData({...formData, name: e.target.value})} 
+              />
+              
+              <input 
+                required 
+                type="email"
+                className="ps-input w-full rounded-2xl px-6 py-4 text-white text-lg outline-none placeholder:text-neutral-600" 
+                placeholder="Email Address" 
+                value={formData.email} 
+                onChange={e => setFormData({...formData, email: e.target.value})} 
+              />
+
+              <input 
+                required 
+                type="password" 
+                className="ps-input w-full rounded-2xl px-6 py-4 text-white text-lg outline-none placeholder:text-neutral-600" 
+                placeholder="Password" 
+                value={formData.password} 
+                onChange={e => setFormData({...formData, password: e.target.value})} 
+              />
+            </div>
+
+            {error && (
+              <div className="flex items-center gap-3 text-red-400 bg-red-400/10 p-4 rounded-xl border border-red-400/20">
+                <AlertTriangle size={16} />
+                <p className="text-xs font-bold uppercase tracking-wider">{error}</p>
               </div>
+            )}
 
-              {error && (
-                <div className="flex items-center gap-4 p-6 bg-red-500/10 rounded-2xl border border-red-500/20">
-                    <ShieldAlert className="text-red-500" size={24} />
-                    <span className="text-[10px] font-black text-red-500 uppercase tracking-widest">{error}</span>
-                </div>
-              )}
+            <button 
+              type="submit" 
+              disabled={isSyncing} 
+              className="ps-button-primary w-full py-5 rounded-full font-black text-lg flex items-center justify-center gap-3"
+            >
+              {isSyncing ? <Loader2 className="animate-spin" size={24} /> : 'Create Account'}
+            </button>
+          </form>
 
-              <button 
-                type="submit"
-                disabled={isSyncing}
-                className="w-full bg-black text-white py-8 rounded-[2.5rem] font-black text-3xl flex items-center justify-center gap-6 hover:bg-[#111] transition-all active:scale-95 shadow-2xl border border-neutral-800 font-futuristic italic tracking-widest"
-              >
-                {isSyncing ? <Loader2 className="animate-spin" size={32} /> : (
-                  <>
-                    AUTHORIZE_PROVISION <ChevronRight size={32} />
-                  </>
-                )}
-              </button>
-           </div>
-        </form>
+          <div className="mt-10 text-center">
+             <button onClick={onSwitchToLogin} className="text-neutral-400 text-sm font-bold hover:text-white transition-all underline underline-offset-8 decoration-white/10">
+               Existing Member? Sign In
+             </button>
+          </div>
+        </div>
       </div>
     </div>
   );

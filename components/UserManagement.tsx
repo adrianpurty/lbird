@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { 
-  User, 
+  User as UserIcon, 
   ShieldCheck, 
   ShieldAlert, 
   Search, 
@@ -16,6 +16,7 @@ import {
   UserCircle,
   FilterX
 } from 'lucide-react';
+import { User } from '../types.ts';
 import { soundService } from '../services/soundService.ts';
 
 interface UserManagementProps {
