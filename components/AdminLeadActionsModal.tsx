@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   X, Save, Trash2, ShieldCheck, AlertCircle, Globe, DollarSign, 
@@ -85,7 +84,7 @@ const AdminLeadActionsModal: React.FC<AdminLeadActionsModalProps> = ({ lead, use
               {canEdit ? (isAdmin ? 'SYSTEM OVERRIDE' : 'ASSET REFINERY') : 'ASSET MANIFEST'}
             </h2>
             <div className="flex flex-wrap items-center gap-3 md:gap-6 mt-4 md:mt-6">
-              <div className="px-3 md:px-4 py-1.5 bg-[#00e5ff]/10 border border-[#00e5ff]/30 rounded-full text-[8px] md:text-[10px] font-black text-[#00e5ff] uppercase tracking-widest">NODE_IDENTIFIER: {lead.id.toUpperCase()}</div>
+              <div className="px-3 md:px-4 py-1.5 bg-[#00e5ff]/10 border border-[#00e5ff]/30 rounded-full text-[8px] md:text-[10px] font-black text-[#00e5ff] uppercase tracking-widest">NODE_IDENTIFIER: {lead?.id?.toUpperCase() || 'UNKNOWN'}</div>
               {isOwner && <span className="px-3 md:px-4 py-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-[8px] md:text-[10px] font-black text-emerald-400 uppercase tracking-widest">OWNER_ACCESS_GRIP</span>}
               <span className="text-[10px] md:text-[12px] text-neutral-600 font-bold uppercase tracking-widest italic shrink-0">ROOT_CONSENSUS_ACTIVE</span>
             </div>

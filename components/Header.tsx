@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Bell, 
@@ -63,7 +62,7 @@ const Header: React.FC<HeaderProps> = ({
     { id: 'settings', icon: Database, label: 'VAULT_API', roles: ['admin', 'user'] },
   ];
 
-  const visibleItems = menuItems.filter(item => item.roles.includes(user.role));
+  const visibleItems = menuItems.filter(item => item.roles.includes(user?.role));
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -128,7 +127,7 @@ const Header: React.FC<HeaderProps> = ({
           >
             <Wallet size={12} className="text-neutral-500 group-hover:text-[#00e5ff] transition-colors" />
             <span className="font-tactical text-base md:text-lg text-white tracking-widest leading-none group-hover:text-glow">
-              ${user.balance.toLocaleString()}
+              ${user.balance?.toLocaleString() || '0'}
             </span>
           </button>
 
@@ -178,7 +177,7 @@ const Header: React.FC<HeaderProps> = ({
               <div className="absolute right-0 mt-4 w-56 bg-[#0c0c0c] border border-neutral-800 rounded-xl shadow-2xl overflow-hidden z-50 animate-in zoom-in-95 glass-panel">
                 <div className="p-4 border-b border-neutral-900 bg-black/40">
                   <p className="text-[10px] font-black uppercase tracking-widest text-white truncate">{user.name}</p>
-                  <p className="text-[8px] font-bold text-neutral-500 uppercase tracking-tighter mt-1">{user.role.toUpperCase()}_ACCESS</p>
+                  <p className="text-[8px] font-bold text-neutral-500 uppercase tracking-tighter mt-1">{user.role?.toUpperCase() || 'USER'}_ACCESS</p>
                 </div>
                 <div className="p-1">
                   <button 

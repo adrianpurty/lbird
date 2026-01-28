@@ -245,7 +245,7 @@ const App: React.FC = () => {
                   </div>
                 </div>
 
-                <DashboardStats leads={marketData.leads} user={user!} />
+                <DashboardStats leads={marketData.leads} user={user!} gateways={marketData.gateways} />
 
                 {/* SAVED ASSETS SECTION (CAROUSEL STYLE) */}
                 {savedLeads.length > 0 && (
@@ -321,7 +321,15 @@ const App: React.FC = () => {
               />
             )}
 
-            {activeTab === 'action-center' && <ActionCenter requests={marketData.purchaseRequests.filter(pr => pr.userId === user?.id)} />}
+            {activeTab === 'action-center' && (
+              <ActionCenter 
+                requests={marketData.purchaseRequests.filter(pr => pr.userId === user?.id)} 
+                user={user!}
+                leads={marketData.leads}
+                onEditLead={setSelectedLeadForDetail}
+              />
+            )}
+
             {activeTab === 'profile' && (
               <ProfileSettings 
                 user={user!} 
@@ -341,7 +349,6 @@ const App: React.FC = () => {
               <AdminPaymentSettings 
                 gateways={marketData.gateways} 
                 onGatewaysChange={(g) => apiService.updateGateways(g).then(() => fetchAppData())} 
-                onDeploy={(g) => apiService.updateGateways(g).then(() => fetchAppData())} 
               />
             )}
             {activeTab === 'auth-config' && user!.role === 'admin' && (

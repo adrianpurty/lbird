@@ -47,13 +47,16 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
   const [showCheckout, setShowCheckout] = useState(false);
   const [processingStatus, setProcessingStatus] = useState<string>('');
   const [flowMode, setFlowMode] = useState<'deposit' | 'withdraw'>('deposit');
-  const [withdrawMethod, setWithdrawMethod] = useState<string>('bank');
+  const [withdrawMethod, setWithdrawMethod] = useState<string>('');
 
   useEffect(() => {
     if (activeGateways.length > 0 && !selectedGatewayId) {
       setSelectedGatewayId(activeGateways[0].id);
     }
-  }, [activeGateways, selectedGatewayId]);
+    if (activeGateways.length > 0 && !withdrawMethod) {
+      setWithdrawMethod(activeGateways[0].provider);
+    }
+  }, [activeGateways, selectedGatewayId, withdrawMethod]);
 
   const selectedGateway = useMemo(() => 
     activeGateways.find(g => g.id === selectedGatewayId), 
@@ -130,7 +133,8 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
           </div>
           <div>
             <h2 className="text-xl font-futuristic text-white italic uppercase leading-none tracking-tight">VAULT <span className="text-neutral-500 font-normal">API</span></h2>
-            <p className="text-[9px] text-neutral-600 font-black uppercase tracking-[0.2em] mt-1">NODE_SYNC_READY</p>
+            {/* Fix: Changed to 1_GLOBAL_SETTLEMENT_NODE */}
+            <p className="text-[9px] text-neutral-600 font-black uppercase tracking-[0.2em] mt-1">1_GLOBAL_SETTLEMENT_NODE</p>
           </div>
         </div>
         <div className="flex items-center gap-2 bg-neutral-900/50 p-1 rounded-lg border border-neutral-800">
@@ -173,24 +177,19 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
                     </div>
                   </div>
 
-                  {/* Provider Selection */}
+                  {/* Provider Selection - SYNCED TO ADMIN GATEWAYS */}
                   <div className="space-y-3">
                     <label className="text-[10px] font-black text-neutral-600 uppercase tracking-widest px-1 italic flex items-center gap-2">
-                      <Cpu size={12} className="text-[#00e5ff]" /> Gateway_Node
+                      <Cpu size={12} className="text-[#00e5ff]" /> Settlement_Vector
                     </label>
                     <div className="grid grid-cols-2 gap-2 max-h-[140px] overflow-y-auto pr-1 scrollbar-hide">
-                      {(flowMode === 'deposit' ? activeGateways : [
-                        { id: 'bank', provider: 'adyen', name: 'BANK_SWIFT' },
-                        { id: 'paypal', provider: 'paypal', name: 'PAYPAL' },
-                        { id: 'binance', provider: 'binance', name: 'BINANCE' },
-                        { id: 'gpay', provider: 'gpay', name: 'GPAY_NODE' }
-                      ]).map((item: any) => {
+                      {activeGateways.map((item) => {
                         const Icon = getProviderIcon(item.provider);
-                        const isSelected = flowMode === 'deposit' ? selectedGatewayId === item.id : withdrawMethod === item.id;
+                        const isSelected = flowMode === 'deposit' ? selectedGatewayId === item.id : withdrawMethod === item.provider;
                         return (
                           <button 
                             key={item.id}
-                            onClick={() => { soundService.playClick(); flowMode === 'deposit' ? setSelectedGatewayId(item.id) : setWithdrawMethod(item.id); }}
+                            onClick={() => { soundService.playClick(); flowMode === 'deposit' ? setSelectedGatewayId(item.id) : setWithdrawMethod(item.provider); }}
                             className={`p-3 rounded-xl border flex items-center gap-3 transition-all ${
                               isSelected ? 'bg-[#00e5ff]/10 border-[#00e5ff]/40 text-[#00e5ff]' : 'bg-black/40 border-neutral-800/60 text-neutral-600 hover:text-white hover:border-neutral-700'
                             }`}
@@ -200,15 +199,19 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
                           </button>
                         );
                       })}
+                      {activeGateways.length === 0 && (
+                        <div className="col-span-2 py-4 text-center text-[8px] text-neutral-700 uppercase italic">No vectors available</div>
+                      )}
                     </div>
                   </div>
                 </div>
 
                 <button 
+                  disabled={activeGateways.length === 0}
                   onClick={() => { soundService.playClick(true); setShowCheckout(true); }} 
-                  className="w-full py-4 rounded-2xl font-black text-sm uppercase italic tracking-[0.2em] transition-all border-b-4 active:translate-y-1 active:border-b-0 bg-white text-black border-neutral-300 hover:bg-neutral-100 flex items-center justify-center gap-3"
+                  className={`w-full py-4 rounded-2xl font-black text-sm uppercase italic tracking-[0.2em] transition-all border-b-4 active:translate-y-1 active:border-b-0 ${activeGateways.length === 0 ? 'bg-neutral-900 text-neutral-700 border-neutral-950 cursor-not-allowed' : 'bg-white text-black border-neutral-300 hover:bg-neutral-100 flex items-center justify-center gap-3'}`}
                 >
-                  Sync_{flowMode.toUpperCase()}_Node <ArrowRight size={16} />
+                  Authorize_Vault_Handshake <ArrowRight size={16} />
                 </button>
               </div>
             ) : (
@@ -246,7 +249,7 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
                     )
                   ) : (
                     <div className="space-y-4">
-                      {withdrawMethod === 'bank' && (
+                      {(withdrawMethod === 'stripe' || withdrawMethod === 'adyen') && (
                         <div className="grid grid-cols-1 gap-3">
                           <div className="relative">
                             <Landmark className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700" size={14} />
@@ -266,22 +269,22 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
                           </div>
                         </div>
                       )}
-                      {withdrawMethod === 'paypal' && (
+                      {(withdrawMethod === 'paypal') && (
                         <div className="relative">
                           <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700" size={14} />
                           <input className="w-full bg-black border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-xs text-white outline-none focus:border-[#00e5ff]/40" placeholder="PAYPAL EMAIL ADDRESS" value={withdrawDetails.paypalEmail} onChange={e => setWithdrawDetails({...withdrawDetails, paypalEmail: e.target.value})} />
                         </div>
                       )}
-                      {withdrawMethod === 'binance' && (
+                      {(withdrawMethod === 'binance' || withdrawMethod === 'crypto') && (
                         <div className="relative">
                           <Scan className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700" size={14} />
-                          <input className="w-full bg-black border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-xs text-white font-mono outline-none focus:border-[#00e5ff]/40" placeholder="BINANCE ID / BEP20 WALLET" value={withdrawDetails.binanceId} onChange={e => setWithdrawDetails({...withdrawDetails, binanceId: e.target.value})} />
+                          <input className="w-full bg-black border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-xs text-white font-mono outline-none focus:border-[#00e5ff]/40" placeholder="WALLET ID / BEP20" value={withdrawDetails.binanceId} onChange={e => setWithdrawDetails({...withdrawDetails, binanceId: e.target.value})} />
                         </div>
                       )}
-                      {withdrawMethod === 'gpay' && (
+                      {(withdrawMethod === 'upi') && (
                         <div className="relative">
                           <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700" size={14} />
-                          <input className="w-full bg-black border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-xs text-white outline-none focus:border-[#00e5ff]/40" placeholder="GPAY LINKED EMAIL / PHONE" value={withdrawDetails.gpayId} onChange={e => setWithdrawDetails({...withdrawDetails, gpayId: e.target.value})} />
+                          <input className="w-full bg-black border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-xs text-white outline-none focus:border-[#00e5ff]/40" placeholder="UPI ID / GPAY" value={withdrawDetails.gpayId} onChange={e => setWithdrawDetails({...withdrawDetails, gpayId: e.target.value})} />
                         </div>
                       )}
                     </div>
@@ -315,8 +318,9 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
              </div>
              <div className="flex flex-col items-end">
                 <span className="text-[9px] font-black text-neutral-700 uppercase tracking-widest mb-1">NETWORK_SYNC</span>
+                {/* Fix: Changed to MASTER_NODE_ACTIVE */}
                 <div className="flex items-center gap-2 text-emerald-500 text-[10px] font-black uppercase italic tracking-widest">
-                   <Activity size={12} className="animate-pulse" /> 100%_Ready
+                   <Activity size={12} className="animate-pulse" /> {activeGateways.length > 0 ? 'MASTER_NODE_ACTIVE' : 'NODES_OFFLINE'}
                 </div>
              </div>
           </div>

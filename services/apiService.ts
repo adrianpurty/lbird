@@ -1,3 +1,4 @@
+
 import { 
   collection, 
   doc, 
@@ -28,6 +29,86 @@ export const NICHE_PROTOCOLS = {
 
 class ApiService {
   /**
+   * Populates the database with initial tactical data.
+   */
+  async seedInitialData(): Promise<void> {
+    const adminId = "admin_1";
+    await setDoc(doc(db, "users", adminId), {
+      id: adminId,
+      name: "ROOT_ADMIN",
+      email: "admin@leadbid.pro",
+      balance: 1000000.0,
+      role: 'admin',
+      status: 'active',
+      stripeConnected: true,
+      wishlist: [],
+      totalSpend: 0
+    });
+
+    const sampleLeads = [
+      {
+        title: "HIGH_INTENT_SOLAR_TX",
+        category: "Real Estate",
+        description: "Verified solar installation prospects from high-conversion landing pages in TZ region.",
+        businessUrl: "https://solar-hub.io",
+        targetLeadUrl: "https://leads.solar-hub.io/endpoint",
+        basePrice: 75,
+        currentBid: 82,
+        bidCount: 12,
+        qualityScore: 94,
+        countryCode: "TZ",
+        ownerId: adminId,
+        status: 'approved',
+        timeLeft: '24h 0m',
+        sellerRating: 5.0
+      },
+      {
+        title: "CRYPTO_WHALE_ALERTS",
+        category: "Finance",
+        description: "High-net-worth individuals interested in institutional-grade crypto arbitrage tools.",
+        businessUrl: "https://alpha-capital.com",
+        targetLeadUrl: "https://alpha-capital.com/leads/ingest",
+        basePrice: 150,
+        currentBid: 210,
+        bidCount: 45,
+        qualityScore: 88,
+        countryCode: "AE",
+        ownerId: adminId,
+        status: 'approved',
+        timeLeft: '24h 0m',
+        sellerRating: 5.0
+      }
+    ];
+
+    for (const lead of sampleLeads) {
+      await addDoc(collection(db, "leads"), {
+        ...lead,
+        timestamp: serverTimestamp()
+      });
+    }
+
+    await setDoc(doc(db, "config", "auth_config"), {
+      googleEnabled: true,
+      googleClientId: "",
+      googleClientSecret: "",
+      facebookEnabled: false,
+      facebookAppId: "",
+      facebookAppSecret: ""
+    });
+
+    const defaultGateways: Partial<GatewayAPI>[] = [
+      { id: 'gw_stripe', provider: 'stripe', name: 'STRIPE_MASTER_NODE', publicKey: '', secretKey: '', fee: '2.5', status: 'active' },
+      { id: 'gw_binance', provider: 'binance', name: 'BINANCE_SMART_NODE', publicKey: '', secretKey: '', fee: '1.0', status: 'active' },
+      { id: 'gw_upi', provider: 'upi', name: 'UPI_REALTIME_NODE', publicKey: '', secretKey: '', fee: '0.0', status: 'active' },
+      { id: 'gw_crypto', provider: 'crypto', name: 'DECENTRALIZED_VAULT', publicKey: '', secretKey: '', fee: '0.5', status: 'active' }
+    ];
+
+    for (const g of defaultGateways) {
+      await setDoc(doc(db, "api_nodes", g.id!), g);
+    }
+  }
+
+  /**
    * Fetches the entire platform state from Firestore.
    * Self-seeds on first empty detection.
    */
@@ -47,16 +128,18 @@ class ApiService {
       const notifSnap = await getDocs(query(collection(db, "notifications"), orderBy("timestamp", "desc"), limit(100)));
       const gatewaySnap = await getDocs(collection(db, "api_nodes"));
       const configSnap = await getDoc(doc(db, "config", "auth_config"));
+      const invoicesSnap = await getDocs(collection(db, "invoices"));
 
       return {
-        metadata: { version: '5.3.5-STABLE', last_updated: new Date().toISOString() },
+        metadata: { version: '5.3.6-STABLE', last_updated: new Date().toISOString() },
         leads: leadsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
         users: usersSnap.docs.map(d => ({ id: d.id, ...d.data() })),
         purchaseRequests: bidsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
         walletActivities: walletSnap.docs.map(d => ({ id: d.id, ...d.data() })),
         notifications: notifSnap.docs.map(d => ({ id: d.id, ...d.data() })),
         gateways: gatewaySnap.docs.map(d => ({ id: d.id, ...d.data() })),
-        authConfig: configSnap.exists() ? configSnap.data() : { googleEnabled: true }
+        authConfig: configSnap.exists() ? configSnap.data() : { googleEnabled: true },
+        invoices: invoicesSnap.docs.map(d => ({ id: d.id, ...d.data() }))
       };
     } catch (e) {
       console.error("Firestore Sync Failed", e);
@@ -78,7 +161,6 @@ class ApiService {
       id: uid,
       name: data.name || '',
       email: data.email || '',
-      username: data.username || '',
       balance: 1000.0,
       role: (data.email?.toLowerCase().includes('admin') || uid === 'admin_1') ? 'admin' : 'user',
       status: 'active',
@@ -120,35 +202,61 @@ class ApiService {
     return runTransaction(db, async (transaction) => {
       const userRef = doc(db, "users", bidData.userId);
       const leadRef = doc(db, "leads", bidData.leadId);
+      const adminRef = doc(db, "users", "admin_1");
+      
       const userSnap = await transaction.get(userRef);
       const leadSnap = await transaction.get(leadRef);
+      const adminSnap = await transaction.get(adminRef);
 
       if (!userSnap.exists() || !leadSnap.exists()) throw "DOC_ERR";
 
       const user = userSnap.data() as User;
+      const lead = leadSnap.data() as Lead;
       if (user.balance < bidData.totalDailyCost) throw "LOW_FUNDS";
 
+      // 1. Update Lead State
       transaction.update(leadRef, {
         currentBid: bidData.bidAmount,
         bidCount: (leadSnap.data().bidCount || 0) + 1
       });
 
+      // 2. Deduct from Buyer Wallet
       transaction.update(userRef, {
         balance: user.balance - bidData.totalDailyCost,
         totalSpend: (user.totalSpend || 0) + bidData.totalDailyCost
       });
 
+      // 3. Add to Admin Wallet (Platform Revenue/Escrow)
+      if (adminSnap.exists()) {
+        const adminData = adminSnap.data() as User;
+        transaction.update(adminRef, {
+          balance: adminData.balance + bidData.totalDailyCost
+        });
+      }
+
+      // 4. Create Bid Record
       transaction.set(doc(collection(db, "bids")), {
         ...bidData,
         timestamp: new Date().toISOString(),
         status: 'approved'
       });
 
+      // 5. Log Wallet Activity for Buyer
       transaction.set(doc(collection(db, "wallet_activities")), {
         userId: bidData.userId,
         type: 'withdrawal',
         amount: bidData.totalDailyCost,
         provider: 'MARKET_ACQUISITION',
+        timestamp: new Date().toISOString(),
+        status: 'completed'
+      });
+
+      // 6. Log Wallet Activity for Admin
+      transaction.set(doc(collection(db, "wallet_activities")), {
+        userId: 'admin_1',
+        type: 'deposit',
+        amount: bidData.totalDailyCost,
+        provider: `ORDER_REVENUE_${bidData.userId}`,
         timestamp: new Date().toISOString(),
         status: 'completed'
       });
@@ -203,9 +311,14 @@ class ApiService {
   }
 
   async updateGateways(gateways: GatewayAPI[]) {
+    // Clear old nodes to prevent duplicates
     const snap = await getDocs(collection(db, "api_nodes"));
     await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
-    await Promise.all(gateways.map(g => addDoc(collection(db, "api_nodes"), g)));
+    
+    // Add only active configurations
+    for (const g of gateways) {
+       await setDoc(doc(db, "api_nodes", g.id), g);
+    }
   }
 
   /**
@@ -216,113 +329,6 @@ class ApiService {
     if (leadsSnap.empty) {
       await this.seedInitialData();
     }
-  }
-
-  /**
-   * Provison initial system state if blank.
-   */
-  private async seedInitialData() {
-    console.log("SEEDING_STARTED: Root node provisioning...");
-    // 1. Seed Super Admin Profile (For admin/1234 bypass)
-    await setDoc(doc(db, "users", "admin_1"), {
-      id: "admin_1",
-      name: "Root Administrator",
-      email: "admin@leadbid.pro",
-      username: "admin",
-      password: "1234",
-      balance: 1000000.0,
-      role: "admin",
-      status: "active",
-      stripeConnected: true,
-      wishlist: []
-    });
-
-    // 2. Seed High-Value Market Leads
-    const initialLeads = [
-      { 
-        title: 'Executive Solar Inbound (California)', 
-        category: 'Solar Energy', 
-        description: 'Verified homeowners with 750+ credit score requesting quotes for residential solar installations.', 
-        businessUrl: 'https://solar-dynamics.io', 
-        targetLeadUrl: 'https://webhook.site/solar-test', 
-        basePrice: 85, 
-        currentBid: 120, 
-        bidCount: 4, 
-        timeLeft: '24h 0m', 
-        qualityScore: 94, 
-        sellerRating: 5.0, 
-        status: 'approved', 
-        countryCode: 'US', 
-        region: 'California', 
-        ownerId: 'admin_1' 
-      },
-      { 
-        title: 'Crypto Whale Inbound (UAE)', 
-        category: 'Crypto Trading', 
-        description: 'High-net-worth individuals in Dubai seeking private OTC desk referrals for 50+ BTC transactions.', 
-        businessUrl: 'https://dubai-exchange.io', 
-        targetLeadUrl: 'https://webhook.site/crypto-test', 
-        basePrice: 500, 
-        currentBid: 1250, 
-        bidCount: 18, 
-        timeLeft: '12h 30m', 
-        qualityScore: 98, 
-        sellerRating: 4.9, 
-        status: 'approved', 
-        countryCode: 'AE', 
-        region: 'Dubai', 
-        ownerId: 'admin_1' 
-      },
-      { 
-        title: 'Personal Injury: Motor Vehicle (Florida)', 
-        category: 'Personal Injury', 
-        description: 'Live transfer calls from accident victims seeking legal representation. Screened for no-fault and policy limits.', 
-        businessUrl: 'https://fl-justice.law', 
-        targetLeadUrl: 'https://webhook.site/legal-test', 
-        basePrice: 250, 
-        currentBid: 420, 
-        bidCount: 7, 
-        timeLeft: '08h 45m', 
-        qualityScore: 92, 
-        sellerRating: 4.8, 
-        status: 'approved', 
-        countryCode: 'US', 
-        region: 'Florida', 
-        ownerId: 'admin_1' 
-      }
-    ];
-
-    for (const lead of initialLeads) {
-      await addDoc(collection(db, "leads"), lead);
-    }
-
-    // 3. System Config
-    await setDoc(doc(db, "config", "auth_config"), { 
-      googleEnabled: true, googleClientId: '', googleClientSecret: '', 
-      facebookEnabled: false, facebookAppId: '', facebookAppSecret: '' 
-    });
-
-    // 4. Diverse Gateways
-    const defaultGateways = [
-      { id: 'gw_stripe_primary', provider: 'stripe', name: 'Global Settlement Node', publicKey: 'pk_test_sample', secretKey: 'sk_test_sample', fee: '2.5', status: 'active' },
-      { id: 'gw_binance_sync', provider: 'binance', name: 'Binance Smart Node', publicKey: '0x_binance_vault', secretKey: '********', fee: '1.0', status: 'active' },
-      { id: 'gw_upi_india', provider: 'upi', name: 'UPI Real-time Node', publicKey: 'leadbid@upi', secretKey: '********', fee: '0.0', status: 'active' },
-      { id: 'gw_crypto_vault', provider: 'crypto', name: 'BTC/ETH Decentralized Node', publicKey: '3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy', secretKey: '********', fee: '0.5', status: 'active' }
-    ];
-
-    for (const g of defaultGateways) {
-       await addDoc(collection(db, "api_nodes"), g);
-    }
-
-    // 5. Initial Notification
-    await addDoc(collection(db, "notifications"), {
-      userId: 'admin_1',
-      message: 'SYSTEM_GENESIS: Network nodes activated and global ledger initialized.',
-      type: 'system',
-      timestamp: new Date().toISOString(),
-      read: false
-    });
-    console.log("SEEDING_COMPLETED: Nodes online.");
   }
 }
 

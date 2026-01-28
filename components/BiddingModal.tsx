@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { X, Globe, Target, Phone, Zap, ChevronRight, Calculator, AlertTriangle, Wallet, Info, ArrowRight, CreditCard, RefreshCw, Calendar, Clock, Scan, Globe as GlobeIcon, Bitcoin, Smartphone, Landmark, Database } from 'lucide-react';
 import { Lead, User, GatewayAPI } from '../types.ts';
@@ -107,7 +106,7 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClo
                 {isBridgeMode ? 'Financial Bridge Proxy' : 'Lead Acquisition Handshake'}
               </h2>
               <p className="text-neutral-500 text-[10px] font-black uppercase tracking-widest mt-2" style={{ fontVariant: 'small-caps' }}>
-                {isBridgeMode ? 'REPLENISH_LIQUIDITY_BUFFER' : `Target Lead Asset: ${lead.title.toUpperCase()}`}
+                {isBridgeMode ? 'REPLENISH_LIQUIDITY_BUFFER' : `Target Lead Asset: ${lead?.title?.toUpperCase() || 'DATA_NODE'}`}
               </p>
             </div>
           </div>
@@ -281,7 +280,7 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClo
                   <div className="space-y-2">
                      <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Bridge Protocol Initiated</h3>
                      <p className="text-[10px] text-neutral-500 leading-relaxed font-bold uppercase tracking-widest">
-                       Current liquidity [${user.balance.toLocaleString()}] is insufficient for this campaign. Select a provisioned financial node to sync additional assets instantly.
+                       Current liquidity [${user.balance?.toLocaleString() || '0'}] is insufficient for this campaign. Select a provisioned financial node to sync additional assets instantly.
                      </p>
                   </div>
                </div>
@@ -297,7 +296,7 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClo
                           className="bg-[#0c0c0c] border border-neutral-800 rounded-3xl p-6 text-left hover:border-amber-400/40 transition-all flex flex-col gap-4 group"
                         >
                            <div className="flex items-center justify-between">
-                              <span className="text-[9px] font-black text-neutral-600 uppercase tracking-widest">FIN_NODE: {g.provider.toUpperCase()}</span>
+                              <span className="text-[9px] font-black text-neutral-600 uppercase tracking-widest">FIN_NODE: {g.provider?.toUpperCase() || 'UNKNOWN'}</span>
                               <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]" />
                            </div>
                            <div className="flex items-center gap-4">
