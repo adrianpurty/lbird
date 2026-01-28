@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
   ShieldCheck, CreditCard, Globe, Landmark, Cpu, Zap, Activity, Database, 
-  Bitcoin, Scan, Smartphone, RefreshCw, Terminal, Lock, Eye, EyeOff, Save, CheckCircle
+  Bitcoin, Scan, Smartphone, RefreshCw, Terminal, Lock, Eye, EyeOff, Save, CheckCircle,
+  Building
 } from 'lucide-react';
 import { GatewayAPI } from '../types.ts';
 import { soundService } from '../services/soundService.ts';

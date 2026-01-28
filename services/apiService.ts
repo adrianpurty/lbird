@@ -20,17 +20,29 @@ import { db } from "./firebase.ts";
 import { Lead, User, PurchaseRequest, Notification, PlatformAnalytics, OAuthConfig, Invoice, GatewayAPI, WalletActivity } from '../types.ts';
 
 export const NICHE_PROTOCOLS = {
-  "Finance": ["Crypto Trading", "High-Ticket Insurance", "Mortgage Leads", "Debt Settlement"],
-  "Travel": ["Luxury Cruises", "International Flights", "Resort Bookings"],
-  "Real Estate": ["Commercial Property", "Residential Leads", "Solar Energy"],
-  "Health": ["Medical Aesthetics", "Dental Care", "Health Insurance"],
-  "Legal": ["Personal Injury", "Corporate Law", "Immigration Leads"]
+  "Finance": ["Crypto Trading", "High-Ticket Insurance", "Mortgage Leads", "Debt Settlement", "Asset Management", "Venture Capital"],
+  "Real Estate": ["Commercial Property", "Residential Leads", "Solar Energy", "Luxury Development", "Property Management"],
+  "Technology": ["SaaS Enterprise", "Cybersecurity Audit", "AI/ML Solutions", "Cloud Infrastructure", "FinTech Systems"],
+  "Health & Medical": ["Medical Aesthetics", "Dental Care", "Health Insurance", "Biotech Research", "Telehealth", "Surgical Leads"],
+  "Legal": ["Personal Injury", "Corporate Law", "Immigration Leads", "Intellectual Property", "Class Action"],
+  "Home Services": ["HVAC Maintenance", "Roofing Contracts", "Plumbing Pros", "Solar Deployment", "Smart Home Install"],
+  "Education": ["Higher Ed Enrollment", "EdTech Licensing", "Corporate Training", "Language Learning", "STEM Programs"],
+  "Marketing & Ads": ["SEO Services", "PPC Management", "Content Strategy", "Influencer Outreach", "Public Relations"],
+  "E-commerce": ["DTC Retail", "B2B Wholesalers", "Subscription Models", "Marketplace Sellers", "Dropshipping"],
+  "Automotive": ["Vehicle Acquisition", "Auto Finance", "Insurance Recovery", "Electric Vehicle Fleet"],
+  "Manufacturing": ["Industrial Supply", "Chemical Sourcing", "Logistics Optimization", "Heavy Machinery"],
+  "Logistics & Supply": ["Freight Forwarding", "Warehouse Tech", "Last-Mile Delivery", "Cold Chain Logistics"],
+  "Human Resources": ["Talent Acquisition", "Payroll Systems", "Employee Benefits", "HR Tech Solutions"],
+  "Energy & Utilities": ["Renewable Grid", "Power Utility", "Natural Gas", "Water Management"],
+  "Telecommunications": ["Fiber Network", "VoIP Solutions", "Satellite Comms", "5G Infrastructure"],
+  "Food & Beverage": ["Franchise Opps", "Restaurant Supply", "Consumer Packaged Goods", "AgriTech"],
+  "Insurance": ["Life & Wellness", "General Liability", "Workers Comp", "Specialty Risk"],
+  "Travel & Tourism": ["Luxury Cruises", "International Flights", "Resort Bookings", "Boutique Stays"],
+  "Security": ["Physical Security", "Surveillance Tech", "Access Control", "Risk Mitigation"],
+  "Non-Profit": ["High-Value Fundraising", "Grant Matching", "Advocacy Campaign"]
 };
 
 class ApiService {
-  /**
-   * Populates the database with initial tactical data.
-   */
   async seedInitialData(): Promise<void> {
     const adminId = "admin_1";
     await setDoc(doc(db, "users", adminId), {
@@ -61,7 +73,9 @@ class ApiService {
         ownerId: adminId,
         status: 'approved',
         timeLeft: '24h 0m',
-        sellerRating: 5.0
+        sellerRating: 5.0,
+        deliveryDate: new Date().toISOString().split('T')[0],
+        leadCapacity: 500
       },
       {
         title: "CRYPTO_WHALE_ALERTS",
@@ -77,7 +91,9 @@ class ApiService {
         ownerId: adminId,
         status: 'approved',
         timeLeft: '24h 0m',
-        sellerRating: 5.0
+        sellerRating: 5.0,
+        deliveryDate: new Date().toISOString().split('T')[0],
+        leadCapacity: 1200
       }
     ];
 
@@ -109,20 +125,13 @@ class ApiService {
     }
   }
 
-  /**
-   * Fetches the entire platform state from Firestore.
-   * Self-seeds on first empty detection.
-   */
   async getData(): Promise<any> {
     try {
       const leadsSnap = await getDocs(collection(db, "leads"));
-      
       if (leadsSnap.empty) {
-        console.log("GENESIS_NODE_DETECTION: Provisioning Database...");
         await this.seedInitialData();
         return this.getData();
       }
-
       const usersSnap = await getDocs(collection(db, "users"));
       const bidsSnap = await getDocs(query(collection(db, "bids"), orderBy("timestamp", "desc")));
       const walletSnap = await getDocs(query(collection(db, "wallet_activities"), orderBy("timestamp", "desc")));
@@ -132,7 +141,7 @@ class ApiService {
       const invoicesSnap = await getDocs(collection(db, "invoices"));
 
       return {
-        metadata: { version: '5.3.6-STABLE', last_updated: new Date().toISOString() },
+        metadata: { version: '5.4.0-LOGISTICS', last_updated: new Date().toISOString() },
         leads: leadsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
         users: usersSnap.docs.map(d => ({ id: d.id, ...d.data() })),
         purchaseRequests: bidsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
@@ -219,19 +228,16 @@ class ApiService {
       const lead = leadSnap.data() as Lead;
       if (user.balance < bidData.totalDailyCost) throw "LOW_FUNDS";
 
-      // 1. Update Lead State
       transaction.update(leadRef, {
         currentBid: bidData.bidAmount,
         bidCount: (leadSnap.data().bidCount || 0) + 1
       });
 
-      // 2. Deduct from Buyer Wallet
       transaction.update(userRef, {
         balance: user.balance - bidData.totalDailyCost,
         totalSpend: (user.totalSpend || 0) + bidData.totalDailyCost
       });
 
-      // 3. Add to Admin Wallet (Platform Revenue/Escrow)
       if (adminSnap.exists()) {
         const adminData = adminSnap.data() as User;
         transaction.update(adminRef, {
@@ -239,24 +245,21 @@ class ApiService {
         });
       }
 
-      // 4. Create Bid Record
       transaction.set(doc(collection(db, "bids")), {
         ...bidData,
         timestamp: new Date().toISOString(),
-        status: 'approved'
+        status: 'pending'
       });
 
-      // 5. Log Wallet Activity for Buyer
       transaction.set(doc(collection(db, "wallet_activities")), {
         userId: bidData.userId,
         type: 'withdrawal',
         amount: bidData.totalDailyCost,
-        provider: 'MARKET_ACQUISITION',
+        provider: 'MARKET_ACQUISITION_STAKE',
         timestamp: new Date().toISOString(),
         status: 'completed'
       });
 
-      // 6. Log Wallet Activity for Admin
       transaction.set(doc(collection(db, "wallet_activities")), {
         userId: 'admin_1',
         type: 'deposit',
@@ -266,6 +269,10 @@ class ApiService {
         status: 'completed'
       });
     });
+  }
+
+  async updateBidStatus(bidId: string, status: 'approved' | 'rejected'): Promise<void> {
+    await updateDoc(doc(db, "bids", bidId), { status });
   }
 
   async deposit(userId: string, amount: number, provider?: string): Promise<any> {
@@ -283,32 +290,30 @@ class ApiService {
         balance: currentBalance + amount
       });
 
-      // If it's a deduction (withdrawal/spend), add same amount to admin
       if (amount < 0 && adminSnap.exists()) {
         const adminBalance = adminSnap.data().balance || 0;
         transaction.update(adminRef, {
           balance: adminBalance + Math.abs(amount)
         });
 
-        // Log reciprocal for Admin
         transaction.set(doc(collection(db, "wallet_activities")), {
           userId: 'admin_1',
           type: 'deposit',
           amount: Math.abs(amount),
-          provider: `DEDUCTION_SYNC_${userId}`,
+          provider: `PLATFORM_YIELD_${userId}`,
           timestamp: new Date().toISOString(),
           status: 'completed'
         });
       }
 
-      // Log for User
       transaction.set(doc(collection(db, "wallet_activities")), {
         userId,
         type: amount > 0 ? 'deposit' : 'withdrawal',
         amount: Math.abs(amount),
-        provider: provider || 'MANUAL_OVERRIDE',
+        provider: provider || 'VAULT_INTERNAL_SYNC',
         timestamp: new Date().toISOString(),
-        status: 'completed'
+        status: 'completed',
+        gateway_protocol: 'OIDC_SIGNED'
       });
     });
   }
@@ -342,19 +347,13 @@ class ApiService {
   }
 
   async updateGateways(gateways: GatewayAPI[]) {
-    // Clear old nodes to prevent duplicates
     const snap = await getDocs(collection(db, "api_nodes"));
     await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
-    
-    // Add only active configurations
     for (const g of gateways) {
        await setDoc(doc(db, "api_nodes", g.id), g);
     }
   }
 
-  /**
-   * Public wrapper to trigger the genesis seed manually (e.g. from auth service)
-   */
   async triggerManualSeed() {
     const leadsSnap = await getDocs(collection(db, "leads"));
     if (leadsSnap.empty) {

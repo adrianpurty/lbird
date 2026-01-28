@@ -57,7 +57,6 @@ const App: React.FC = () => {
   });
 
   const [user, setUser] = useState<User | null>(null);
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => 'dark');
   const [showBiometricPrompt, setShowBiometricPrompt] = useState(false);
 
   const [selectedLeadForBid, setSelectedLeadForBid] = useState<{ lead: Lead, initialBid?: number } | null>(null);
@@ -181,15 +180,12 @@ const App: React.FC = () => {
     }
   }, [user, showToast, fetchAppData]);
 
-  const toggleTheme = useCallback(() => setTheme(prev => prev === 'dark' ? 'light' : 'dark'), []);
-
   const handleLogin = (loggedUser: User) => {
     setUser(loggedUser);
     setAuthView('app');
     setActiveTab('market');
     fetchAppData();
     
-    // Logic to show biometric prompt if not already enabled and browser supports it
     if (!loggedUser.biometricEnabled && window.PublicKeyCredential) {
       setShowBiometricPrompt(true);
     }
@@ -200,8 +196,6 @@ const App: React.FC = () => {
   const handleEnableBiometrics = async () => {
     if (!user) return;
     try {
-      // Simulated biometric registration handshake
-      // In a real app, this calls navigator.credentials.create
       const simulatedKey = `bio_${Math.random().toString(36).substr(2, 9)}`;
       await apiService.updateUser(user.id, { 
         biometricEnabled: true, 
@@ -230,9 +224,19 @@ const App: React.FC = () => {
     return marketData.leads.filter(l => user?.wishlist?.includes(l.id));
   }, [marketData.leads, user?.wishlist]);
 
+  // Specific user activities for the wallet ledger
+  const userWalletActivities = useMemo(() => {
+    return marketData.walletActivities
+      .filter(wa => wa.userId === user?.id)
+      .map(wa => ({
+        ...wa,
+        timestamp: new Date(wa.timestamp).toLocaleTimeString() + ' // ' + new Date(wa.timestamp).toLocaleDateString()
+      }));
+  }, [marketData.walletActivities, user?.id]);
+
   if (isLoading) return (
-    <div className="h-screen flex items-center justify-center bg-black">
-      <Server className="text-white/40 animate-pulse" size={100} />
+    <div className="h-screen flex items-center justify-center bg-platform">
+      <Server className="text-accent/40 animate-pulse" size={100} />
     </div>
   );
 
@@ -240,13 +244,11 @@ const App: React.FC = () => {
   if (!user && authView === 'signup') return <Signup onSignup={handleLogin} onSwitchToLogin={() => setAuthView('login')} authConfig={marketData.authConfig} />;
 
   return (
-    <div className="flex flex-col h-screen bg-[#050505] text-white overflow-hidden font-rajdhani">
+    <div className="flex flex-col h-screen bg-platform text-main overflow-hidden font-rajdhani transition-colors duration-500">
       <MemoizedHeader 
         user={user!} 
         notifications={marketData.notifications} 
         onClearNotifications={() => apiService.clearNotifications().then(() => fetchAppData())} 
-        theme={theme} 
-        onToggleTheme={toggleTheme} 
         onLogout={handleLogout}
         onProfileClick={() => setActiveTab('profile')}
         activeTab={activeTab}
@@ -254,20 +256,20 @@ const App: React.FC = () => {
       />
 
       <div className="flex-1 min-w-0 h-full relative overflow-hidden">
-        <main className="h-full overflow-y-auto p-6 lg:p-12 scroll-smooth scrollbar-hide">
+        <main className="h-full overflow-y-auto p-6 lg:p-12 scroll-smooth scrollbar-hide bg-platform">
           <div className="max-w-[1600px] mx-auto w-full pb-32 md:pb-20">
             {activeTab === 'market' && (
               <div className="space-y-12 animate-in fade-in duration-700">
                 <div className="space-y-6">
                   <div className="flex items-center gap-4">
                     <h1 className="text-4xl sm:text-7xl font-futuristic italic font-black uppercase tracking-tighter">
-                      SALES <span className="text-transparent" style={{ WebkitTextStroke: '2px #ffffff', opacity: 0.3 }}>FLOOR</span>
+                      SALES <span className="text-transparent" style={{ WebkitTextStroke: '2px var(--text-main)', opacity: 0.1 }}>FLOOR</span>
                     </h1>
-                    <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_15px_#10b981]" />
+                    <div className="w-3 h-3 rounded-full bg-accent animate-pulse shadow-[0_0_15px_var(--accent-primary)]" />
                   </div>
                   <div className="flex items-center gap-8">
-                    <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-[0.4em]">TACTICAL_LEAD_MARKETPLACE_V4.2</p>
-                    <div className="hidden sm:block h-px flex-1 bg-gradient-to-r from-neutral-900 to-transparent" />
+                    <p className="text-[10px] text-dim font-bold uppercase tracking-[0.4em]">TACTICAL_LEAD_MARKETPLACE_V4.2</p>
+                    <div className="hidden sm:block h-px flex-1 bg-gradient-to-r from-border-main to-transparent" />
                   </div>
                 </div>
 
@@ -276,9 +278,9 @@ const App: React.FC = () => {
                 {savedLeads.length > 0 && (
                   <section className="space-y-6 animate-in slide-in-from-left duration-500">
                     <div className="flex items-center gap-3">
-                      <Heart size={16} className="text-[#00e5ff]" fill="#00e5ff" />
-                      <h3 className="text-sm font-black text-white italic uppercase tracking-[0.3em]">BOOKMARKED_NODES</h3>
-                      <span className="text-[10px] text-neutral-700 font-mono">({savedLeads.length})</span>
+                      <Heart size={16} className="text-accent" fill="currentColor" />
+                      <h3 className="text-sm font-black text-main italic uppercase tracking-[0.3em]">BOOKMARKED_NODES</h3>
+                      <span className="text-[10px] text-dim font-mono">({savedLeads.length})</span>
                     </div>
                     <div className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide -mx-4 px-4">
                       {savedLeads.map(lead => (
@@ -304,11 +306,10 @@ const App: React.FC = () => {
 
                 <section className="space-y-8">
                   <div className="flex items-center gap-3">
-                    <Layers size={16} className="text-neutral-500" />
-                    <h3 className="text-sm font-black text-white italic uppercase tracking-[0.3em]">GLOBAL_LEAD_POOLS</h3>
+                    <Layers size={16} className="text-dim" />
+                    <h3 className="text-sm font-black text-main italic uppercase tracking-[0.3em]">GLOBAL_LEAD_POOLS</h3>
                   </div>
-                  {/* Lead component container set to pure black */}
-                  <div className="bg-black rounded-[2rem] sm:rounded-[3rem] border border-white/5 p-4 sm:p-10 shadow-2xl relative">
+                  <div className="bg-surface rounded-[2rem] sm:rounded-[3rem] border border-bright p-4 sm:p-10 shadow-2xl relative">
                     <MemoizedLeadGrid 
                       leads={marketData.leads} 
                       onBid={(id, initialBid) => setSelectedLeadForBid({ lead: marketData.leads.find(l => l.id === id)!, initialBid })} 
@@ -348,10 +349,12 @@ const App: React.FC = () => {
 
             {activeTab === 'action-center' && (
               <ActionCenter 
-                requests={marketData.purchaseRequests.filter(pr => pr.userId === user?.id)} 
+                requests={marketData.purchaseRequests} 
                 user={user!}
                 leads={marketData.leads}
                 allUsers={marketData.users}
+                notifications={marketData.notifications}
+                walletActivities={marketData.walletActivities}
                 onEditLead={setSelectedLeadForDetail}
                 onWalletUpdate={fetchAppData}
               />
@@ -369,8 +372,21 @@ const App: React.FC = () => {
                 }} 
               />
             )}
-            {activeTab === 'create' && <LeadSubmissionForm onSubmit={(l) => apiService.createLead({...l, ownerId: user!.id}).then(() => { fetchAppData(); setActiveTab('market'); })} />}
-            {activeTab === 'settings' && <WalletSettings balance={user!.balance} onDeposit={(amt, provider) => apiService.deposit(user!.id, amt, provider).then(() => fetchAppData())} gateways={marketData.gateways} stripeConnected={user!.stripeConnected} onConnect={() => {}} />}
+            
+            {activeTab === 'create' && (
+              <LeadSubmissionForm onSubmit={(l) => apiService.createLead({...l, ownerId: user!.id}).then(() => { fetchAppData(); setActiveTab('market'); })} />
+            )}
+
+            {activeTab === 'settings' && (
+              <WalletSettings 
+                balance={user!.balance} 
+                onDeposit={(amt, provider) => apiService.deposit(user!.id, amt, provider).then(() => { fetchAppData(); showToast(amt > 0 ? "LIQUIDITY_SYNCED" : "VAULT_WITHDRAWAL_INITIATED"); })} 
+                gateways={marketData.gateways} 
+                stripeConnected={user!.stripeConnected} 
+                onConnect={() => {}} 
+                walletActivities={userWalletActivities}
+              />
+            )}
             
             {activeTab === 'payment-config' && user!.role === 'admin' && (
               <AdminPaymentSettings 
@@ -378,6 +394,7 @@ const App: React.FC = () => {
                 onGatewaysChange={(g) => apiService.updateGateways(g).then(() => fetchAppData())} 
               />
             )}
+
             {activeTab === 'auth-config' && user!.role === 'admin' && (
               <AdminOAuthSettings 
                 config={marketData.authConfig} 
@@ -431,7 +448,7 @@ const App: React.FC = () => {
       {toast && (
         <div className="fixed bottom-24 sm:bottom-10 right-4 sm:right-10 z-[1000] animate-in slide-in-from-right duration-500">
            <div className={`px-6 sm:px-8 py-3 sm:py-4 rounded-2xl border-2 flex items-center gap-4 ${
-             toast.type === 'error' ? 'bg-red-950/20 border-red-900/40 text-red-500' : 'bg-emerald-950/20 border-emerald-900/40 text-emerald-500'
+             toast.type === 'error' ? 'bg-red-50/5 border-red-200 text-red-600' : 'bg-emerald-50 border-emerald-200 text-emerald-600'
            }`}>
              <Zap size={16} />
              <span className="font-black uppercase tracking-widest text-[9px] sm:text-[11px]">{toast.message}</span>

@@ -16,6 +16,8 @@ export interface Lead {
   countryCode: string;
   region: string;
   ownerId?: string;
+  deliveryDate?: string;
+  leadCapacity?: number;
 }
 
 export interface PurchaseRequest {
@@ -131,7 +133,7 @@ export interface GatewayAPI {
   provider: 
     | 'stripe' | 'paypal' | 'adyen' | 'braintree' | 'square' | 'authorize_net' 
     | 'razorpay' | 'mollie' | 'paystack' | 'crypto' | 'binance' | 'upi' 
-    | 'skrill' | 'neteller' | 'klarna' | 'alipay' | 'wechat' | 'custom';
+    | 'skrill' | 'neteller' | 'klarna' | 'alipay' | 'wechat' | 'custom' | 'bank';
   publicKey: string;
   secretKey: string;
   fee: string;

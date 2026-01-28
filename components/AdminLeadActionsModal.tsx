@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   X, Save, Trash2, ShieldCheck, AlertCircle, Globe, DollarSign, 
   Target, Sparkles, Terminal, Loader2, Zap, MapPin, Activity, 
-  Database, TrendingUp, Cpu, Gauge, ArrowRight, CheckCircle2, XCircle, Gavel
+  Database, TrendingUp, Cpu, Gauge, ArrowRight, CheckCircle2, XCircle, Gavel,
+  Calendar, Hash, ChevronUp, ChevronDown
 } from 'lucide-react';
 import { Lead, User } from '../types.ts';
 import { applyAiOverride } from '../services/geminiService.ts';
@@ -17,10 +18,34 @@ interface AdminLeadActionsModalProps {
   onBid?: (id: string) => void;
 }
 
+const getWeekRange = (week: number, year: number) => {
+  const firstDayOfYear = new Date(year, 0, 1);
+  const days = (week - 1) * 7;
+  const start = new Date(year, 0, 1 + days);
+  const end = new Date(year, 0, 1 + days + 6);
+  return {
+    start: start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    end: end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  };
+};
+
+const parseWeekString = (weekStr?: string) => {
+  if (!weekStr || !weekStr.startsWith('WK-')) {
+    const now = new Date();
+    return { week: 1, year: now.getFullYear() };
+  }
+  const parts = weekStr.split('-');
+  return { week: parseInt(parts[1]) || 1, year: parseInt(parts[2]) || new Date().getFullYear() };
+};
+
 const AdminLeadActionsModal: React.FC<AdminLeadActionsModalProps> = ({ lead, user, onClose, onSave, onDelete, onBid }) => {
+  const initialLogistics = useMemo(() => parseWeekString(lead.deliveryDate), [lead.deliveryDate]);
+  
   const [formData, setFormData] = useState<Partial<Lead>>({
     ...lead
   });
+  
+  const [logistics, setLogistics] = useState(initialLogistics);
   const [aiPrompt, setAiPrompt] = useState('');
   const [isApplyingAi, setIsApplyingAi] = useState(false);
 
@@ -28,11 +53,32 @@ const AdminLeadActionsModal: React.FC<AdminLeadActionsModalProps> = ({ lead, use
   const isOwner = lead.ownerId === user.id;
   const canEdit = isAdmin || isOwner;
 
+  const weekRange = useMemo(() => 
+    getWeekRange(logistics.week, logistics.year), 
+    [logistics]
+  );
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!canEdit) return;
     soundService.playClick(true);
-    onSave(formData);
+    
+    const finalPayload = {
+      ...formData,
+      deliveryDate: `WK-${logistics.week.toString().padStart(2, '0')}-${logistics.year}`
+    };
+    onSave(finalPayload);
+  };
+
+  const adjustWeek = (delta: number) => {
+    if (!canEdit) return;
+    soundService.playClick();
+    setLogistics(prev => {
+      let newWeek = prev.week + delta;
+      if (newWeek > 53) return { ...prev, week: 1, year: prev.year + 1 };
+      if (newWeek < 1) return { ...prev, week: 53, year: prev.year - 1 };
+      return { ...prev, week: newWeek };
+    });
   };
 
   const handleDecision = (status: 'approved' | 'rejected') => {
@@ -68,7 +114,6 @@ const AdminLeadActionsModal: React.FC<AdminLeadActionsModalProps> = ({ lead, use
 
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center p-2 md:p-6 bg-black/95 backdrop-blur-2xl animate-in fade-in duration-300">
-      {/* Background HUD Ambience */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 opacity-40">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#00e5ff]/5 rounded-full blur-[120px]" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-white/5 rounded-full blur-[120px]" />
@@ -76,7 +121,6 @@ const AdminLeadActionsModal: React.FC<AdminLeadActionsModalProps> = ({ lead, use
 
       <div className="w-full max-w-[1100px] max-h-[95vh] bg-[#080808] border-2 border-neutral-900 rounded-[2.5rem] md:rounded-[3.5rem] shadow-[0_50px_150px_-20px_rgba(0,0,0,1)] flex flex-col relative z-10 animate-in zoom-in-95 duration-500 overflow-hidden">
         
-        {/* LANDSCAPE HEADER - SALES FLOOR STYLE */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 p-6 md:p-12 border-b-2 border-neutral-900 bg-black/40">
           <div className="relative">
             <div className="absolute -left-4 md:-left-12 top-1/2 -translate-y-1/2 w-4 h-12 md:h-24 bg-[#00e5ff] rounded-full blur-xl opacity-20" />
@@ -105,21 +149,16 @@ const AdminLeadActionsModal: React.FC<AdminLeadActionsModalProps> = ({ lead, use
           </div>
         </div>
 
-        {/* MODAL CONTENT SECTORS */}
         <div className="flex-1 overflow-y-auto p-6 md:p-12 space-y-8 md:space-y-12 scrollbar-hide">
-          
-          {/* SECTOR 00: AI TACTICAL INJECTOR (Only for editors) */}
           {canEdit && (
             <div className="bg-[#0c0c0c]/90 rounded-[2rem] border-2 border-[#00e5ff]/20 p-6 md:p-10 shadow-2xl relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity">
                 <Sparkles size={120} />
               </div>
-              
               <div className="flex items-center gap-3 mb-6">
                 <Terminal size={16} className="text-[#00e5ff]" />
                 <h3 className="text-[10px] font-black text-[#00e5ff] uppercase tracking-widest">Sector_00 // AI_Command_Core</h3>
               </div>
-              
               <div className="space-y-4">
                 <textarea 
                   rows={2}
@@ -142,17 +181,13 @@ const AdminLeadActionsModal: React.FC<AdminLeadActionsModalProps> = ({ lead, use
           )}
 
           <form onSubmit={handleSubmit} className="space-y-8 md:space-y-12">
-            
-            {/* SECTOR 01: ASSET MANIFEST */}
-            <div className="bg-[#0c0c0c]/90 rounded-[2rem] md:rounded-[3rem] border-2 border-neutral-900 p-6 md:p-10 shadow-2xl relative overflow-hidden scanline-effect group">
+            <div className="bg-[#0c0c0c]/90 rounded-[2rem] md:rounded-[3rem] border-2 border-neutral-900 p-6 md:p-10 shadow-2xl relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity">
                 <Database size={120} />
               </div>
-              
               <h3 className="text-[10px] font-black text-neutral-600 uppercase tracking-widest mb-8 md:mb-10 flex items-center gap-3">
                 <Cpu size={14} className="text-[#00e5ff]" /> Sector_01 // Asset_Manifest
               </h3>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 mb-8 md:mb-10">
                 <div className="space-y-3">
                   <label className="text-[9px] md:text-[10px] font-black text-neutral-700 uppercase tracking-widest px-2 italic">CAMPAIGN_NODE_LABEL</label>
@@ -174,6 +209,55 @@ const AdminLeadActionsModal: React.FC<AdminLeadActionsModalProps> = ({ lead, use
                     onChange={e => setFormData({...formData, category: e.target.value})}
                   />
                 </div>
+              </div>
+
+              {/* Refinery Logistical Controls - Week Feature Integration */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 mb-8 md:mb-10 p-8 bg-main/[0.02] border border-bright rounded-[2.5rem]">
+                 <div className="space-y-3">
+                    <label className="text-[9px] md:text-[10px] font-black text-neutral-700 uppercase tracking-widest px-2 italic flex items-center justify-between">
+                       <div className="flex items-center gap-2"><Calendar size={14} className="text-[#00e5ff]" /> LOGISTICS_WEEK_PROTOCOL</div>
+                       <span className="text-[8px] text-[#00e5ff]/60">{weekRange.start} — {weekRange.end}</span>
+                    </label>
+                    <div className="flex items-center gap-6 bg-black/40 border-2 border-neutral-800 rounded-2xl p-4 px-8 justify-between group focus-within:border-[#00e5ff]/40 transition-all">
+                       <div className="flex flex-col">
+                          <span className="text-[8px] font-black text-neutral-600 uppercase">Week_Num</span>
+                          <span className="text-3xl font-tactical font-black text-white italic tracking-widest leading-none">#{logistics.week.toString().padStart(2, '0')}</span>
+                       </div>
+                       <div className="flex gap-2">
+                          <button type="button" disabled={!canEdit} onClick={() => adjustWeek(-1)} className="w-12 h-12 bg-neutral-900 border border-neutral-800 rounded-xl flex items-center justify-center text-neutral-500 hover:text-white hover:border-[#00e5ff]/40 transition-all active:scale-90 disabled:opacity-20"><ChevronDown size={20} /></button>
+                          <button type="button" disabled={!canEdit} onClick={() => adjustWeek(1)} className="w-12 h-12 bg-neutral-900 border border-neutral-800 rounded-xl flex items-center justify-center text-neutral-500 hover:text-white hover:border-[#00e5ff]/40 transition-all active:scale-90 disabled:opacity-20"><ChevronUp size={20} /></button>
+                       </div>
+                       <div className="flex flex-col items-end">
+                          <span className="text-[8px] font-black text-neutral-600 uppercase">Year</span>
+                          <select 
+                            disabled={!canEdit}
+                            className="bg-transparent text-xl font-tactical font-black text-white italic outline-none cursor-pointer appearance-none text-right"
+                            value={logistics.year}
+                            onChange={e => setLogistics({...logistics, year: parseInt(e.target.value)})}
+                          >
+                            <option value={2024}>2024</option>
+                            <option value={2025}>2025</option>
+                            <option value={2026}>2026</option>
+                          </select>
+                       </div>
+                    </div>
+                 </div>
+                 <div className="space-y-3">
+                    <label className="text-[9px] md:text-[10px] font-black text-neutral-700 uppercase tracking-widest px-2 italic flex items-center gap-2">
+                       <Hash size={14} className="text-[#00e5ff]" /> DELIVERABLE_UNITS
+                    </label>
+                    <div className="relative">
+                      <input 
+                        required
+                        type="number"
+                        readOnly={!canEdit}
+                        className={`w-full bg-black/40 border-2 border-neutral-800 rounded-2xl px-6 h-[72px] text-white font-black outline-none focus:border-[#00e5ff]/60 transition-all text-2xl font-tactical tracking-[0.2em] ${!canEdit ? 'cursor-default border-transparent' : ''}`}
+                        value={formData.leadCapacity || 0}
+                        onChange={e => setFormData({...formData, leadCapacity: parseInt(e.target.value) || 0})}
+                      />
+                      <span className="absolute right-6 top-1/2 -translate-y-1/2 text-[9px] font-black text-neutral-700 uppercase">Unit_Load</span>
+                    </div>
+                 </div>
               </div>
 
               <div className="space-y-3 mb-8 md:mb-10">
@@ -218,12 +302,10 @@ const AdminLeadActionsModal: React.FC<AdminLeadActionsModalProps> = ({ lead, use
               </div>
             </div>
 
-            {/* SECTOR 02: FINANCIAL & STATUS */}
             <div className="bg-[#0f0f0f] border-2 border-neutral-900 rounded-[2.5rem] p-6 md:p-10 shadow-xl relative overflow-hidden group">
               <h3 className="text-[10px] font-black text-neutral-600 uppercase tracking-widest mb-8 md:mb-10 flex items-center gap-3">
                 <DollarSign size={14} className="text-[#00e5ff]" /> Sector_02 // Financial_Logic
               </h3>
-
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div className="space-y-3">
                   <label className="text-[9px] md:text-[10px] font-black text-neutral-700 uppercase tracking-widest px-2 italic">NODE_FLOOR ($)</label>
@@ -233,14 +315,13 @@ const AdminLeadActionsModal: React.FC<AdminLeadActionsModalProps> = ({ lead, use
                       type="number"
                       step="0.01"
                       readOnly={!canEdit}
-                      className={`w-full bg-black border-2 border-neutral-800 rounded-xl md:rounded-2xl px-12 py-4 text-white font-black outline-none focus:border-[#00e5ff] text-2xl font-tactical tracking-widest ${!canEdit ? 'cursor-default border-transparent' : ''}`}
+                      className={`w-full bg-black border-2 border-neutral-800 rounded-xl md:rounded-2xl px-12 py-4 text-white font-black outline-none focus:border-[#00e5ff] text-2xl font-tactical tracking-widest ${!canEdit ? 'cursor-not-allowed border-transparent' : ''}`}
                       value={formData.basePrice}
                       onChange={e => setFormData({...formData, basePrice: parseFloat(e.target.value)})}
                     />
                     <span className="absolute left-5 top-1/2 -translate-y-1/2 text-neutral-700 font-black text-xl italic font-tactical">$</span>
                   </div>
                 </div>
-
                 <div className="space-y-3">
                   <label className="text-[9px] md:text-[10px] font-black text-neutral-700 uppercase tracking-widest px-2 italic">LIVE_VALUATION ($)</label>
                   <div className="relative">
@@ -256,7 +337,6 @@ const AdminLeadActionsModal: React.FC<AdminLeadActionsModalProps> = ({ lead, use
                     <span className="absolute left-5 top-1/2 -translate-y-1/2 text-neutral-700 font-black text-xl italic font-tactical">$</span>
                   </div>
                 </div>
-
                 <div className="space-y-3">
                   <label className="text-[9px] md:text-[10px] font-black text-neutral-700 uppercase tracking-widest px-2 italic">NETWORK_STATE</label>
                   <div className="relative">
@@ -276,7 +356,6 @@ const AdminLeadActionsModal: React.FC<AdminLeadActionsModalProps> = ({ lead, use
               </div>
             </div>
 
-            {/* FOOTER ACTIONS */}
             <div className="space-y-6 pt-4">
               {canEdit ? (
                 <div className="flex flex-col md:flex-row gap-6">
@@ -286,7 +365,6 @@ const AdminLeadActionsModal: React.FC<AdminLeadActionsModalProps> = ({ lead, use
                   >
                     COMMIT_SYSTEM_CHANGES <Save size={28} />
                   </button>
-                  
                   <button 
                     type="button"
                     onClick={() => {
@@ -332,7 +410,6 @@ const AdminLeadActionsModal: React.FC<AdminLeadActionsModalProps> = ({ lead, use
             </div>
           </form>
 
-          {/* INTEGRITY DISCLOSURE */}
           <div className="bg-[#0f0f0f] border-2 border-neutral-900 p-6 md:p-8 rounded-2xl md:rounded-[2.5rem] flex items-start gap-4 md:gap-6 shadow-xl max-w-4xl mx-auto">
             <ShieldCheck className="text-emerald-500 shrink-0" size={20} />
             <div>

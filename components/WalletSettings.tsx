@@ -1,33 +1,38 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
-  CreditCard, 
   ShieldCheck, 
   Wallet, 
   Bitcoin,
   Smartphone,
-  Loader2,
-  QrCode,
   Zap,
-  Scan,
-  Globe,
   Activity,
   History,
   ArrowDownLeft,
   ArrowUpRight,
-  Cpu,
-  RefreshCw,
-  Shield,
   Database,
   DollarSign,
-  Landmark,
-  ShoppingBag,
-  CircleDollarSign,
+  CreditCard,
+  Scan,
+  Download,
+  Box,
+  Globe,
   ArrowRight,
-  Mail,
+  Settings as SettingsIcon,
+  Cpu,
+  AlertTriangle,
+  CheckCircle2,
+  RefreshCw,
+  Lock,
+  Terminal,
+  Hash,
+  Key,
+  Building,
   User as UserIcon,
-  Fingerprint
+  Briefcase,
+  ChevronRight,
+  Landmark
 } from 'lucide-react';
-import { GatewayAPI } from '../types.ts';
+import { GatewayAPI, WalletActivity } from '../types.ts';
 import { soundService } from '../services/soundService.ts';
 
 interface WalletSettingsProps {
@@ -36,344 +41,338 @@ interface WalletSettingsProps {
   balance: number;
   onDeposit: (amount: number, provider?: string) => void;
   gateways: GatewayAPI[];
+  walletActivities?: WalletActivity[];
 }
 
-const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gateways }) => {
-  const activeGateways = useMemo(() => gateways.filter(g => g.status === 'active'), [gateways]);
-  
+const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gateways, walletActivities = [] }) => {
   const [amount, setAmount] = useState<string>('500');
-  const [selectedGatewayId, setSelectedGatewayId] = useState<string>('');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [showCheckout, setShowCheckout] = useState(false);
-  const [processingStatus, setProcessingStatus] = useState<string>('');
+  const [selectedGatewayId, setSelectedGatewayId] = useState<string | null>(null);
+  const [showHandshakeHUD, setShowHandshakeHUD] = useState(false);
+  const [handshakeStep, setHandshakeStep] = useState(0);
   const [flowMode, setFlowMode] = useState<'deposit' | 'withdraw'>('deposit');
-  const [withdrawMethod, setWithdrawMethod] = useState<string>('');
 
-  useEffect(() => {
-    if (activeGateways.length > 0 && !selectedGatewayId) {
-      setSelectedGatewayId(activeGateways[0].id);
+  const [cardData, setCardData] = useState({ number: '', expiry: '', cvc: '' });
+  const [vpaId, setVpaId] = useState('');
+  const [walletAddr, setWalletAddr] = useState('');
+  const [bankData, setBankData] = useState({ holder: '', bankName: '', accountNumber: '', routing: '' });
+
+  const activeGateways = useMemo(() => gateways.filter(g => g.status === 'active'), [gateways]);
+  const selectedGateway = useMemo(() => activeGateways.find(g => g.id === selectedGatewayId), [activeGateways, selectedGatewayId]);
+
+  const calculation = useMemo(() => {
+    const num = parseFloat(amount) || 0;
+    const feePercent = selectedGateway ? parseFloat(selectedGateway.fee) : 0;
+    const feeAmount = (num * feePercent) / 100;
+    const netAmount = flowMode === 'deposit' ? num - feeAmount : num;
+    return { feeAmount, netAmount, feePercent };
+  }, [amount, selectedGateway, flowMode]);
+
+  const isFormValid = useMemo(() => {
+    if (!selectedGateway || calculation.netAmount <= 0) return false;
+    const p = selectedGateway.provider;
+
+    if (p === 'stripe') {
+      if (flowMode === 'deposit') {
+        return cardData.number.length >= 15 && cardData.expiry.includes('/') && cardData.cvc.length >= 3;
+      } else {
+        return bankData.holder.length > 2 && bankData.bankName.length > 2 && bankData.accountNumber.length > 5 && bankData.routing.length > 3;
+      }
     }
-    if (activeGateways.length > 0 && !withdrawMethod) {
-      setWithdrawMethod(activeGateways[0].provider);
-    }
-  }, [activeGateways, selectedGatewayId, withdrawMethod]);
 
-  const selectedGateway = useMemo(() => 
-    activeGateways.find(g => g.id === selectedGatewayId), 
-    [activeGateways, selectedGatewayId]
-  );
-
-  const [cardInfo, setCardInfo] = useState({ number: '', expiry: '', cvv: '', name: '' });
-  const [withdrawDetails, setWithdrawDetails] = useState({
-    bankName: '',
-    accountName: '',
-    iban: '',
-    swift: '',
-    paypalEmail: '',
-    binanceId: '',
-    gpayId: ''
-  });
+    if (p === 'upi') return vpaId.includes('@');
+    if (p === 'crypto' || p === 'binance') return walletAddr.length >= 26;
+    
+    return true;
+  }, [selectedGateway, calculation.netAmount, cardData, vpaId, walletAddr, bankData, flowMode]);
 
   const getProviderIcon = (provider: string) => {
-    switch (provider) {
-      case 'stripe': return CreditCard;
-      case 'paypal': return Globe;
-      case 'adyen': return Landmark;
-      case 'braintree': return Cpu;
-      case 'square': return ShoppingBag;
-      case 'authorize_net': return ShieldCheck;
-      case 'razorpay': return Zap;
-      case 'mollie': return Activity;
-      case 'paystack': return Database;
-      case 'crypto': return Bitcoin;
-      case 'binance': return Scan;
-      case 'upi': return Smartphone;
-      case 'skrill': return Wallet;
-      case 'neteller': return CircleDollarSign;
-      case 'gpay': return Smartphone;
-      default: return Database;
-    }
+    const p = provider.toLowerCase();
+    if (p.includes('stripe')) return Globe;
+    if (p.includes('binance') || p.includes('scan')) return Scan;
+    if (p.includes('crypto') || p.includes('bitcoin')) return Bitcoin;
+    if (p.includes('upi') || p.includes('phone')) return Smartphone;
+    return CreditCard;
   };
 
-  const handleProcessTransaction = async () => {
-    const numericAmount = parseFloat(amount) || 0;
-    if (numericAmount <= 0) return;
-    if (flowMode === 'withdraw' && numericAmount > balance) return;
-
-    setIsProcessing(true);
+  const handleAuthorize = async () => {
+    if (!isFormValid) return;
     soundService.playClick(true);
+    setShowHandshakeHUD(true);
+    setHandshakeStep(1);
+
+    await new Promise(r => setTimeout(r, 1000));
+    setHandshakeStep(2);
+    await new Promise(r => setTimeout(r, 1200));
+    setHandshakeStep(3);
+    await new Promise(r => setTimeout(r, 1000));
+    setHandshakeStep(4);
+    await new Promise(r => setTimeout(r, 800));
+
+    const finalAmount = flowMode === 'deposit' ? calculation.netAmount : -calculation.netAmount;
+    onDeposit(finalAmount, selectedGateway?.name);
     
-    const stages = flowMode === 'deposit' 
-      ? ['Syncing Node...', 'Validating Key...', 'Settling...']
-      : ['Allocating...', 'Routing...', 'Settled'];
-
-    for (const stage of stages) {
-      setProcessingStatus(stage);
-      await new Promise(r => setTimeout(r, 650));
-    }
-
-    const providerName = flowMode === 'deposit' 
-        ? (selectedGateway?.name || selectedGateway?.provider.toUpperCase() || 'SYNC_NODE')
-        : (withdrawMethod.toUpperCase());
-
-    onDeposit(flowMode === 'deposit' ? numericAmount : -numericAmount, providerName);
-    setIsProcessing(false);
-    setShowCheckout(false);
+    setShowHandshakeHUD(false);
+    setHandshakeStep(0);
     soundService.playClick(false);
+    setAmount('500'); 
+    setCardData({ number: '', expiry: '', cvc: '' });
+    setVpaId('');
+    setWalletAddr('');
+    setBankData({ holder: '', bankName: '', accountNumber: '', routing: '' });
   };
 
   return (
-    <div className="max-w-[1200px] mx-auto space-y-6 pb-20 animate-in fade-in duration-500 font-rajdhani px-4 md:px-0">
+    <div className="max-w-[1400px] mx-auto space-y-4 pb-24 font-rajdhani animate-in fade-in duration-500 px-4 lg:px-0">
       
-      {/* COMPACT HEADER */}
-      <div className="flex items-center justify-between border-b border-neutral-900 pb-4">
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 bg-[#00e5ff]/10 rounded-xl flex items-center justify-center text-[#00e5ff] shadow-glow-sm">
-            <Database size={20} />
-          </div>
-          <div>
-            <h2 className="text-xl font-futuristic text-white italic uppercase leading-none tracking-tight">VAULT <span className="text-neutral-500 font-normal">API</span></h2>
-            {/* Fix: Changed to 1_GLOBAL_SETTLEMENT_NODE */}
-            <p className="text-[9px] text-neutral-600 font-black uppercase tracking-[0.2em] mt-1">1_GLOBAL_SETTLEMENT_NODE</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 bg-neutral-900/50 p-1 rounded-lg border border-neutral-800">
-           <button 
-            onClick={() => { soundService.playClick(); setFlowMode('deposit'); setShowCheckout(false); }} 
-            className={`px-4 py-1.5 rounded-md text-[9px] font-black uppercase tracking-widest transition-all ${flowMode === 'deposit' ? 'bg-white text-black' : 'text-neutral-500 hover:text-white'}`}
-           >
-             Deposit
-           </button>
-           <button 
-            onClick={() => { soundService.playClick(); setFlowMode('withdraw'); setShowCheckout(false); }} 
-            className={`px-4 py-1.5 rounded-md text-[9px] font-black uppercase tracking-widest transition-all ${flowMode === 'withdraw' ? 'bg-white text-black' : 'text-neutral-500 hover:text-white'}`}
-           >
-             Withdraw
-           </button>
-        </div>
+      {/* 1. TOP STATS BELT */}
+      <div className="flex flex-col sm:flex-row items-center gap-3 w-full">
+         <div className="flex-1 w-full bg-surface border border-bright rounded-2xl p-4 flex items-center justify-between shadow-lg">
+            <div className="flex items-center gap-4">
+               <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center text-emerald-500 shadow-md">
+                  <Wallet size={20} />
+               </div>
+               <div>
+                  <span className="text-[8px] font-black text-dim uppercase tracking-widest block leading-none mb-1">AVAIL_LIQUIDITY</span>
+                  <span className="text-xl font-tactical font-black text-main italic tracking-widest leading-none">${balance.toLocaleString()}</span>
+               </div>
+            </div>
+            <div className="flex bg-input p-0.5 rounded-lg border border-bright">
+               <button 
+                 onClick={() => { soundService.playClick(); setFlowMode('deposit'); setSelectedGatewayId(null); }} 
+                 className={`px-6 py-1.5 rounded-md text-[8px] font-black uppercase transition-all ${flowMode === 'deposit' ? 'bg-main text-surface shadow-md' : 'text-dim hover:text-main'}`}
+               >
+                 Deposit
+               </button>
+               <button 
+                 onClick={() => { soundService.playClick(); setFlowMode('withdraw'); setSelectedGatewayId(null); }} 
+                 className={`px-6 py-1.5 rounded-md text-[8px] font-black uppercase transition-all ${flowMode === 'withdraw' ? 'bg-main text-surface shadow-md' : 'text-dim hover:text-main'}`}
+               >
+                 Withdraw
+               </button>
+            </div>
+         </div>
+
+         <div className="hidden lg:flex w-64 bg-surface border border-bright rounded-2xl p-4 items-center gap-4 shadow-lg">
+            <Activity className="text-emerald-500 animate-pulse" size={20} />
+            <div>
+               <span className="text-[8px] font-black text-dim uppercase tracking-widest block leading-none mb-1">NODE_STATUS</span>
+               <span className="text-xs font-black text-emerald-500 uppercase tracking-widest">ENCRYPTED_SYNC</span>
+            </div>
+         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         
-        {/* OPERATION HUB (Col 7) */}
-        <div className="lg:col-span-7 space-y-6">
-          <div className="bg-[#0c0c0c] rounded-[2rem] border border-neutral-800/60 p-6 shadow-2xl relative overflow-hidden group">
-            {!showCheckout ? (
+        {/* 2. MAIN INTERACTIVE NODE */}
+        <div className="lg:col-span-8 flex flex-col gap-4">
+          <div className="bg-surface border border-bright rounded-[2.5rem] p-6 sm:p-10 relative overflow-hidden shadow-2xl transition-colors">
+            <div className="absolute top-0 right-0 p-10 opacity-[0.02] pointer-events-none text-main">
+              <Database size={240} className="animate-pulse" />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
+              
               <div className="space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  {/* Amount Input */}
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black text-neutral-600 uppercase tracking-widest px-1 italic flex items-center gap-2">
-                      <DollarSign size={12} className="text-[#00e5ff]" /> Settlement_Unit
-                    </label>
-                    <div className="relative">
-                      <input 
-                        type="number" 
-                        value={amount} 
-                        onChange={(e) => setAmount(e.target.value)} 
-                        className="w-full bg-black border border-neutral-800 rounded-2xl px-12 py-4 text-3xl font-black text-white outline-none focus:border-[#00e5ff]/50 transition-all font-tactical tracking-widest" 
-                      />
-                      <span className="absolute left-5 top-1/2 -translate-y-1/2 text-neutral-700 font-black text-xl italic font-tactical">$</span>
+                 <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                       <DollarSign size={14} className="text-accent" />
+                       <h3 className="text-[10px] font-black text-main uppercase tracking-[0.3em] italic">Settlement_Units</h3>
                     </div>
-                  </div>
-
-                  {/* Provider Selection - SYNCED TO ADMIN GATEWAYS */}
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black text-neutral-600 uppercase tracking-widest px-1 italic flex items-center gap-2">
-                      <Cpu size={12} className="text-[#00e5ff]" /> Settlement_Vector
-                    </label>
-                    <div className="grid grid-cols-2 gap-2 max-h-[140px] overflow-y-auto pr-1 scrollbar-hide">
-                      {activeGateways.map((item) => {
-                        const Icon = getProviderIcon(item.provider);
-                        const isSelected = flowMode === 'deposit' ? selectedGatewayId === item.id : withdrawMethod === item.provider;
-                        return (
-                          <button 
-                            key={item.id}
-                            onClick={() => { soundService.playClick(); flowMode === 'deposit' ? setSelectedGatewayId(item.id) : setWithdrawMethod(item.provider); }}
-                            className={`p-3 rounded-xl border flex items-center gap-3 transition-all ${
-                              isSelected ? 'bg-[#00e5ff]/10 border-[#00e5ff]/40 text-[#00e5ff]' : 'bg-black/40 border-neutral-800/60 text-neutral-600 hover:text-white hover:border-neutral-700'
-                            }`}
-                          >
-                            <Icon size={14} />
-                            <span className="text-[9px] font-black uppercase truncate">{item.name || item.provider}</span>
-                          </button>
-                        );
-                      })}
-                      {activeGateways.length === 0 && (
-                        <div className="col-span-2 py-4 text-center text-[8px] text-neutral-700 uppercase italic">No vectors available</div>
-                      )}
+                    <div className="relative bg-input rounded-3xl border-2 border-bright p-6 flex flex-col items-center justify-center group focus-within:border-accent/40 transition-all shadow-inner">
+                       <div className="flex items-center gap-3 w-full">
+                          <span className="text-2xl font-tactical text-dim italic font-black leading-none shrink-0">$</span>
+                          <input 
+                            type="number" 
+                            value={amount} 
+                            onChange={(e) => setAmount(e.target.value)} 
+                            className="w-full bg-transparent border-none text-5xl font-black text-main outline-none font-tactical italic tracking-widest text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
+                          />
+                       </div>
                     </div>
-                  </div>
-                </div>
+                 </div>
 
-                <button 
-                  disabled={activeGateways.length === 0}
-                  onClick={() => { soundService.playClick(true); setShowCheckout(true); }} 
-                  className={`w-full py-4 rounded-2xl font-black text-sm uppercase italic tracking-[0.2em] transition-all border-b-4 active:translate-y-1 active:border-b-0 ${activeGateways.length === 0 ? 'bg-neutral-900 text-neutral-700 border-neutral-950 cursor-not-allowed' : 'bg-white text-black border-neutral-300 hover:bg-neutral-100 flex items-center justify-center gap-3'}`}
-                >
-                  Authorize_Vault_Handshake <ArrowRight size={16} />
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-6 animate-in zoom-in-95 duration-300">
-                <div className="flex justify-between items-center border-b border-neutral-800 pb-4">
-                  <h3 className="text-sm font-black text-white uppercase italic tracking-widest font-futuristic">PROTOCOL_AUTH</h3>
-                  <button onClick={() => setShowCheckout(false)} className="text-[9px] font-black text-neutral-600 hover:text-white uppercase tracking-widest">Abort</button>
-                </div>
-                
-                <div className="py-2">
-                  {flowMode === 'deposit' ? (
-                    selectedGateway?.provider === 'crypto' || selectedGateway?.provider === 'binance' || selectedGateway?.provider === 'upi' ? (
-                      <div className="flex flex-col items-center gap-4 bg-black/40 rounded-2xl p-6 border border-neutral-800">
-                        <QrCode size={120} className="text-white" />
-                        <div className="text-center w-full px-2">
-                          <p className="text-[8px] text-neutral-700 font-black uppercase tracking-widest mb-2">MASTER_ENDPOINT</p>
-                          <code className="text-[10px] text-[#00e5ff] break-all block bg-black p-2 rounded-lg border border-neutral-900">{selectedGateway.publicKey || '0x_NODE_ERR'}</code>
-                        </div>
+                 {selectedGateway && (
+                   <div className="p-5 bg-input border border-bright rounded-2xl space-y-4 animate-in slide-in-from-top-4 duration-500">
+                      <div className="flex items-center gap-2">
+                        <Lock size={12} className="text-accent/60" />
+                        <span className="text-[9px] font-black text-dim uppercase tracking-widest">Data_Identifier_Manifest</span>
                       </div>
-                    ) : (
-                      <div className="grid grid-cols-1 gap-4">
-                        <div className="relative">
-                          <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700" size={14} />
-                          <input className="w-full bg-black border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-xs text-white outline-none focus:border-[#00e5ff]/40" placeholder="LEGAL NAME" value={cardInfo.name} onChange={e => setCardInfo({...cardInfo, name: e.target.value.toUpperCase()})} />
-                        </div>
-                        <div className="relative">
-                          <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700" size={14} />
-                          <input className="w-full bg-black border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-xs text-white font-mono outline-none focus:border-[#00e5ff]/40" placeholder="0000 0000 0000 0000" value={cardInfo.number} onChange={e => setCardInfo({...cardInfo, number: e.target.value})} />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <input className="bg-black border border-neutral-800 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-[#00e5ff]/40" placeholder="MM/YY" value={cardInfo.expiry} onChange={e => setCardInfo({...cardInfo, expiry: e.target.value})} />
-                          <input className="bg-black border border-neutral-800 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-[#00e5ff]/40" placeholder="CVV" value={cardInfo.cvv} onChange={e => setCardInfo({...cardInfo, cvv: e.target.value})} />
-                        </div>
-                      </div>
-                    )
-                  ) : (
-                    <div className="space-y-4">
-                      {(withdrawMethod === 'stripe' || withdrawMethod === 'adyen') && (
-                        <div className="grid grid-cols-1 gap-3">
-                          <div className="relative">
-                            <Landmark className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700" size={14} />
-                            <input className="w-full bg-black border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-xs text-white outline-none focus:border-[#00e5ff]/40" placeholder="BANK NAME" value={withdrawDetails.bankName} onChange={e => setWithdrawDetails({...withdrawDetails, bankName: e.target.value.toUpperCase()})} />
-                          </div>
-                          <div className="relative">
-                            <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700" size={14} />
-                            <input className="w-full bg-black border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-xs text-white outline-none focus:border-[#00e5ff]/40" placeholder="ACCOUNT HOLDER NAME" value={withdrawDetails.accountName} onChange={e => setWithdrawDetails({...withdrawDetails, accountName: e.target.value.toUpperCase()})} />
-                          </div>
-                          <div className="relative">
-                            <Fingerprint className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700" size={14} />
-                            <input className="w-full bg-black border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-xs text-white font-mono outline-none focus:border-[#00e5ff]/40" placeholder="ACCOUNT NUMBER / IBAN" value={withdrawDetails.iban} onChange={e => setWithdrawDetails({...withdrawDetails, iban: e.target.value})} />
-                          </div>
-                          <div className="relative">
-                            <Zap className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700" size={14} />
-                            <input className="w-full bg-black border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-xs text-white font-mono outline-none focus:border-[#00e5ff]/40" placeholder="SWIFT / ROUTING CODE" value={withdrawDetails.swift} onChange={e => setWithdrawDetails({...withdrawDetails, swift: e.target.value})} />
-                          </div>
-                        </div>
-                      )}
-                      {(withdrawMethod === 'paypal') && (
-                        <div className="relative">
-                          <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700" size={14} />
-                          <input className="w-full bg-black border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-xs text-white outline-none focus:border-[#00e5ff]/40" placeholder="PAYPAL EMAIL ADDRESS" value={withdrawDetails.paypalEmail} onChange={e => setWithdrawDetails({...withdrawDetails, paypalEmail: e.target.value})} />
-                        </div>
-                      )}
-                      {(withdrawMethod === 'binance' || withdrawMethod === 'crypto') && (
-                        <div className="relative">
-                          <Scan className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700" size={14} />
-                          <input className="w-full bg-black border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-xs text-white font-mono outline-none focus:border-[#00e5ff]/40" placeholder="WALLET ID / BEP20" value={withdrawDetails.binanceId} onChange={e => setWithdrawDetails({...withdrawDetails, binanceId: e.target.value})} />
-                        </div>
-                      )}
-                      {(withdrawMethod === 'upi') && (
-                        <div className="relative">
-                          <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700" size={14} />
-                          <input className="w-full bg-black border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-xs text-white outline-none focus:border-[#00e5ff]/40" placeholder="UPI ID / GPAY" value={withdrawDetails.gpayId} onChange={e => setWithdrawDetails({...withdrawDetails, gpayId: e.target.value})} />
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
 
-                {isProcessing ? (
-                  <div className="py-6 text-center space-y-4 bg-black/20 rounded-2xl border border-neutral-800/40 border-dashed">
-                    <Loader2 className="animate-spin text-[#00e5ff] mx-auto" size={24} />
-                    <p className="text-[10px] text-neutral-400 font-black uppercase tracking-widest animate-pulse">{processingStatus}</p>
-                  </div>
-                ) : (
-                  <button 
-                    onClick={handleProcessTransaction} 
-                    className="w-full py-4 rounded-2xl font-black text-sm uppercase italic tracking-widest bg-[#00e5ff] text-black border-b-4 border-[#009fb1] active:translate-y-1 active:border-b-0"
-                  >
-                    Authorize_Settlement
-                  </button>
-                )}
+                      {selectedGateway.provider === 'stripe' && flowMode === 'deposit' && (
+                        <div className="space-y-3">
+                           <div className="relative">
+                              <CreditCard size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-dim/60" />
+                              <input 
+                                placeholder="PAN_ID: 0000 0000 0000 0000"
+                                className="w-full bg-surface border border-bright rounded-xl pl-9 pr-4 py-2.5 text-main text-[10px] font-mono outline-none focus:border-accent/40"
+                                value={cardData.number}
+                                onChange={e => setCardData({...cardData, number: e.target.value.replace(/\D/g, '').slice(0, 16)})}
+                              />
+                           </div>
+                           <div className="grid grid-cols-2 gap-3">
+                             <input placeholder="MM/YY" className="w-full bg-surface border border-bright rounded-xl px-4 py-2.5 text-main text-[10px] font-mono outline-none focus:border-accent/40 text-center" value={cardData.expiry} onChange={e => setCardData({...cardData, expiry: e.target.value.slice(0, 5)})} />
+                             <input type="password" placeholder="CVC" className="w-full bg-surface border border-bright rounded-xl px-4 py-2.5 text-main text-[10px] font-mono outline-none focus:border-accent/40 text-center" value={cardData.cvc} onChange={e => setCardData({...cardData, cvc: e.target.value.replace(/\D/g, '').slice(0, 4)})} />
+                           </div>
+                        </div>
+                      )}
+
+                      {(selectedGateway.provider === 'stripe' && flowMode === 'withdraw') && (
+                        <div className="space-y-3">
+                           <div className="relative">
+                              <UserIcon size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-dim/60" />
+                              <input 
+                                placeholder="BENEFICIARY_FULL_NAME" 
+                                className="w-full bg-surface border border-bright rounded-xl pl-9 pr-4 py-2.5 text-main text-[10px] font-mono outline-none focus:border-accent/40" 
+                                value={bankData.holder} 
+                                onChange={e => setBankData({...bankData, holder: e.target.value.toUpperCase()})} 
+                              />
+                           </div>
+                           <div className="relative">
+                              <Landmark size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-dim/60" />
+                              <input 
+                                placeholder="BANK_INSTITUTION_NAME" 
+                                className="w-full bg-surface border border-bright rounded-xl pl-9 pr-4 py-2.5 text-main text-[10px] font-mono outline-none focus:border-accent/40" 
+                                value={bankData.bankName} 
+                                onChange={e => setBankData({...bankData, bankName: e.target.value.toUpperCase()})} 
+                              />
+                           </div>
+                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <div className="relative">
+                                 <Hash size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-dim/60" />
+                                 <input 
+                                   placeholder="ACCOUNT_IBAN" 
+                                   className="w-full bg-surface border border-bright rounded-xl pl-9 pr-4 py-2.5 text-main text-[10px] font-mono outline-none focus:border-accent/40" 
+                                   value={bankData.accountNumber} 
+                                   onChange={e => setBankData({...bankData, accountNumber: e.target.value.replace(/\s/g, '')})} 
+                                 />
+                              </div>
+                              <div className="relative">
+                                 <Briefcase size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-dim/60" />
+                                 <input 
+                                   placeholder="SWIFT_BIC_CODE" 
+                                   className="w-full bg-surface border border-bright rounded-xl pl-9 pr-4 py-2.5 text-main text-[10px] font-mono outline-none focus:border-accent/40" 
+                                   value={bankData.routing} 
+                                   onChange={e => setBankData({...bankData, routing: e.target.value.toUpperCase()})} 
+                                 />
+                              </div>
+                           </div>
+                        </div>
+                      )}
+
+                      {(selectedGateway.provider === 'upi') && (
+                        <div className="relative">
+                           <Smartphone size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-dim/60" />
+                           <input placeholder="VPA_PROTOCOL_ID: user@bank" className="w-full bg-surface border border-bright rounded-xl pl-9 pr-4 py-2.5 text-main text-[10px] font-mono outline-none focus:border-emerald-500/40" value={vpaId} onChange={e => setVpaId(e.target.value)} />
+                        </div>
+                      )}
+
+                      {(selectedGateway.provider === 'crypto' || selectedGateway.provider === 'binance') && (
+                        <div className="relative">
+                           <Key size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-dim/60" />
+                           <input placeholder="BLOCKCHAIN_ADDR: 0x..." className="w-full bg-surface border border-bright rounded-xl pl-9 pr-4 py-2.5 text-main text-[9px] font-mono outline-none focus:border-orange-500/40" value={walletAddr} onChange={e => setWalletAddr(e.target.value)} />
+                        </div>
+                      )}
+                   </div>
+                 )}
               </div>
-            )}
-          </div>
 
-          {/* BALANCE DISPLAY */}
-          <div className="bg-[#0f0f0f] border border-neutral-800/60 rounded-[1.5rem] p-6 shadow-xl flex items-center justify-between">
-             <div className="flex flex-col">
-                <span className="text-[9px] font-black text-neutral-700 uppercase tracking-widest mb-1">AVAILABLE_LIQUIDITY</span>
-                <div className="text-3xl font-black text-white italic font-tactical tracking-widest leading-none">
-                   <span className="text-sm text-[#00e5ff] mr-1 opacity-50">$</span>{balance.toLocaleString()}
-                </div>
-             </div>
-             <div className="flex flex-col items-end">
-                <span className="text-[9px] font-black text-neutral-700 uppercase tracking-widest mb-1">NETWORK_SYNC</span>
-                {/* Fix: Changed to MASTER_NODE_ACTIVE */}
-                <div className="flex items-center gap-2 text-emerald-500 text-[10px] font-black uppercase italic tracking-widest">
-                   <Activity size={12} className="animate-pulse" /> {activeGateways.length > 0 ? 'MASTER_NODE_ACTIVE' : 'NODES_OFFLINE'}
-                </div>
-             </div>
+              <div className="space-y-4">
+                 <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                       <Zap size={14} className="text-amber-500" />
+                       <h3 className="text-[10px] font-black text-main uppercase tracking-[0.3em] italic">Settlement_Vector</h3>
+                    </div>
+                    <span className="text-[7px] text-dim font-mono">NODES: {activeGateways.length}</span>
+                 </div>
+                 
+                 <div className="grid grid-cols-1 gap-2 max-h-[280px] overflow-y-auto pr-1 scrollbar-hide">
+                    {activeGateways.map(g => {
+                       const Icon = getProviderIcon(g.provider);
+                       const isSelected = selectedGatewayId === g.id;
+                       return (
+                         <button 
+                           key={g.id} 
+                           onClick={() => { soundService.playClick(); setSelectedGatewayId(g.id); }}
+                           className={`flex items-center justify-between p-3 rounded-xl border-2 transition-all group/node ${isSelected ? 'bg-accent text-white border-accent shadow-lg' : 'bg-input border-bright text-dim hover:border-accent/40'}`}
+                         >
+                            <div className="flex items-center gap-3">
+                               <Icon size={16} className={isSelected ? 'text-white' : 'text-dim'} />
+                               <div className="text-left">
+                                  <p className="text-[10px] font-black uppercase tracking-widest leading-none">{g.name}</p>
+                                  <p className={`text-[7px] font-bold mt-1 ${isSelected ? 'text-white/80' : 'text-dim/60'}`}>FEE: {g.fee}%</p>
+                               </div>
+                            </div>
+                            {isSelected ? <CheckCircle2 size={14} /> : <ChevronRight size={14} className="opacity-0 group-hover/node:opacity-100 transition-opacity" />}
+                         </button>
+                       );
+                    })}
+                 </div>
+
+                 {selectedGateway && (
+                   <div className="bg-input border border-bright rounded-xl p-3 flex justify-between items-center animate-in fade-in">
+                      <div className="text-[8px] font-black text-dim uppercase">Net_Handshake: <span className="text-emerald-500 italic font-bold">${calculation.netAmount.toLocaleString()}</span></div>
+                      <div className="text-[8px] font-black text-dim uppercase">Margin: <span className="text-red-500 font-bold">-${calculation.feeAmount.toFixed(2)}</span></div>
+                   </div>
+                 )}
+              </div>
+            </div>
+
+            <div className="mt-10 pt-6 border-t border-bright relative z-10">
+               <button 
+                onClick={handleAuthorize}
+                disabled={!isFormValid}
+                className="w-full py-5 bg-main text-surface rounded-2xl font-black text-xl uppercase italic tracking-[0.3em] transition-all hover:bg-accent active:scale-[0.98] shadow-2xl flex items-center justify-center gap-4 disabled:opacity-10 disabled:grayscale"
+              >
+                INIT_VAULT_HANDSHAKE <ArrowRight size={24} />
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* LEDGER FEED (Col 5) */}
-        <div className="lg:col-span-5">
-           <div className="bg-[#0f0f0f] rounded-[2rem] border border-neutral-800/60 p-6 h-full flex flex-col shadow-2xl relative overflow-hidden min-h-[400px]">
-              <div className="flex justify-between items-center border-b border-neutral-800/40 pb-4 mb-4">
-                 <h4 className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] flex items-center gap-2 font-futuristic">
-                    <History size={14} className="text-[#00e5ff]" /> MASTER_LEDGER
-                 </h4>
-                 <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]" />
-              </div>
-              
-              <div className="flex-1 space-y-2 overflow-y-auto scrollbar-hide max-h-[300px] lg:max-h-none">
-                 {[
-                   { type: 'dep', amt: '+2,500', node: 'STRIPE_NODE', date: '5m' },
-                   { type: 'wit', amt: '-1,245', node: 'BANK_SWIFT', date: '1h' },
-                   { type: 'dep', amt: '+500', node: 'BNB_PAY', date: '6h' },
-                   { type: 'dep', amt: '+8,000', node: 'ROOT_GATE', date: '1d' },
-                 ].map((tx, idx) => (
-                   <div key={idx} className="bg-black/40 p-3 rounded-xl border border-neutral-800/30 flex items-center justify-between hover:border-[#00e5ff]/30 transition-all cursor-default">
-                      <div className="flex items-center gap-3">
-                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${tx.type === 'dep' ? 'bg-emerald-950/20 text-emerald-500' : 'bg-red-950/20 text-red-500'}`}>
-                            {tx.type === 'dep' ? <ArrowDownLeft size={14} /> : <ArrowUpRight size={14} />}
-                         </div>
-                         <div className="min-w-0">
-                            <p className="text-[9px] text-neutral-200 font-black uppercase truncate max-w-[100px] leading-none">{tx.node}</p>
-                            <p className="text-[7px] text-neutral-700 font-bold uppercase mt-1">{tx.date} ago</p>
-                         </div>
-                      </div>
-                      <div className="text-right">
-                        <span className={`text-sm font-black italic font-tactical tracking-widest ${tx.type === 'dep' ? 'text-emerald-500' : 'text-neutral-500'}`}>{tx.amt}</span>
-                      </div>
-                   </div>
-                 ))}
+        <div className="lg:col-span-4 flex flex-col gap-4">
+           <div className="bg-surface border border-bright rounded-[2.5rem] p-6 sm:p-8 flex flex-col shadow-2xl h-full relative overflow-hidden transition-colors">
+              <div className="flex items-center justify-between mb-6 border-b border-bright pb-4 shrink-0">
+                 <div className="flex items-center gap-3">
+                    <History size={16} className="text-emerald-500" />
+                    <h3 className="text-sm font-black text-main italic uppercase tracking-widest font-futuristic">Master_Ledger</h3>
+                 </div>
+                 <Cpu size={14} className="text-dim/40" />
               </div>
 
-              <button className="w-full mt-6 bg-neutral-900 text-neutral-600 hover:text-white py-3 rounded-xl text-[9px] font-black uppercase tracking-widest border-b-2 border-neutral-950 transition-all flex items-center justify-center gap-2">
-                 <Shield size={12} /> Export_Log
+              <div className="flex-1 space-y-2 overflow-y-auto scrollbar-hide pr-1 min-h-[300px]">
+                 {walletActivities.length > 0 ? (
+                   walletActivities.map(act => (
+                     <div key={act.id} className="bg-input rounded-xl border border-bright p-3 flex items-center justify-between hover:border-accent/40 transition-all cursor-default group/row">
+                        <div className="flex items-center gap-3">
+                           <div className={`w-8 h-8 rounded-lg flex items-center justify-center border ${act.type === 'deposit' ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-500' : 'bg-red-500/5 border-red-500/20 text-red-500'}`}>
+                              {act.type === 'deposit' ? <ArrowDownLeft size={14} /> : <ArrowUpRight size={14} />}
+                           </div>
+                           <div className="min-w-0">
+                              <p className="text-[10px] font-black text-main uppercase truncate max-w-[100px] leading-tight">{act.provider}</p>
+                              <p className="text-[7px] text-dim font-bold uppercase mt-0.5">{new Date(act.timestamp).toLocaleDateString()}</p>
+                           </div>
+                        </div>
+                        <div className="text-right">
+                           <span className={`text-sm font-tactical font-black italic tracking-widest ${act.type === 'deposit' ? 'text-emerald-500' : 'text-red-500'}`}>
+                              {act.type === 'deposit' ? '+' : '-'}{act.amount.toLocaleString()}
+                           </span>
+                        </div>
+                     </div>
+                   ))
+                 ) : (
+                   <div className="h-full flex flex-col items-center justify-center opacity-10">
+                      <RefreshCw size={40} className="animate-spin mb-4 text-main" />
+                      <p className="text-[8px] font-black uppercase tracking-widest text-main">Node_Sync_Silent</p>
+                   </div>
+                 )}
+              </div>
+
+              <button className="mt-4 w-full py-3 bg-input hover:bg-accent/10 border border-bright rounded-xl text-[9px] font-black uppercase text-dim hover:text-accent transition-all flex items-center justify-center gap-2">
+                 <Download size={14} /> EXPORT_AUDIT_LOG
               </button>
            </div>
         </div>
       </div>
-      
-      <div className="bg-neutral-950/40 p-4 rounded-[1.5rem] border border-neutral-900 flex items-start gap-4">
-        <ShieldCheck className="text-neutral-700 shrink-0 mt-0.5" size={16} />
-        <p className="text-[9px] text-neutral-600 font-medium leading-relaxed uppercase italic tracking-tighter">
-          Financial settlements are signed via ECDSA-P256. Sync latency depends on node throughput. All transactions are final upon ledger broadcast.
-        </p>
-      </div>
-
     </div>
   );
 };
