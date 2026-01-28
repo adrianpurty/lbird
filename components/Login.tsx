@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { 
   Zap, 
@@ -7,10 +8,14 @@ import {
   ArrowRight,
   AlertTriangle,
   Globe,
-  Facebook
+  Facebook,
+  ShieldCheck,
+  Cpu,
+  Database
 } from 'lucide-react';
 import { User, OAuthConfig } from '../types.ts';
 import { authService } from '../services/authService.ts';
+import { soundService } from '../services/soundService.ts';
 
 interface LoginProps {
   onLogin: (user: User) => void;
@@ -27,6 +32,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSyncing) return;
+    soundService.playClick(true);
     setIsSyncing(true);
     setError('');
     
@@ -42,6 +48,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
 
   const handleSocialAuth = async (provider: 'google' | 'facebook') => {
     if (isSyncing) return;
+    soundService.playClick(true);
     setIsSyncing(true);
     setError('');
     try {
@@ -55,103 +62,127 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden">
-      {/* PS5 Dynamic Background */}
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden scanline grid-bg">
       <div className="ps5-bg">
         <div className="ps5-liquid" />
         <div className="ps5-liquid-2" />
       </div>
 
-      <div className="w-full max-w-[480px] mx-auto z-10 animate-in fade-in zoom-in-95 duration-1000">
+      <div className="w-full max-w-[440px] mx-auto z-10 animate-in fade-in zoom-in-95 duration-700">
         
-        {/* Logo Section */}
-        <div className="text-center mb-12">
-          <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-full mx-auto flex items-center justify-center border border-white/20 mb-4">
-            <Zap className="text-white fill-white" size={32} />
+        {/* BRANDING HUB */}
+        <div className="text-center mb-8">
+          <div className="w-14 h-14 bg-white rounded-2xl mx-auto flex items-center justify-center shadow-[0_0_30px_rgba(255,255,255,0.1)] border border-white/20 mb-4 transition-transform hover:scale-105 duration-500">
+            <Zap className="text-black fill-black" size={28} />
           </div>
-          <h1 className="text-3xl font-futuristic text-white tracking-[0.2em] uppercase">
-            LEAD<span className="opacity-40">BID</span> PRO
+          <h1 className="text-2xl font-futuristic text-white tracking-[0.3em] uppercase italic">
+            LEAD<span className="text-neutral-500">BID</span> PRO
           </h1>
+          <p className="text-[7px] text-neutral-600 font-black uppercase tracking-[0.5em] mt-2 italic">ESTABLISHING_SECURE_HANDSHAKE</p>
         </div>
 
-        {/* Login Card */}
-        <div className="glass-panel rounded-[2rem] p-10 md:p-12">
-          <div className="mb-10 text-center">
-            <h2 className="text-4xl font-bold text-white tracking-tight mb-2">Sign In</h2>
-            <p className="text-neutral-400 text-sm font-medium">Access your enterprise lead hub.</p>
+        {/* ACCESS TERMINAL */}
+        <div className="bg-[#0c0c0c]/80 backdrop-blur-2xl border border-neutral-800 rounded-[2.5rem] p-8 md:p-10 shadow-2xl relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity">
+            <ShieldCheck size={80} />
+          </div>
+
+          <div className="mb-8 flex items-center justify-between border-b border-neutral-900 pb-4">
+            <div>
+              <h2 className="text-xl font-black text-white uppercase italic tracking-widest leading-none">SIGN_IN</h2>
+              <p className="text-[8px] text-neutral-600 font-black uppercase tracking-widest mt-1.5 flex items-center gap-2">
+                <Cpu size={10} className="text-[#00e5ff]" /> Terminal_Auth_v4.2
+              </p>
+            </div>
+            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_10px_#10b981]" />
           </div>
           
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-4">
-              <div className="relative">
-                <input 
-                  required 
-                  type="text"
-                  className="ps-input w-full rounded-2xl px-6 py-4 text-white text-lg outline-none placeholder:text-neutral-600" 
-                  placeholder="ID / Email" 
-                  value={email} 
-                  onChange={e => setEmail(e.target.value)} 
-                />
+              <div className="space-y-1.5">
+                <label className="text-[8px] font-black text-neutral-700 uppercase tracking-[0.2em] px-1 italic">IDENTIFIER_ENTRY</label>
+                <div className="relative group/input">
+                  <Fingerprint className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-800 group-focus-within/input:text-[#00e5ff] transition-colors" size={14} />
+                  <input 
+                    required 
+                    type="text"
+                    className="w-full bg-black/40 border border-neutral-800 rounded-xl pl-12 pr-6 py-3.5 text-white text-xs outline-none focus:border-[#00e5ff]/40 transition-all font-bold placeholder:text-neutral-800" 
+                    placeholder="EMAIL_OR_USERNAME" 
+                    value={email} 
+                    onChange={e => setEmail(e.target.value)} 
+                  />
+                </div>
               </div>
               
-              <div className="relative">
-                <input 
-                  required 
-                  type="password" 
-                  className="ps-input w-full rounded-2xl px-6 py-4 text-white text-lg outline-none placeholder:text-neutral-600" 
-                  placeholder="Password" 
-                  value={password} 
-                  onChange={e => setPassword(e.target.value)} 
-                />
+              <div className="space-y-1.5">
+                <label className="text-[8px] font-black text-neutral-700 uppercase tracking-[0.2em] px-1 italic">CRYPTOGRAPHIC_TOKEN</label>
+                <div className="relative group/input">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-800 group-focus-within/input:text-[#00e5ff] transition-colors" size={14} />
+                  <input 
+                    required 
+                    type="password" 
+                    className="w-full bg-black/40 border border-neutral-800 rounded-xl pl-12 pr-6 py-3.5 text-white text-xs outline-none focus:border-[#00e5ff]/40 transition-all font-bold placeholder:text-neutral-800" 
+                    placeholder="PASSWORD_STRING" 
+                    value={password} 
+                    onChange={e => setPassword(e.target.value)} 
+                  />
+                </div>
               </div>
             </div>
 
             {error && (
-              <div className="flex items-center gap-3 text-red-400 bg-red-400/10 p-4 rounded-xl border border-red-400/20">
-                <AlertTriangle size={16} />
-                <p className="text-xs font-bold uppercase tracking-wider">{error}</p>
+              <div className="flex items-center gap-3 text-red-500 bg-red-500/5 p-4 rounded-xl border border-red-500/20 animate-in shake duration-300">
+                <AlertTriangle size={14} className="shrink-0" />
+                <p className="text-[9px] font-black uppercase tracking-widest leading-relaxed">{error}</p>
               </div>
             )}
 
             <button 
               type="submit" 
               disabled={isSyncing} 
-              className="ps-button-primary w-full py-5 rounded-full font-black text-lg flex items-center justify-center gap-3"
+              className="w-full py-4 rounded-xl font-black text-xs uppercase italic tracking-[0.3em] transition-all border-b-4 active:translate-y-1 active:border-b-0 bg-white text-black border-neutral-300 hover:bg-neutral-100 flex items-center justify-center gap-3 mt-2 shadow-xl shadow-white/5 font-tactical"
             >
-              {isSyncing ? <Loader2 className="animate-spin" size={24} /> : 'Sign In'}
+              {isSyncing ? <Loader2 className="animate-spin" size={18} /> : (
+                <>INIT_AUTHORIZATION <ArrowRight size={14} /></>
+              )}
             </button>
           </form>
 
-          {/* Social Auth */}
-          <div className="mt-8 pt-8 border-t border-white/5 space-y-4">
-            <p className="text-center text-[10px] text-neutral-500 font-black uppercase tracking-[0.2em]">Other sign in options</p>
-            <div className="flex justify-center gap-4">
+          {/* SOCIAL HANDSHAKE */}
+          <div className="mt-8 pt-6 border-t border-neutral-900 space-y-4">
+            <p className="text-center text-[7px] text-neutral-700 font-black uppercase tracking-[0.4em]">Alternative_Identity_Sync</p>
+            <div className="flex justify-center gap-3">
               <button 
                 onClick={() => handleSocialAuth('google')}
-                className="w-14 h-14 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all"
+                className="w-12 h-12 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-center hover:border-blue-500/40 hover:bg-blue-500/5 transition-all group"
               >
-                <Globe size={20} className="text-neutral-300" />
+                <img src="https://www.google.com/favicon.ico" className="w-5 h-5 grayscale opacity-50 group-hover:grayscale-0 group-hover:opacity-100 transition-all" />
               </button>
               <button 
                 onClick={() => handleSocialAuth('facebook')}
-                className="w-14 h-14 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all"
+                className="w-12 h-12 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-center hover:border-blue-600/40 hover:bg-blue-600/5 transition-all group"
               >
-                <Facebook size={20} className="text-neutral-300" />
+                <Facebook size={18} className="text-neutral-700 group-hover:text-blue-600 group-hover:opacity-100 transition-all" fill="currentColor" />
               </button>
             </div>
           </div>
 
-          <div className="mt-10 text-center">
-             <button onClick={onSwitchToSignup} className="text-neutral-400 text-sm font-bold hover:text-white transition-all underline underline-offset-8 decoration-white/10">
-               New here? Create Account
+          <div className="mt-8 text-center">
+             <button onClick={onSwitchToSignup} className="text-neutral-500 text-[9px] font-black uppercase tracking-[0.2em] hover:text-white transition-all">
+               New Node Detection // Create Account
              </button>
           </div>
         </div>
 
-        {/* Footer Hint */}
-        <div className="mt-8 text-center opacity-30">
-          <p className="text-[10px] text-white font-bold uppercase tracking-[0.3em]">
-            Press X to Sync // Admin: admin / 1234
+        {/* SECURITY DISCLOSURE */}
+        <div className="mt-6 flex items-center justify-center gap-4 opacity-30">
+          <div className="flex items-center gap-2">
+            <Database size={10} className="text-white" />
+            <span className="text-[7px] text-white font-bold uppercase tracking-widest">Secured Node</span>
+          </div>
+          <div className="w-1 h-1 bg-neutral-800 rounded-full" />
+          <p className="text-[7px] text-white font-bold uppercase tracking-widest">
+            Admin Bypass: admin / 1234
           </p>
         </div>
       </div>

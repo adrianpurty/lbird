@@ -23,7 +23,10 @@ import {
   Landmark,
   ShoppingBag,
   CircleDollarSign,
-  ArrowRight
+  ArrowRight,
+  Mail,
+  User as UserIcon,
+  Fingerprint
 } from 'lucide-react';
 import { GatewayAPI } from '../types.ts';
 import { soundService } from '../services/soundService.ts';
@@ -63,7 +66,10 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
     bankName: '',
     accountName: '',
     iban: '',
-    swift: ''
+    swift: '',
+    paypalEmail: '',
+    binanceId: '',
+    gpayId: ''
   });
 
   const getProviderIcon = (provider: string) => {
@@ -82,6 +88,7 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
       case 'upi': return Smartphone;
       case 'skrill': return Wallet;
       case 'neteller': return CircleDollarSign;
+      case 'gpay': return Smartphone;
       default: return Database;
     }
   };
@@ -172,10 +179,12 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
                     <label className="text-[10px] font-black text-neutral-600 uppercase tracking-widest px-1 italic flex items-center gap-2">
                       <Cpu size={12} className="text-[#00e5ff]" /> Gateway_Node
                     </label>
-                    <div className="grid grid-cols-2 gap-2 max-h-[120px] overflow-y-auto pr-1 scrollbar-hide">
+                    <div className="grid grid-cols-2 gap-2 max-h-[140px] overflow-y-auto pr-1 scrollbar-hide">
                       {(flowMode === 'deposit' ? activeGateways : [
-                        { id: 'bank', provider: 'adyen', name: 'SWIFT' },
-                        { id: 'binance', provider: 'binance', name: 'BINANCE' }
+                        { id: 'bank', provider: 'adyen', name: 'BANK_SWIFT' },
+                        { id: 'paypal', provider: 'paypal', name: 'PAYPAL' },
+                        { id: 'binance', provider: 'binance', name: 'BINANCE' },
+                        { id: 'gpay', provider: 'gpay', name: 'GPAY_NODE' }
                       ]).map((item: any) => {
                         const Icon = getProviderIcon(item.provider);
                         const isSelected = flowMode === 'deposit' ? selectedGatewayId === item.id : withdrawMethod === item.id;
@@ -210,7 +219,7 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
                   <button onClick={() => setShowCheckout(false)} className="text-[9px] font-black text-neutral-600 hover:text-white uppercase tracking-widest">Abort</button>
                 </div>
                 
-                <div className="py-4">
+                <div className="py-2">
                   {flowMode === 'deposit' ? (
                     selectedGateway?.provider === 'crypto' || selectedGateway?.provider === 'binance' ? (
                       <div className="flex flex-col items-center gap-4 bg-black/40 rounded-2xl p-6 border border-neutral-800">
@@ -222,8 +231,14 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
                       </div>
                     ) : (
                       <div className="grid grid-cols-1 gap-4">
-                        <input className="bg-black border border-neutral-800 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-[#00e5ff]/40" placeholder="LEGAL NAME" value={cardInfo.name} onChange={e => setCardInfo({...cardInfo, name: e.target.value.toUpperCase()})} />
-                        <input className="bg-black border border-neutral-800 rounded-xl px-4 py-3 text-xs text-white font-mono outline-none focus:border-[#00e5ff]/40" placeholder="0000 0000 0000 0000" value={cardInfo.number} onChange={e => setCardInfo({...cardInfo, number: e.target.value})} />
+                        <div className="relative">
+                          <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700" size={14} />
+                          <input className="w-full bg-black border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-xs text-white outline-none focus:border-[#00e5ff]/40" placeholder="LEGAL NAME" value={cardInfo.name} onChange={e => setCardInfo({...cardInfo, name: e.target.value.toUpperCase()})} />
+                        </div>
+                        <div className="relative">
+                          <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700" size={14} />
+                          <input className="w-full bg-black border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-xs text-white font-mono outline-none focus:border-[#00e5ff]/40" placeholder="0000 0000 0000 0000" value={cardInfo.number} onChange={e => setCardInfo({...cardInfo, number: e.target.value})} />
+                        </div>
                         <div className="grid grid-cols-2 gap-4">
                           <input className="bg-black border border-neutral-800 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-[#00e5ff]/40" placeholder="MM/YY" value={cardInfo.expiry} onChange={e => setCardInfo({...cardInfo, expiry: e.target.value})} />
                           <input className="bg-black border border-neutral-800 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-[#00e5ff]/40" placeholder="CVV" value={cardInfo.cvv} onChange={e => setCardInfo({...cardInfo, cvv: e.target.value})} />
@@ -232,8 +247,44 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
                     )
                   ) : (
                     <div className="space-y-4">
-                      <input className="w-full bg-black border border-neutral-800 rounded-xl px-4 py-3 text-xs text-white" placeholder="RECIPIENT NAME" value={withdrawDetails.accountName} onChange={e => setWithdrawDetails({...withdrawDetails, accountName: e.target.value})} />
-                      <input className="w-full bg-black border border-neutral-800 rounded-xl px-4 py-3 text-xs text-white font-mono" placeholder="ROUTING / IBAN STRING" value={withdrawDetails.iban} onChange={e => setWithdrawDetails({...withdrawDetails, iban: e.target.value})} />
+                      {withdrawMethod === 'bank' && (
+                        <div className="grid grid-cols-1 gap-3">
+                          <div className="relative">
+                            <Landmark className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700" size={14} />
+                            <input className="w-full bg-black border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-xs text-white outline-none focus:border-[#00e5ff]/40" placeholder="BANK NAME" value={withdrawDetails.bankName} onChange={e => setWithdrawDetails({...withdrawDetails, bankName: e.target.value.toUpperCase()})} />
+                          </div>
+                          <div className="relative">
+                            <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700" size={14} />
+                            <input className="w-full bg-black border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-xs text-white outline-none focus:border-[#00e5ff]/40" placeholder="ACCOUNT HOLDER NAME" value={withdrawDetails.accountName} onChange={e => setWithdrawDetails({...withdrawDetails, accountName: e.target.value.toUpperCase()})} />
+                          </div>
+                          <div className="relative">
+                            <Fingerprint className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700" size={14} />
+                            <input className="w-full bg-black border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-xs text-white font-mono outline-none focus:border-[#00e5ff]/40" placeholder="ACCOUNT NUMBER / IBAN" value={withdrawDetails.iban} onChange={e => setWithdrawDetails({...withdrawDetails, iban: e.target.value})} />
+                          </div>
+                          <div className="relative">
+                            <Zap className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700" size={14} />
+                            <input className="w-full bg-black border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-xs text-white font-mono outline-none focus:border-[#00e5ff]/40" placeholder="SWIFT / ROUTING CODE" value={withdrawDetails.swift} onChange={e => setWithdrawDetails({...withdrawDetails, swift: e.target.value})} />
+                          </div>
+                        </div>
+                      )}
+                      {withdrawMethod === 'paypal' && (
+                        <div className="relative">
+                          <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700" size={14} />
+                          <input className="w-full bg-black border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-xs text-white outline-none focus:border-[#00e5ff]/40" placeholder="PAYPAL EMAIL ADDRESS" value={withdrawDetails.paypalEmail} onChange={e => setWithdrawDetails({...withdrawDetails, paypalEmail: e.target.value})} />
+                        </div>
+                      )}
+                      {withdrawMethod === 'binance' && (
+                        <div className="relative">
+                          <Scan className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700" size={14} />
+                          <input className="w-full bg-black border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-xs text-white font-mono outline-none focus:border-[#00e5ff]/40" placeholder="BINANCE ID / BEP20 WALLET" value={withdrawDetails.binanceId} onChange={e => setWithdrawDetails({...withdrawDetails, binanceId: e.target.value})} />
+                        </div>
+                      )}
+                      {withdrawMethod === 'gpay' && (
+                        <div className="relative">
+                          <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700" size={14} />
+                          <input className="w-full bg-black border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-xs text-white outline-none focus:border-[#00e5ff]/40" placeholder="GPAY LINKED EMAIL / PHONE" value={withdrawDetails.gpayId} onChange={e => setWithdrawDetails({...withdrawDetails, gpayId: e.target.value})} />
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -285,7 +336,7 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
               <div className="flex-1 space-y-2 overflow-y-auto scrollbar-hide max-h-[300px] lg:max-h-none">
                  {[
                    { type: 'dep', amt: '+2,500', node: 'STRIPE_NODE', date: '5m' },
-                   { type: 'wit', amt: '-1,245', node: 'SWIFT_CORE', date: '1h' },
+                   { type: 'wit', amt: '-1,245', node: 'BANK_SWIFT', date: '1h' },
                    { type: 'dep', amt: '+500', node: 'BNB_PAY', date: '6h' },
                    { type: 'dep', amt: '+8,000', node: 'ROOT_GATE', date: '1d' },
                  ].map((tx, idx) => (

@@ -39,14 +39,12 @@
   <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@300;400;500;600;700;800&family=Rajdhani:wght@300;400;500;600;700&family=Teko:wght@300;400;500;600;700&family=JetBrains+Mono:wght@100;400;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-platform: #000000;
+      --bg-platform: #050505;
       --bg-surface: #0a0a0a;
-      --bg-card: #111111;
+      --bg-card: #0c0c0c;
       --text-main: #ffffff;
-      --accent-primary: #ffffff;
-      --accent-muted: #404040;
+      --accent-primary: #00e5ff;
       --border-main: #1a1a1a;
-      --ps-blue: #0072ce;
     }
 
     body {
@@ -71,14 +69,48 @@
     }
 
     .text-glow {
-      text-shadow: 0 0 10px rgba(0, 114, 206, 0.5);
+      text-shadow: 0 0 10px rgba(0, 229, 255, 0.4);
     }
 
     .scrollbar-hide::-webkit-scrollbar {
       display: none;
     }
 
-    /* PS5 Background Animation */
+    @keyframes scanline {
+      0% { transform: translateY(-100%); }
+      100% { transform: translateY(100%); }
+    }
+
+    .scanline::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom, transparent 0%, rgba(0, 229, 255, 0.03) 50%, transparent 100%);
+      height: 100px;
+      width: 100%;
+      animation: scanline 8s linear infinite;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .grid-bg {
+      background-image: 
+        linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+
+    .glass-panel {
+      background: rgba(12, 12, 12, 0.7);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+    }
+
+    .theme-transition {
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
     @keyframes liquid-flow {
       0% { transform: translate(-10%, -10%) rotate(0deg); }
       50% { transform: translate(10%, 10%) rotate(180deg); }
@@ -88,7 +120,7 @@
     .ps5-bg {
       position: fixed;
       inset: 0;
-      background: radial-gradient(circle at 50% 50%, #001a33 0%, #000000 100%);
+      background: radial-gradient(circle at 50% 50%, #00121a 0%, #000000 100%);
       z-index: -1;
       overflow: hidden;
     }
@@ -97,7 +129,7 @@
       position: absolute;
       width: 150%;
       height: 150%;
-      background: radial-gradient(circle at center, rgba(0, 114, 206, 0.15) 0%, transparent 70%);
+      background: radial-gradient(circle at center, rgba(0, 229, 255, 0.1) 0%, transparent 70%);
       filter: blur(80px);
       animation: liquid-flow 20s infinite linear;
     }
@@ -106,46 +138,11 @@
       position: absolute;
       width: 120%;
       height: 120%;
-      background: radial-gradient(circle at center, rgba(255, 255, 255, 0.05) 0%, transparent 60%);
+      background: radial-gradient(circle at center, rgba(255, 255, 255, 0.03) 0%, transparent 60%);
       filter: blur(100px);
       animation: liquid-flow 25s infinite linear reverse;
       right: -20%;
       bottom: -20%;
-    }
-
-    .glass-panel {
-      background: rgba(255, 255, 255, 0.03);
-      backdrop-filter: blur(25px);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-    }
-
-    .ps-button-primary {
-      background: #ffffff;
-      color: #000000;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .ps-button-primary:hover {
-      background: #ffffff;
-      transform: scale(1.02);
-      box-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
-    }
-
-    .ps-input {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      transition: all 0.3s ease;
-    }
-
-    .ps-input:focus {
-      border-color: var(--ps-blue);
-      background: rgba(255, 255, 255, 0.08);
-      box-shadow: 0 0 15px rgba(0, 114, 206, 0.2);
-    }
-
-    .theme-transition {
-      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
   </style>
 <script type="importmap">

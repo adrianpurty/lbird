@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react';
 import { 
   Server, Database, Clock, Zap, Activity, Heart, Globe, Layers
@@ -61,6 +60,7 @@ const App: React.FC = () => {
 
   const [selectedLeadForBid, setSelectedLeadForBid] = useState<Lead | null>(null);
   const [selectedLeadForEdit, setSelectedLeadForEdit] = useState<Lead | null>(null);
+  const [lastBidLeadId, setLastBidLeadId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'info' } | null>(null);
 
@@ -221,6 +221,7 @@ const App: React.FC = () => {
                              nicheCount={marketData.leads.filter(l => l.category === lead.category).length}
                              isWishlisted={true}
                              onToggleWishlist={() => toggleWishlist(lead.id)}
+                             isRecentlyBid={lastBidLeadId === lead.id}
                              compact
                            />
                         </div>
@@ -244,6 +245,7 @@ const App: React.FC = () => {
                       currentUserId={user!.id} 
                       wishlist={user!.wishlist || []} 
                       onToggleWishlist={toggleWishlist}
+                      lastBidLeadId={lastBidLeadId}
                     />
                   </div>
                 </section>
@@ -295,7 +297,7 @@ const App: React.FC = () => {
 
       <MobileNav activeTab={activeTab} onTabChange={setActiveTab} role={user!.role} />
 
-      {selectedLeadForBid && <BiddingModal lead={selectedLeadForBid} user={user!} gateways={marketData.gateways} onClose={() => setSelectedLeadForBid(null)} onSubmit={(d) => apiService.placeBid({ userId: user!.id, leadId: selectedLeadForBid.id, leadTitle: selectedLeadForBid.title, ...d }).then(() => { fetchAppData(); setSelectedLeadForBid(null); setActiveTab('action-center'); })} onRefill={() => { setSelectedLeadForBid(null); setActiveTab('settings'); }} />}
+      {selectedLeadForBid && <BiddingModal lead={selectedLeadForBid} user={user!} gateways={marketData.gateways} onClose={() => setSelectedLeadForBid(null)} onSubmit={(d) => apiService.placeBid({ userId: user!.id, leadId: selectedLeadForBid.id, leadTitle: selectedLeadForBid.title, ...d }).then(() => { fetchAppData(); setLastBidLeadId(selectedLeadForBid.id); setTimeout(() => setLastBidLeadId(null), 6000); setSelectedLeadForBid(null); setActiveTab('market'); showToast("BID_DEPLOYED_SUCCESSFULLY", "success"); })} onRefill={() => { setSelectedLeadForBid(null); setActiveTab('settings'); }} />}
       {selectedLeadForEdit && <AdminLeadActionsModal lead={selectedLeadForEdit} user={user!} onClose={() => setSelectedLeadForEdit(null)} onSave={(u) => apiService.updateLead(selectedLeadForEdit.id, u).then(() => { fetchAppData(); setSelectedLeadForEdit(null); })} onDelete={(id) => apiService.deleteLead(id).then(() => { fetchAppData(); setSelectedLeadForEdit(null); })} />}
       
       {toast && (

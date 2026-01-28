@@ -12,7 +12,8 @@ import {
   Terminal,
   Zap,
   Cpu,
-  ArrowRight
+  ArrowRight,
+  Settings2
 } from 'lucide-react';
 import { OAuthConfig } from '../types.ts';
 import { soundService } from '../services/soundService.ts';
@@ -52,7 +53,7 @@ const AdminOAuthSettings: React.FC<AdminOAuthSettingsProps> = ({ config, onConfi
     try {
       await onConfigChange(localConfig);
       setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
+      setTimeout(() => setSaveSuccess(false), 2000);
     } catch (error) {
       console.error("Config Save Failed", error);
     } finally {
@@ -61,182 +62,151 @@ const AdminOAuthSettings: React.FC<AdminOAuthSettingsProps> = ({ config, onConfi
   };
 
   return (
-    <div className="max-w-[1200px] mx-auto space-y-6 pb-20 animate-in fade-in duration-500 font-rajdhani px-4 md:px-0">
+    <div className="max-w-[1000px] mx-auto space-y-4 pb-24 animate-in fade-in duration-500 font-rajdhani px-3 md:px-0">
       
-      {/* COMPACT HEADER */}
-      <div className="flex items-center justify-between border-b border-neutral-900 pb-4">
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 bg-purple-500/10 rounded-xl flex items-center justify-center text-purple-400 shadow-glow-sm">
-            <Lock size={20} />
+      {/* ULTRA-COMPACT HEADER */}
+      <div className="flex items-center justify-between border-b border-neutral-900 pb-3">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-purple-500/10 rounded-lg flex items-center justify-center text-purple-400 shadow-glow-sm">
+            <Lock size={16} />
           </div>
           <div>
-            <h2 className="text-xl font-futuristic text-white italic uppercase leading-none tracking-tight">AUTH <span className="text-neutral-500 font-normal">INFRA</span></h2>
-            <p className="text-[9px] text-neutral-600 font-black uppercase tracking-[0.2em] mt-1">OIDC_PROTOCOLS_READY</p>
+            <h2 className="text-lg font-futuristic text-white italic uppercase leading-none tracking-tight">AUTH <span className="text-neutral-500">INFRA</span></h2>
+            <p className="text-[8px] text-neutral-600 font-black uppercase tracking-widest mt-0.5">OIDC_V4_READY</p>
           </div>
         </div>
         
         <div className="flex items-center gap-2">
           <button 
             onClick={() => { soundService.playClick(); setShowSecrets(!showSecrets); }}
-            className="p-2.5 bg-neutral-900/50 border border-neutral-800 rounded-lg text-neutral-500 hover:text-white transition-all"
+            className="p-1.5 bg-neutral-900/50 border border-neutral-800 rounded-md text-neutral-500 hover:text-white transition-all"
           >
-            {showSecrets ? <EyeOff size={16} /> : <Eye size={16} />}
+            {showSecrets ? <EyeOff size={14} /> : <Eye size={14} />}
           </button>
           
           <button 
             onClick={handleSave}
             disabled={isSaving}
-            className={`flex items-center gap-2 px-6 py-2 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all border-b-4 active:translate-y-1 active:border-b-0 ${
+            className={`flex items-center gap-2 px-4 py-1.5 rounded-md font-black text-[9px] uppercase tracking-widest transition-all border-b-2 active:translate-y-0.5 active:border-b-0 ${
               saveSuccess 
                 ? 'bg-emerald-600 text-white border-emerald-900' 
                 : 'bg-white text-black border-neutral-300 hover:bg-neutral-100'
             }`}
           >
-            {isSaving ? <RefreshCw className="animate-spin" size={14} /> : <Database size={14} />}
-            {isSaving ? 'SYNCING...' : saveSuccess ? 'DEPLOYED' : 'COMMIT_INFRA'}
+            {isSaving ? <RefreshCw className="animate-spin" size={12} /> : <Database size={12} />}
+            {isSaving ? 'SYNC' : saveSuccess ? 'DONE' : 'COMMIT'}
           </button>
         </div>
       </div>
 
-      {/* AUTH NODES GRID */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* COMPACT NODES GRID */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         
         {/* GOOGLE NODE */}
-        <div className="group relative bg-[#0c0c0c] border border-neutral-800/60 rounded-[2rem] p-6 shadow-xl overflow-hidden transition-all hover:border-blue-500/30">
-          <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 shadow-[2px_0_15px_rgba(59,130,246,0.3)]" />
+        <div className="group relative bg-[#0c0c0c] border border-neutral-800/40 rounded-2xl p-4 shadow-lg overflow-hidden transition-all hover:border-blue-500/20">
+          <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500/50" />
           
-          <div className="space-y-6">
+          <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-black border border-neutral-800 rounded-xl flex items-center justify-center grayscale group-hover:grayscale-0 transition-all">
-                  <img src="https://www.google.com/favicon.ico" alt="Google" className="w-6 h-6" />
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-black border border-neutral-800 rounded-lg flex items-center justify-center grayscale group-hover:grayscale-0 transition-all">
+                  <img src="https://www.google.com/favicon.ico" alt="Google" className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-black text-white italic uppercase tracking-widest leading-none">GOOGLE_CORE</h3>
-                  <p className="text-[8px] text-neutral-600 font-black uppercase tracking-widest mt-1">NODE_IDENTIFIER_01</p>
+                  <h3 className="text-xs font-black text-white italic uppercase tracking-widest leading-none">GOOGLE_CORE</h3>
+                  <p className="text-[7px] text-neutral-600 font-black uppercase mt-0.5">NODE_01</p>
                 </div>
               </div>
               <button 
                 onClick={() => handleToggle('googleEnabled')}
-                className={`px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-widest border transition-all ${
+                className={`px-2 py-0.5 rounded-md text-[7px] font-black uppercase tracking-widest border transition-all ${
                   localConfig.googleEnabled ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' : 'bg-red-500/10 border-red-500/30 text-red-400 opacity-40'
                 }`}
               >
-                {localConfig.googleEnabled ? 'OPERATIONAL' : 'OFFLINE'}
+                {localConfig.googleEnabled ? 'ACTIVE' : 'OFFLINE'}
               </button>
             </div>
 
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-[9px] font-black text-neutral-700 uppercase tracking-widest px-1 italic">CLIENT_IDENTIFIER</label>
-                <div className="relative group/input">
-                  <Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700 group-focus-within/input:text-blue-400 transition-colors" size={14} />
-                  <input 
-                    className="w-full bg-black/40 border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-neutral-400 font-mono text-[10px] outline-none focus:border-blue-500/40 transition-all"
-                    placeholder="G_CLIENT_ID_STRING"
-                    value={localConfig.googleClientId}
-                    onChange={(e) => handleChange('googleClientId', e.target.value)}
-                  />
-                </div>
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <label className="text-[8px] font-black text-neutral-700 uppercase tracking-widest px-1 italic">CLIENT_ID</label>
+                <input 
+                  className="w-full bg-black/40 border border-neutral-800 rounded-lg px-3 py-2 text-neutral-400 font-mono text-[9px] outline-none focus:border-blue-500/40 transition-all"
+                  placeholder="G_CLIENT_ID"
+                  value={localConfig.googleClientId}
+                  onChange={(e) => handleChange('googleClientId', e.target.value)}
+                />
               </div>
-              <div className="space-y-2">
-                <label className="text-[9px] font-black text-neutral-700 uppercase tracking-widest px-1 italic">SECRET_AUTHENTICATOR</label>
-                <div className="relative group/input">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700 group-focus-within/input:text-blue-400 transition-colors" size={14} />
-                  <input 
-                    type={showSecrets ? "text" : "password"}
-                    className="w-full bg-black/40 border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-neutral-400 font-mono text-[10px] outline-none focus:border-blue-500/40 transition-all"
-                    placeholder="••••••••••••••••"
-                    value={localConfig.googleClientSecret}
-                    onChange={(e) => handleChange('googleClientSecret', e.target.value)}
-                  />
-                </div>
+              <div className="space-y-1.5">
+                <label className="text-[8px] font-black text-neutral-700 uppercase tracking-widest px-1 italic">SECRET_TOKEN</label>
+                <input 
+                  type={showSecrets ? "text" : "password"}
+                  className="w-full bg-black/40 border border-neutral-800 rounded-lg px-3 py-2 text-neutral-400 font-mono text-[9px] outline-none focus:border-blue-500/40 transition-all"
+                  placeholder="••••••••"
+                  value={localConfig.googleClientSecret}
+                  onChange={(e) => handleChange('googleClientSecret', e.target.value)}
+                />
               </div>
             </div>
           </div>
         </div>
 
         {/* META NODE */}
-        <div className="group relative bg-[#0c0c0c] border border-neutral-800/60 rounded-[2rem] p-6 shadow-xl overflow-hidden transition-all hover:border-blue-600/30">
-          <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 shadow-[2px_0_15px_rgba(37,99,235,0.3)]" />
+        <div className="group relative bg-[#0c0c0c] border border-neutral-800/40 rounded-2xl p-4 shadow-lg overflow-hidden transition-all hover:border-blue-600/20">
+          <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600/50" />
           
-          <div className="space-y-6">
+          <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-black border border-neutral-800 rounded-xl flex items-center justify-center grayscale group-hover:grayscale-0 transition-all text-blue-600">
-                  <Facebook size={24} fill="currentColor" />
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-black border border-neutral-800 rounded-lg flex items-center justify-center grayscale group-hover:grayscale-0 transition-all text-blue-600">
+                  <Facebook size={18} fill="currentColor" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-black text-white italic uppercase tracking-widest leading-none">META_HANDSHAKE</h3>
-                  <p className="text-[8px] text-neutral-600 font-black uppercase tracking-widest mt-1">NODE_IDENTIFIER_02</p>
+                  <h3 className="text-xs font-black text-white italic uppercase tracking-widest leading-none">META_SYNC</h3>
+                  <p className="text-[7px] text-neutral-600 font-black uppercase mt-0.5">NODE_02</p>
                 </div>
               </div>
               <button 
                 onClick={() => handleToggle('facebookEnabled')}
-                className={`px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-widest border transition-all ${
+                className={`px-2 py-0.5 rounded-md text-[7px] font-black uppercase tracking-widest border transition-all ${
                   localConfig.facebookEnabled ? 'bg-blue-600/10 border-blue-600/30 text-blue-500' : 'bg-red-500/10 border-red-500/30 text-red-400 opacity-40'
                 }`}
               >
-                {localConfig.facebookEnabled ? 'OPERATIONAL' : 'OFFLINE'}
+                {localConfig.facebookEnabled ? 'ACTIVE' : 'OFFLINE'}
               </button>
             </div>
 
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-[9px] font-black text-neutral-700 uppercase tracking-widest px-1 italic">APP_IDENTIFIER</label>
-                <div className="relative group/input">
-                  <Cpu className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700 group-focus-within/input:text-blue-500 transition-colors" size={14} />
-                  <input 
-                    className="w-full bg-black/40 border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-neutral-400 font-mono text-[10px] outline-none focus:border-blue-500/40 transition-all"
-                    placeholder="M_APP_ID_STRING"
-                    value={localConfig.facebookAppId}
-                    onChange={(e) => handleChange('facebookAppId', e.target.value)}
-                  />
-                </div>
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <label className="text-[8px] font-black text-neutral-700 uppercase tracking-widest px-1 italic">APP_ID</label>
+                <input 
+                  className="w-full bg-black/40 border border-neutral-800 rounded-lg px-3 py-2 text-neutral-400 font-mono text-[9px] outline-none focus:border-blue-500/40 transition-all"
+                  placeholder="M_APP_ID"
+                  value={localConfig.facebookAppId}
+                  onChange={(e) => handleChange('facebookAppId', e.target.value)}
+                />
               </div>
-              <div className="space-y-2">
-                <label className="text-[9px] font-black text-neutral-700 uppercase tracking-widest px-1 italic">GRAPH_SECRET_TOKEN</label>
-                <div className="relative group/input">
-                  <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700 group-focus-within/input:text-blue-500 transition-colors" size={14} />
-                  <input 
-                    type={showSecrets ? "text" : "password"}
-                    className="w-full bg-black/40 border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-neutral-400 font-mono text-[10px] outline-none focus:border-blue-500/40 transition-all"
-                    placeholder="••••••••••••••••"
-                    value={localConfig.facebookAppSecret}
-                    onChange={(e) => handleChange('facebookAppSecret', e.target.value)}
-                  />
-                </div>
+              <div className="space-y-1.5">
+                <label className="text-[8px] font-black text-neutral-700 uppercase tracking-widest px-1 italic">GRAPH_SECRET</label>
+                <input 
+                  type={showSecrets ? "text" : "password"}
+                  className="w-full bg-black/40 border border-neutral-800 rounded-lg px-3 py-2 text-neutral-400 font-mono text-[9px] outline-none focus:border-blue-500/40 transition-all"
+                  placeholder="••••••••"
+                  value={localConfig.facebookAppSecret}
+                  onChange={(e) => handleChange('facebookAppSecret', e.target.value)}
+                />
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* DISCLOSURE FOOTER */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-[#0f0f0f] border border-neutral-900 p-4 rounded-2xl flex items-start gap-4 shadow-sm group hover:bg-neutral-900/40 transition-all">
-          <div className="w-10 h-10 bg-purple-500/5 rounded-xl flex items-center justify-center border border-purple-500/20 text-purple-500 shrink-0 group-hover:scale-110 transition-transform">
-            <Terminal size={18} />
-          </div>
-          <div className="space-y-1">
-             <h4 className="text-[10px] font-black text-white italic uppercase tracking-[0.1em] font-futuristic">PROTO_SYNC</h4>
-             <p className="text-[9px] text-neutral-600 font-medium leading-relaxed uppercase italic tracking-tighter">
-               Manual provisioning requires valid secret tokens. Incomplete handshakes trigger nodal lockout.
-             </p>
-          </div>
-        </div>
-
-        <div className="bg-[#0f0f0f] border border-neutral-900 p-4 rounded-2xl flex items-start gap-4 shadow-sm group hover:bg-neutral-900/40 transition-all">
-          <div className="w-10 h-10 bg-blue-500/5 rounded-xl flex items-center justify-center border border-blue-500/20 text-blue-500 shrink-0 group-hover:scale-110 transition-transform">
-            <ShieldCheck size={18} />
-          </div>
-          <div className="space-y-1">
-             <h4 className="text-[10px] font-black text-white italic uppercase tracking-[0.1em] font-futuristic">AUDIT_LOG</h4>
-             <p className="text-[9px] text-neutral-600 font-medium leading-relaxed uppercase italic tracking-tighter">
-               All commits are signature-verified. Identity segments use 256-bit encryption during sync.
-             </p>
-          </div>
-        </div>
+      {/* DISCLOSURE FOOTER - ULTRA SMALL */}
+      <div className="bg-[#0f0f0f] border border-neutral-900 p-3 rounded-xl flex items-center gap-3 shadow-sm">
+        <ShieldCheck size={14} className="text-neutral-700 shrink-0" />
+        <p className="text-[7px] text-neutral-600 font-medium leading-relaxed uppercase tracking-widest">
+          Node provisioning requires valid OIDC signatures. Unauthorized identity sync will trigger a system lockout.
+        </p>
       </div>
 
     </div>

@@ -1,9 +1,8 @@
-
 import React, { useState, useMemo, memo } from 'react';
 import { Lead, UserRole } from '../types.ts';
 import { 
   PlaneTakeoff, Ship, Hotel, Building2, Coins, Shield, Stethoscope, BriefcaseBusiness,
-  ListFilter, Activity, Edit3, Target, Globe, Star, Info, Database, Gavel, Layers, Heart
+  ListFilter, Activity, Edit3, Target, Globe, Star, Info, Database, Gavel, Layers, Heart, CheckCircle
 } from 'lucide-react';
 import { soundService } from '../services/soundService.ts';
 
@@ -16,6 +15,7 @@ interface LeadGridProps {
   activeBids?: string[];
   wishlist: string[];
   onToggleWishlist: (id: string) => void;
+  lastBidLeadId?: string | null;
 }
 
 interface TacticalCardProps {
@@ -27,10 +27,11 @@ interface TacticalCardProps {
   isWishlisted: boolean;
   onToggleWishlist: (id: string) => void;
   compact?: boolean;
+  isRecentlyBid?: boolean;
 }
 
 // Named export for direct access
-export const TacticalLeadCard = memo(({ lead, userRole, onBid, onEdit, nicheCount, isWishlisted, onToggleWishlist, compact }: TacticalCardProps) => {
+export const TacticalLeadCard = memo(({ lead, userRole, onBid, onEdit, nicheCount, isWishlisted, onToggleWishlist, compact, isRecentlyBid }: TacticalCardProps) => {
   const isAdmin = userRole === 'admin';
   const integrityColor = lead.qualityScore > 80 ? 'text-emerald-400' : lead.qualityScore > 50 ? 'text-amber-400' : 'text-red-400';
 
@@ -47,19 +48,28 @@ export const TacticalLeadCard = memo(({ lead, userRole, onBid, onEdit, nicheCoun
   return (
     <div 
       className={`group relative bg-[#0a0a0a] border rounded-2xl overflow-hidden hover:bg-white/[0.03] transition-all duration-500 flex flex-col h-[200px] shadow-2xl cursor-pointer ${
+        isRecentlyBid ? 'border-emerald-500 ring-4 ring-emerald-500/20 animate-pulse' : 
         isWishlisted ? 'border-[#00e5ff]/40 shadow-[#00e5ff]/5' : 'border-white/15'
       }`}
       onClick={() => { soundService.playClick(); onBid(lead.id); }}
     >
       {/* Dynamic Background Accent */}
       <div className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl -mr-16 -mt-16 transition-all ${
-        isWishlisted ? 'bg-[#00e5ff]/10' : 'bg-white/[0.02] group-hover:bg-white/[0.05]'
+        isRecentlyBid ? 'bg-emerald-500/20' : isWishlisted ? 'bg-[#00e5ff]/10' : 'bg-white/[0.02] group-hover:bg-white/[0.05]'
       }`} />
+
+      {/* RECENT BID CELEBRATION OVERLAY */}
+      {isRecentlyBid && (
+        <div className="absolute top-0 left-0 right-0 bg-emerald-500 py-1 flex items-center justify-center gap-2 z-20 animate-in slide-in-from-top duration-500">
+           <CheckCircle size={10} className="text-white" />
+           <span className="text-[8px] font-black text-white uppercase tracking-[0.3em]">BID_SECURED_SYNC_ACTIVE</span>
+        </div>
+      )}
       
       {/* TOP STRIPE: ID & ADMIN */}
-      <div className="flex justify-between items-center px-5 py-2.5 border-b border-white/15 shrink-0">
+      <div className={`flex justify-between items-center px-5 py-2.5 border-b border-white/15 shrink-0 ${isRecentlyBid ? 'mt-4' : ''}`}>
         <div className="flex items-center gap-2">
-          <div className={`w-1.5 h-1.5 rounded-full ${isWishlisted ? 'bg-[#00e5ff] shadow-[0_0_8px_#00e5ff]' : 'bg-emerald-500 shadow-[0_0_8px_#10b981]'}`} />
+          <div className={`w-1.5 h-1.5 rounded-full ${isRecentlyBid ? 'bg-emerald-400 shadow-[0_0_8px_#34d399]' : isWishlisted ? 'bg-[#00e5ff] shadow-[0_0_8px_#00e5ff]' : 'bg-emerald-500 shadow-[0_0_8px_#10b981]'}`} />
           <span className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em] font-mono">NODE_{lead.id.slice(-4).toUpperCase()}</span>
         </div>
         <div className="flex items-center gap-4">
@@ -93,7 +103,7 @@ export const TacticalLeadCard = memo(({ lead, userRole, onBid, onEdit, nicheCoun
       <div className="flex-1 p-5 flex gap-5 overflow-hidden items-center">
         {/* Left Aspect: Icon & Score */}
         <div className="flex flex-col items-center gap-2 shrink-0">
-          <div className="w-14 h-14 rounded-2xl bg-white/[0.03] border border-white/15 flex items-center justify-center text-white/60 shadow-inner group-hover:scale-105 group-hover:border-white/20 transition-all duration-500">
+          <div className={`w-14 h-14 rounded-2xl bg-white/[0.03] border border-white/15 flex items-center justify-center text-white/60 shadow-inner transition-all duration-500 ${isRecentlyBid ? 'border-emerald-500/50 scale-105' : 'group-hover:scale-105 group-hover:border-white/20'}`}>
             {getIcon(lead.category)}
           </div>
           <div className="text-center">
@@ -132,10 +142,10 @@ export const TacticalLeadCard = memo(({ lead, userRole, onBid, onEdit, nicheCoun
           
           <button 
             className={`px-4 py-2 rounded-lg font-black text-[9px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg ${
-              isWishlisted ? 'bg-[#00e5ff] text-black' : 'bg-white text-black'
+              isRecentlyBid ? 'bg-emerald-500 text-white' : isWishlisted ? 'bg-[#00e5ff] text-black' : 'bg-white text-black'
             }`}
           >
-            BID
+            {isRecentlyBid ? 'SECURED' : 'BID'}
           </button>
         </div>
       </div>
@@ -143,7 +153,7 @@ export const TacticalLeadCard = memo(({ lead, userRole, onBid, onEdit, nicheCoun
       {/* BOTTOM DECORATION */}
       <div className="h-0.5 w-full bg-white/15 relative">
         <div 
-          className={`absolute h-full transition-all duration-1000 ease-out ${isWishlisted ? 'bg-[#00e5ff]/50' : 'bg-white/20'}`} 
+          className={`absolute h-full transition-all duration-1000 ease-out ${isRecentlyBid ? 'bg-emerald-400' : isWishlisted ? 'bg-[#00e5ff]/50' : 'bg-white/20'}`} 
           style={{ width: `${lead.qualityScore}%` }}
         />
       </div>
@@ -156,7 +166,7 @@ interface LeadGridComponent extends React.FC<LeadGridProps> {
   TacticalLeadCard: typeof TacticalLeadCard;
 }
 
-const LeadGrid: LeadGridComponent = ({ leads, onBid, onEdit, userRole, wishlist, onToggleWishlist }) => {
+const LeadGrid: LeadGridComponent = ({ leads, onBid, onEdit, userRole, wishlist, onToggleWishlist, lastBidLeadId }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   
   const nicheCounts = useMemo(() => {
@@ -202,6 +212,7 @@ const LeadGrid: LeadGridComponent = ({ leads, onBid, onEdit, userRole, wishlist,
             nicheCount={nicheCounts[lead.category] || 0}
             isWishlisted={wishlist.includes(lead.id)}
             onToggleWishlist={onToggleWishlist}
+            isRecentlyBid={lastBidLeadId === lead.id}
           />
         ))}
       </div>
