@@ -49,7 +49,7 @@ class ApiService {
       const configSnap = await getDoc(doc(db, "config", "auth_config"));
 
       return {
-        metadata: { version: '5.3.1-STABLE', last_updated: new Date().toISOString() },
+        metadata: { version: '5.3.4-STABLE', last_updated: new Date().toISOString() },
         leads: leadsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
         users: usersSnap.docs.map(d => ({ id: d.id, ...d.data() })),
         purchaseRequests: bidsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
@@ -209,15 +209,27 @@ class ApiService {
   }
 
   /**
+   * Public wrapper to trigger the genesis seed manually (e.g. from auth service)
+   */
+  async triggerManualSeed() {
+    const leadsSnap = await getDocs(collection(db, "leads"));
+    if (leadsSnap.empty) {
+      await this.seedInitialData();
+    }
+  }
+
+  /**
    * Provison initial system state if blank.
    */
   private async seedInitialData() {
-    // 1. Seed Super Admin Profile (For admin/12340 bypass)
+    console.log("SEEDING_STARTED: Root node provisioning...");
+    // 1. Seed Super Admin Profile (For admin/1234 bypass)
     await setDoc(doc(db, "users", "admin_1"), {
       id: "admin_1",
       name: "Root Administrator",
       email: "admin@leadbid.pro",
       username: "admin",
+      password: "1234",
       balance: 1000000.0,
       role: "admin",
       status: "active",
@@ -304,6 +316,7 @@ class ApiService {
       timestamp: new Date().toISOString(),
       read: false
     });
+    console.log("SEEDING_COMPLETED: Nodes online.");
   }
 }
 

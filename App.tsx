@@ -133,6 +133,51 @@ const App: React.FC = () => {
     }
   }, [user, showToast]);
 
+  const handleQuickBid = useCallback(async (lead: Lead) => {
+    if (!user) return;
+    soundService.playClick(true);
+
+    if (!user.defaultBusinessUrl || !user.defaultTargetUrl) {
+      showToast("SET_DEFAULTS_IN_PROFILE_FOR_QUICK_BID", "info");
+      setSelectedLeadForBid(lead);
+      return;
+    }
+
+    const bidAmount = lead.currentBid + 1;
+    const leadsPerDay = 50;
+    const totalDailyCost = bidAmount * leadsPerDay;
+
+    if (user.balance < totalDailyCost) {
+      showToast("INSUFFICIENT_FUNDS_FOR_QUICK_BID", "error");
+      setSelectedLeadForBid(lead);
+      return;
+    }
+
+    try {
+      await apiService.placeBid({
+        userId: user.id,
+        leadId: lead.id,
+        leadTitle: lead.title,
+        buyerBusinessUrl: user.defaultBusinessUrl,
+        buyerTargetLeadUrl: user.defaultTargetUrl,
+        buyerTollFree: user.phone || '',
+        leadsPerDay,
+        bidAmount,
+        totalDailyCost,
+        officeHoursStart: '09:00',
+        officeHoursEnd: '17:00',
+        operationalDays: ['mon', 'tue', 'wed', 'thu', 'fri']
+      });
+      
+      setLastBidLeadId(lead.id);
+      setTimeout(() => setLastBidLeadId(null), 6000);
+      fetchAppData();
+      showToast("QUICK_BID_DEPLOYED", "success");
+    } catch (error) {
+      showToast("QUICK_BID_FAILED", "error");
+    }
+  }, [user, showToast, fetchAppData]);
+
   const toggleTheme = useCallback(() => setTheme(prev => prev === 'dark' ? 'light' : 'dark'), []);
 
   const handleLogin = (loggedUser: User) => {
@@ -218,6 +263,7 @@ const App: React.FC = () => {
                              userRole={user!.role}
                              currentUserId={user!.id}
                              onBid={(id) => setSelectedLeadForBid(marketData.leads.find(l => l.id === id) || null)}
+                             onQuickBid={handleQuickBid}
                              onEdit={setSelectedLeadForDetail}
                              nicheCount={marketData.leads.filter(l => l.category === lead.category).length}
                              isWishlisted={true}
@@ -241,6 +287,7 @@ const App: React.FC = () => {
                     <MemoizedLeadGrid 
                       leads={marketData.leads} 
                       onBid={(id) => setSelectedLeadForBid(marketData.leads.find(l => l.id === id) || null)} 
+                      onQuickBid={handleQuickBid}
                       onEdit={setSelectedLeadForDetail} 
                       userRole={user!.role} 
                       currentUserId={user!.id} 

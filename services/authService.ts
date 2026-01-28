@@ -16,19 +16,36 @@ export const authService = {
    * Authenticate user via Firebase or Sudo Bypass
    */
   async signIn(email: string, token: string): Promise<User> {
-    // SUPER ADMIN BYPASS: Username 'admin', Password '12340'
-    if (email.toLowerCase() === 'admin' && token === '12340') {
-       const profile = await apiService.getUserProfile('admin_1');
-       if (profile) {
-         localStorage.setItem('leadbid_sudo_session', 'true');
-         return profile;
-       }
-       // If no seed exists yet, we force a sync which triggers the seed
-       throw new Error("ADMIN_PROFILE_NOT_SEEDED: Initialize the database by clicking Sign In again.");
+    const identifier = email.trim().toLowerCase();
+    const password = token.trim();
+
+    // SUPER ADMIN BYPASS: Username 'admin', Password '1234'
+    if (identifier === 'admin') {
+      if (password === '1234') {
+        let profile = await apiService.getUserProfile('admin_1');
+        
+        // If profile doesn't exist (DB not seeded), attempt a manual seed immediately
+        if (!profile) {
+          console.log("ADMIN_NODE_MISSING: Triggering manual genesis seed...");
+          await apiService.triggerManualSeed();
+          profile = await apiService.getUserProfile('admin_1');
+        }
+
+        if (profile) {
+          localStorage.setItem('leadbid_sudo_session', 'true');
+          return profile;
+        } else {
+          throw new Error("ADMIN_PROVISION_FAILED: Database node could not be initialized.");
+        }
+      } else {
+        // Explicitly throw if someone tries 'admin' with wrong password to prevent fall-through to Firebase
+        throw new Error("INVALID_ADMIN_CREDENTIALS");
+      }
     }
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, token);
+      // Standard Firebase Email Auth
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const firebaseUser = userCredential.user;
       
       const userProfile = await apiService.getUserProfile(firebaseUser.uid);
@@ -37,6 +54,10 @@ export const authService = {
       return userProfile;
     } catch (error: any) {
       console.error("Auth Error:", error);
+      // Map Firebase generic errors to more user-friendly messages if needed
+      if (error.code === 'auth/invalid-credential') {
+        throw new Error("Invalid email or password.");
+      }
       throw new Error(error.message || "Authentication failed");
     }
   },
