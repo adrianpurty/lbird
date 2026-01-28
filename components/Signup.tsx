@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   Zap, 
@@ -6,14 +5,11 @@ import {
   User as UserIcon, 
   Lock, 
   Loader2, 
-  Globe,
-  Facebook,
   AlertTriangle,
   Fingerprint,
   ArrowRight,
   ShieldCheck,
-  Cpu,
-  Database
+  Cpu
 } from 'lucide-react';
 import { User, OAuthConfig } from '../types.ts';
 import { authService } from '../services/authService.ts';
@@ -54,11 +50,9 @@ const Signup: React.FC<SignupProps> = ({ onSignup, onSwitchToLogin, authConfig }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden scanline grid-bg">
-      <div className="ps5-bg">
-        <div className="ps5-liquid" />
-        <div className="ps5-liquid-2" />
-      </div>
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden scanline grid-bg bg-[#050505]">
+      {/* SOLID MATTE BLACK BACKGROUND */}
+      <div className="fixed inset-0 bg-[#050505] -z-10" />
 
       <div className="w-full max-w-[440px] mx-auto z-10 animate-in fade-in zoom-in-95 duration-700">
         
@@ -74,8 +68,8 @@ const Signup: React.FC<SignupProps> = ({ onSignup, onSwitchToLogin, authConfig }
         </div>
 
         {/* REGISTRATION TERMINAL */}
-        <div className="bg-[#0c0c0c]/80 backdrop-blur-2xl border border-neutral-800 rounded-[2.5rem] p-8 md:p-10 shadow-2xl relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity">
+        <div className="bg-[#0c0c0c] border border-neutral-800 rounded-[2.5rem] p-8 md:p-10 shadow-2xl relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity text-white">
             <ShieldCheck size={80} />
           </div>
 
@@ -159,18 +153,6 @@ const Signup: React.FC<SignupProps> = ({ onSignup, onSwitchToLogin, authConfig }
                Existing Member? Handshake Terminal
              </button>
           </div>
-        </div>
-
-        {/* SECURITY DISCLOSURE */}
-        <div className="mt-6 flex items-center justify-center gap-4 opacity-30">
-          <div className="flex items-center gap-2">
-            <Database size={10} className="text-white" />
-            <span className="text-[7px] text-white font-bold uppercase tracking-widest">SSL Enabled</span>
-          </div>
-          <div className="w-1 h-1 bg-neutral-800 rounded-full" />
-          <p className="text-[7px] text-white font-bold uppercase tracking-widest">
-            Protocol: SECURE_WSS_v4
-          </p>
         </div>
       </div>
     </div>

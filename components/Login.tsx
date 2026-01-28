@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   Zap, 
@@ -7,11 +6,8 @@ import {
   Fingerprint,
   ArrowRight,
   AlertTriangle,
-  Globe,
-  Facebook,
   ShieldCheck,
-  Cpu,
-  Database
+  Cpu
 } from 'lucide-react';
 import { User, OAuthConfig } from '../types.ts';
 import { authService } from '../services/authService.ts';
@@ -62,11 +58,9 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden scanline grid-bg">
-      <div className="ps5-bg">
-        <div className="ps5-liquid" />
-        <div className="ps5-liquid-2" />
-      </div>
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden scanline grid-bg bg-[#050505]">
+      {/* SOLID MATTE BLACK BACKGROUND */}
+      <div className="fixed inset-0 bg-[#050505] -z-10" />
 
       <div className="w-full max-w-[440px] mx-auto z-10 animate-in fade-in zoom-in-95 duration-700">
         
@@ -82,8 +76,8 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
         </div>
 
         {/* ACCESS TERMINAL */}
-        <div className="bg-[#0c0c0c]/80 backdrop-blur-2xl border border-neutral-800 rounded-[2.5rem] p-8 md:p-10 shadow-2xl relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity">
+        <div className="bg-[#0c0c0c] border border-neutral-800 rounded-[2.5rem] p-8 md:p-10 shadow-2xl relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity text-white">
             <ShieldCheck size={80} />
           </div>
 
@@ -162,7 +156,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
                 onClick={() => handleSocialAuth('facebook')}
                 className="w-12 h-12 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-center hover:border-blue-600/40 hover:bg-blue-600/5 transition-all group"
               >
-                <Facebook size={18} className="text-neutral-700 group-hover:text-blue-600 group-hover:opacity-100 transition-all" fill="currentColor" />
+                <Lock size={18} className="text-neutral-700 group-hover:text-blue-600 group-hover:opacity-100 transition-all" fill="currentColor" />
               </button>
             </div>
           </div>
@@ -172,18 +166,6 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
                New Node Detection // Create Account
              </button>
           </div>
-        </div>
-
-        {/* SECURITY DISCLOSURE */}
-        <div className="mt-6 flex items-center justify-center gap-4 opacity-30">
-          <div className="flex items-center gap-2">
-            <Database size={10} className="text-white" />
-            <span className="text-[7px] text-white font-bold uppercase tracking-widest">Secured Node</span>
-          </div>
-          <div className="w-1 h-1 bg-neutral-800 rounded-full" />
-          <p className="text-[7px] text-white font-bold uppercase tracking-widest">
-            Admin Bypass: admin / 1234
-          </p>
         </div>
       </div>
     </div>

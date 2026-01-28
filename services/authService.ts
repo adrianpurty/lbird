@@ -1,100 +1,96 @@
-import { User } from "../types.ts";
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signOut, 
+  onAuthStateChanged,
+  GoogleAuthProvider,
+  FacebookAuthProvider,
+  signInWithPopup
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { auth } from "./firebase.ts";
 import { apiService } from "./apiService.ts";
-
-const SESSION_KEY = 'lb_auth_session_v5';
+import { User } from "../types.ts";
 
 export const authService = {
   async signIn(email: string, token: string): Promise<User> {
-    // Admin bypass requirement
+    // Special check for hardcoded admin bypass if needed, 
+    // but better to manage via Firebase Auth + Firestore roles
     if (email === 'admin' && token === '1234') {
-      const adminUser: User = { 
-        id: 'admin_1', 
-        name: 'System Administrator', 
-        username: 'admin', 
-        email: 'admin@leadbid.pro', 
-        balance: 1000000, 
-        role: 'admin', 
-        stripeConnected: true, 
-        status: 'active',
-        wishlist: [] 
-      };
-      localStorage.setItem(SESSION_KEY, JSON.stringify(adminUser));
-      return adminUser;
+       // We still attempt to sign in the real admin user in Firebase if it exists
+       // for the sake of the exercise, we will fallback to standard firebase auth
+       email = 'admin@leadbid.pro';
     }
 
     try {
-      const user = await apiService.authenticateUser(email, token);
-      if (!user) {
-        throw new Error("Email or password is incorrect");
-      }
-      localStorage.setItem(SESSION_KEY, JSON.stringify(user));
-      return user;
+      const userCredential = await signInWithEmailAndPassword(auth, email, token);
+      const firebaseUser = userCredential.user;
+      
+      // Fetch profile details from Firestore
+      const userProfile = await apiService.getUserProfile(firebaseUser.uid);
+      if (!userProfile) throw new Error("USER_PROFILE_NOT_FOUND");
+      
+      return userProfile;
     } catch (error: any) {
+      console.error("Auth Error:", error);
       throw new Error(error.message || "Authentication failed");
     }
   },
 
   async signUp(email: string, token: string, name?: string): Promise<User> {
     try {
-      const newUser = await apiService.registerUser({
+      const userCredential = await createUserWithEmailAndPassword(auth, email, token);
+      const firebaseUser = userCredential.user;
+      
+      // Initialize Firestore profile
+      const newUser = await apiService.initUserProfile(firebaseUser.uid, {
         email,
-        password: token,
         name: name || email.split('@')[0],
         username: email.split('@')[0] + Math.floor(Math.random() * 1000)
       });
       
-      localStorage.setItem(SESSION_KEY, JSON.stringify(newUser));
       return newUser;
     } catch (error: any) {
-      if (error.message && error.message.includes("exists")) {
-        throw new Error("User already exists. Please sign in");
-      }
       throw new Error(error.message || "Signup failed");
     }
   },
 
-  /**
-   * Orchestrates the social identity handshake.
-   * In a production environment, this would call the Google/Facebook SDKs.
-   */
   async signInWithSocial(provider: 'google' | 'facebook'): Promise<User> {
-    // Simulated SDK Response
-    const mockSocialProfile = {
-      name: `Social_${provider.toUpperCase()}_User`,
-      email: `${provider}_user@market.net`,
-      profileImage: provider === 'google' 
-        ? 'https://www.google.com/favicon.ico' 
-        : 'https://www.facebook.com/favicon.ico'
-    };
-
     try {
-      const user = await apiService.socialSync(mockSocialProfile);
-      localStorage.setItem(SESSION_KEY, JSON.stringify(user));
-      return user;
+      const authProvider = provider === 'google' ? new GoogleAuthProvider() : new FacebookAuthProvider();
+      const result = await signInWithPopup(auth, authProvider);
+      const firebaseUser = result.user;
+
+      let profile = await apiService.getUserProfile(firebaseUser.uid);
+      if (!profile) {
+        profile = await apiService.initUserProfile(firebaseUser.uid, {
+          email: firebaseUser.email || '',
+          name: firebaseUser.displayName || 'Social User',
+          profileImage: firebaseUser.photoURL || '',
+          username: (firebaseUser.email?.split('@')[0] || 'user') + Math.floor(Math.random() * 1000)
+        });
+      }
+      return profile;
     } catch (error: any) {
       throw new Error(`SOCIAL_SYNC_FAILED: ${error.message}`);
     }
   },
 
   async signOut(): Promise<void> {
-    localStorage.removeItem(SESSION_KEY);
+    await signOut(auth);
   },
 
   onAuthStateChanged(callback: (user: User | null) => void) {
-    const checkAuth = () => {
-      const saved = localStorage.getItem(SESSION_KEY);
-      const user = saved ? JSON.parse(saved) : null;
-      callback(user);
-    };
-
-    // Initial check
-    setTimeout(checkAuth, 0);
-
-    const handler = (e: StorageEvent) => {
-      if (e.key === SESSION_KEY) checkAuth();
-    };
-    
-    window.addEventListener('storage', handler);
-    return () => window.removeEventListener('storage', handler);
+    return onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        try {
+          const profile = await apiService.getUserProfile(firebaseUser.uid);
+          callback(profile);
+        } catch (e) {
+          callback(null);
+        }
+      } else {
+        callback(null);
+      }
+    });
   }
 };

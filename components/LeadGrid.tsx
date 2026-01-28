@@ -2,14 +2,14 @@ import React, { useState, useMemo, memo } from 'react';
 import { Lead, UserRole } from '../types.ts';
 import { 
   PlaneTakeoff, Ship, Hotel, Building2, Coins, Shield, Stethoscope, BriefcaseBusiness,
-  ListFilter, Activity, Edit3, Target, Globe, Star, Info, Database, Gavel, Layers, Heart, CheckCircle
+  ListFilter, Activity, Edit3, Target, Globe, Star, Info, Database, Gavel, Layers, Heart, CheckCircle, Eye
 } from 'lucide-react';
 import { soundService } from '../services/soundService.ts';
 
 interface LeadGridProps {
   leads: Lead[];
   onBid: (id: string) => void;
-  onEdit?: (lead: Lead) => void;
+  onEdit: (lead: Lead) => void;
   userRole: UserRole;
   currentUserId: string;
   activeBids?: string[];
@@ -21,6 +21,7 @@ interface LeadGridProps {
 interface TacticalCardProps {
   lead: Lead;
   userRole: UserRole;
+  currentUserId: string;
   onBid: (id: string) => void;
   onEdit: (lead: Lead) => void;
   nicheCount: number;
@@ -31,8 +32,11 @@ interface TacticalCardProps {
 }
 
 // Named export for direct access
-export const TacticalLeadCard = memo(({ lead, userRole, onBid, onEdit, nicheCount, isWishlisted, onToggleWishlist, compact, isRecentlyBid }: TacticalCardProps) => {
+export const TacticalLeadCard = memo(({ lead, userRole, currentUserId, onBid, onEdit, nicheCount, isWishlisted, onToggleWishlist, compact, isRecentlyBid }: TacticalCardProps) => {
   const isAdmin = userRole === 'admin';
+  const isOwner = lead.ownerId === currentUserId;
+  const canEdit = isAdmin || isOwner;
+  
   const integrityColor = lead.qualityScore > 80 ? 'text-emerald-400' : lead.qualityScore > 50 ? 'text-amber-400' : 'text-red-400';
 
   const getIcon = (category: string) => {
@@ -51,7 +55,7 @@ export const TacticalLeadCard = memo(({ lead, userRole, onBid, onEdit, nicheCoun
         isRecentlyBid ? 'border-emerald-500 ring-4 ring-emerald-500/20 animate-pulse' : 
         isWishlisted ? 'border-[#00e5ff]/40 shadow-[#00e5ff]/5' : 'border-white/15'
       }`}
-      onClick={() => { soundService.playClick(); onBid(lead.id); }}
+      onClick={() => { soundService.playClick(); onEdit(lead); }}
     >
       {/* Dynamic Background Accent */}
       <div className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl -mr-16 -mt-16 transition-all ${
@@ -68,9 +72,16 @@ export const TacticalLeadCard = memo(({ lead, userRole, onBid, onEdit, nicheCoun
       
       {/* TOP STRIPE: ID & ADMIN */}
       <div className={`flex justify-between items-center px-5 py-2.5 border-b border-white/15 shrink-0 ${isRecentlyBid ? 'mt-4' : ''}`}>
-        <div className="flex items-center gap-2">
-          <div className={`w-1.5 h-1.5 rounded-full ${isRecentlyBid ? 'bg-emerald-400 shadow-[0_0_8px_#34d399]' : isWishlisted ? 'bg-[#00e5ff] shadow-[0_0_8px_#00e5ff]' : 'bg-emerald-500 shadow-[0_0_8px_#10b981]'}`} />
-          <span className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em] font-mono">NODE_{lead.id.slice(-4).toUpperCase()}</span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <div className={`w-1.5 h-1.5 rounded-full ${isRecentlyBid ? 'bg-emerald-400 shadow-[0_0_8px_#34d399]' : isWishlisted ? 'bg-[#00e5ff] shadow-[0_0_8px_#00e5ff]' : 'bg-emerald-500 shadow-[0_0_8px_#10b981]'}`} />
+            <span className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em] font-mono">NODE_{lead.id.slice(-4).toUpperCase()}</span>
+          </div>
+          {lead.ownerId && (
+            <span className="text-[7px] font-black text-white/10 uppercase tracking-[0.1em] font-mono border-l border-white/5 pl-3 hidden sm:inline-block">
+              OWNER:{lead.ownerId.slice(-6).toUpperCase()}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-4">
            {/* NICHE CAPACITY INDICATOR */}
@@ -88,12 +99,16 @@ export const TacticalLeadCard = memo(({ lead, userRole, onBid, onEdit, nicheCoun
              <Heart size={12} fill={isWishlisted ? "currentColor" : "none"} />
            </button>
 
-           {isAdmin && (
+           {canEdit ? (
             <button 
                 onClick={(e) => { e.stopPropagation(); onEdit(lead); }} 
                 className="p-1.5 hover:bg-white/10 rounded transition-all text-white/40 hover:text-white"
             >
                 <Edit3 size={12} />
+            </button>
+           ) : (
+            <button className="p-1.5 hover:bg-white/10 rounded transition-all text-white/40 hover:text-white">
+                <Eye size={12} />
             </button>
            )}
         </div>
@@ -141,11 +156,12 @@ export const TacticalLeadCard = memo(({ lead, userRole, onBid, onEdit, nicheCoun
           </div>
           
           <button 
+            onClick={(e) => { e.stopPropagation(); onBid(lead.id); }}
             className={`px-4 py-2 rounded-lg font-black text-[9px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg ${
               isRecentlyBid ? 'bg-emerald-500 text-white' : isWishlisted ? 'bg-[#00e5ff] text-black' : 'bg-white text-black'
             }`}
           >
-            {isRecentlyBid ? 'SECURED' : 'BID'}
+            {isRecentlyBid ? 'SECURED' : isOwner ? 'VIEW' : 'BID'}
           </button>
         </div>
       </div>
@@ -166,7 +182,7 @@ interface LeadGridComponent extends React.FC<LeadGridProps> {
   TacticalLeadCard: typeof TacticalLeadCard;
 }
 
-const LeadGrid: LeadGridComponent = ({ leads, onBid, onEdit, userRole, wishlist, onToggleWishlist, lastBidLeadId }) => {
+const LeadGrid: LeadGridComponent = ({ leads, onBid, onEdit, userRole, currentUserId, wishlist, onToggleWishlist, lastBidLeadId }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   
   const nicheCounts = useMemo(() => {
@@ -207,8 +223,9 @@ const LeadGrid: LeadGridComponent = ({ leads, onBid, onEdit, userRole, wishlist,
             key={lead.id}
             lead={lead}
             userRole={userRole}
+            currentUserId={currentUserId}
             onBid={onBid}
-            onEdit={onEdit!}
+            onEdit={onEdit}
             nicheCount={nicheCounts[lead.category] || 0}
             isWishlisted={wishlist.includes(lead.id)}
             onToggleWishlist={onToggleWishlist}
