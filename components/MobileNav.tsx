@@ -8,7 +8,9 @@ import {
   User as UserIcon,
   Activity,
   Heart,
-  Zap
+  Zap,
+  Settings,
+  Lock
 } from 'lucide-react';
 import { UserRole } from '../types.ts';
 import { soundService } from '../services/soundService.ts';
@@ -23,7 +25,8 @@ const MobileNav: React.FC<MobileNavProps> = ({ activeTab, onTabChange, role }) =
   const menuItems = [
     { id: 'market', icon: LayoutGrid, label: 'MARKET', roles: ['admin', 'user'] },
     { id: 'action-center', icon: Activity, label: 'SYNC', roles: ['admin', 'user'] },
-    { id: 'wishlist', icon: Heart, label: 'VAULT', roles: ['admin', 'user'] },
+    { id: 'payment-config', icon: Settings, label: 'GATE', roles: ['admin'] },
+    { id: 'auth-config', icon: Lock, label: 'AUTH', roles: ['admin'] },
     { id: 'create', icon: PlusCircle, label: 'SELL', roles: ['admin', 'user'] },
     { id: 'admin', icon: ShieldAlert, label: 'CMD', roles: ['admin'] },
   ];
@@ -31,26 +34,26 @@ const MobileNav: React.FC<MobileNavProps> = ({ activeTab, onTabChange, role }) =
   const visibleItems = menuItems.filter(item => item.roles.includes(role));
 
   return (
-    <nav className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-[400px] z-[90]">
-      <div className="bg-[#0c0c0c]/80 backdrop-blur-2xl border border-neutral-800 rounded-[2rem] p-2 flex items-center justify-between shadow-[0_20px_50px_-10px_rgba(0,0,0,1)] ring-1 ring-white/5 overflow-hidden relative">
+    <nav className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[95%] max-w-[440px] z-[90]">
+      <div className="bg-[#0c0c0c]/80 backdrop-blur-2xl border border-neutral-800 rounded-[2rem] p-1 flex items-center justify-between shadow-[0_20px_50px_-10px_rgba(0,0,0,1)] ring-1 ring-white/5 overflow-hidden relative">
         {/* Scanning Line Decor */}
         <div className="absolute top-0 left-0 w-full h-[1px] bg-white/5 animate-pulse" />
         
         {visibleItems.map((item) => {
           const isActive = activeTab === item.id;
-          const isSpecial = item.id === 'admin';
+          const isSpecial = item.id === 'admin' || item.id.includes('config');
           
           return (
             <button
               key={item.id}
               onClick={() => { soundService.playClick(); onTabChange(item.id); }}
-              className={`relative flex flex-col items-center gap-1.5 transition-all duration-500 py-3 flex-1 rounded-2xl ${
+              className={`relative flex flex-col items-center gap-1 transition-all duration-500 py-2.5 flex-1 rounded-2xl ${
                 isActive ? 'scale-105' : 'opacity-40'
               }`}
             >
               <div className="relative">
                 <item.icon 
-                  size={20} 
+                  size={18} 
                   className={`transition-colors duration-500 ${
                     isActive 
                       ? (isSpecial ? 'text-red-500' : 'text-[#00e5ff]') 
@@ -65,7 +68,7 @@ const MobileNav: React.FC<MobileNavProps> = ({ activeTab, onTabChange, role }) =
                 )}
               </div>
               
-              <span className={`text-[8px] font-black uppercase tracking-widest leading-none font-futuristic transition-colors ${
+              <span className={`text-[7px] font-black uppercase tracking-widest leading-none font-futuristic transition-colors ${
                 isActive ? 'text-white' : 'text-neutral-600'
               }`}>
                 {item.label}

@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { X, Globe, Target, Phone, Zap, ChevronRight, Calculator, AlertTriangle, Wallet, Info, ArrowRight, CreditCard, RefreshCw, Calendar, Clock } from 'lucide-react';
+import { X, Globe, Target, Phone, Zap, ChevronRight, Calculator, AlertTriangle, Wallet, Info, ArrowRight, CreditCard, RefreshCw, Calendar, Clock, Scan, Globe as GlobeIcon, Bitcoin, Smartphone, Landmark, Database } from 'lucide-react';
 import { Lead, User, GatewayAPI } from '../types.ts';
 import { soundService } from '../services/soundService.ts';
 
@@ -78,6 +78,18 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClo
       return;
     }
     onSubmit({ ...formData, totalDailyCost });
+  };
+
+  const getProviderIcon = (provider: string) => {
+    switch (provider) {
+      case 'stripe': return CreditCard;
+      case 'paypal': return GlobeIcon;
+      case 'adyen': return Landmark;
+      case 'crypto': return Bitcoin;
+      case 'binance': return Scan;
+      case 'upi': return Smartphone;
+      default: return Database;
+    }
   };
 
   return (
@@ -161,7 +173,7 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClo
                 />
               </div>
 
-              {/* INTEGRATED SCHEDULE MODULE */}
+              {/* SCHEDULE MODULE */}
               <div className="bg-[#111111] border-2 border-neutral-800/60 rounded-[2rem] p-6 space-y-6">
                 <div className="flex items-center justify-between">
                    <div className="flex items-center gap-3">
@@ -172,7 +184,6 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClo
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-                  {/* Days Toggles */}
                   <div className="flex gap-1.5 justify-center md:justify-start">
                     {DAYS_OF_WEEK.map(day => (
                       <button
@@ -190,7 +201,6 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClo
                     ))}
                   </div>
 
-                  {/* Office Hours Row */}
                   <div className="flex items-center gap-3 bg-black/40 border border-neutral-800 p-2 rounded-xl">
                     <div className="flex-1 relative">
                        <Clock size={10} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#00e5ff]/60" />
@@ -215,7 +225,7 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClo
                 </div>
               </div>
 
-              {/* BIDDING CALCULATOR SECTION */}
+              {/* CALCULATOR SECTION */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                 <div className="bg-black/60 border border-neutral-800 p-4 rounded-2xl space-y-4">
                   <div className="flex justify-between items-center">
@@ -257,11 +267,11 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClo
                 type="submit"
                 className={`w-full py-6 rounded-[2.5rem] font-black text-xl sm:text-2xl transition-all flex items-center justify-center gap-6 active:scale-[0.98] mt-4 border-b-[6px] ${
                   hasInsufficientFunds 
-                    ? 'bg-amber-400 text-black border-amber-600 hover:bg-amber-350' 
+                    ? 'bg-amber-400 text-black border-amber-600 hover:bg-amber-500' 
                     : 'bg-white text-black border-neutral-300 hover:bg-neutral-100'
                 }`}
               >
-                {hasInsufficientFunds ? 'Refill Vault Balance' : 'Authorize Acquisition'} <ArrowRight size={24} />
+                {hasInsufficientFunds ? 'Initiate Bridge Protocol' : 'Authorize Acquisition'} <ArrowRight size={24} />
               </button>
             </form>
           ) : (
@@ -271,32 +281,37 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClo
                   <div className="space-y-2">
                      <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Bridge Protocol Initiated</h3>
                      <p className="text-[10px] text-neutral-500 leading-relaxed font-bold uppercase tracking-widest">
-                       Your current balance [${user.balance.toLocaleString()}] is insufficient for this campaign. Select a financial node to sync additional assets instantly.
+                       Current liquidity [${user.balance.toLocaleString()}] is insufficient for this campaign. Select a provisioned financial node to sync additional assets instantly.
                      </p>
                   </div>
                </div>
 
-               <div className="grid grid-cols-2 gap-4">
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {activeGateways.length > 0 ? (
-                    activeGateways.map((g) => (
-                      <button 
-                        key={g.id}
-                        onClick={() => { soundService.playClick(); onRefill(); }}
-                        className="bg-[#0c0c0c] border border-neutral-800 rounded-3xl p-6 text-left hover:border-amber-400/40 transition-all flex flex-col gap-4 group"
-                      >
-                         <div className="flex items-center justify-between">
-                            <span className="text-[9px] font-black text-neutral-600 uppercase tracking-widest">FIN_NODE: {g.provider.toUpperCase()}</span>
-                            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]" />
-                         </div>
-                         <div className="flex items-center gap-4">
-                            <CreditCard className="text-neutral-700 group-hover:text-amber-400 transition-colors" size={24} />
-                            <h4 className="text-lg font-black text-white italic truncate uppercase">{g.name}</h4>
-                         </div>
-                         <div className="text-[8px] text-neutral-700 font-bold uppercase flex items-center gap-1">
-                            <RefreshCw size={10} className="animate-spin-slow" /> INSTANT_SYNC_ACTIVE
-                         </div>
-                      </button>
-                    ))
+                    activeGateways.map((g) => {
+                      const NodeIcon = getProviderIcon(g.provider);
+                      return (
+                        <button 
+                          key={g.id}
+                          onClick={() => { soundService.playClick(); onRefill(); }}
+                          className="bg-[#0c0c0c] border border-neutral-800 rounded-3xl p-6 text-left hover:border-amber-400/40 transition-all flex flex-col gap-4 group"
+                        >
+                           <div className="flex items-center justify-between">
+                              <span className="text-[9px] font-black text-neutral-600 uppercase tracking-widest">FIN_NODE: {g.provider.toUpperCase()}</span>
+                              <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]" />
+                           </div>
+                           <div className="flex items-center gap-4">
+                              <div className="w-10 h-10 rounded-xl bg-black border border-neutral-800 flex items-center justify-center text-neutral-700 group-hover:text-amber-400 transition-colors">
+                                 <NodeIcon size={20} />
+                              </div>
+                              <h4 className="text-lg font-black text-white italic truncate uppercase flex-1">{g.name}</h4>
+                           </div>
+                           <div className="text-[8px] text-neutral-700 font-bold uppercase flex items-center gap-1">
+                              <RefreshCw size={10} className="animate-spin-slow" /> INSTANT_SYNC_AVAILABLE
+                           </div>
+                        </button>
+                      );
+                    })
                   ) : (
                     <div className="col-span-full py-12 text-center bg-black/40 border border-dashed border-neutral-800 rounded-[2.5rem]">
                        <AlertTriangle className="mx-auto text-neutral-800 mb-4" size={40} />

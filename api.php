@@ -1,3 +1,4 @@
+
 <?php
 /**
  * LeadBid Pro - Enterprise AI Data Node (SQLite3)
@@ -26,7 +27,7 @@ try {
         $db->exec("CREATE TABLE config (key TEXT PRIMARY KEY, value TEXT)");
         $db->exec("CREATE TABLE users (id TEXT PRIMARY KEY, name TEXT, username TEXT, password TEXT, email TEXT, balance REAL, role TEXT, status TEXT DEFAULT 'active', stripeConnected INTEGER, wishlist TEXT, bio TEXT, profileImage TEXT, phone TEXT, companyWebsite TEXT, industryFocus TEXT, preferredContact TEXT, defaultBusinessUrl TEXT, defaultTargetUrl TEXT, last_active_at TEXT, current_page TEXT, ipAddress TEXT, deviceInfo TEXT, location TEXT, totalSpend REAL DEFAULT 0)");
         $db->exec("CREATE TABLE leads (id TEXT PRIMARY KEY, title TEXT, category TEXT, description TEXT, businessUrl TEXT, targetLeadUrl TEXT, basePrice REAL, currentBid REAL, bidCount INTEGER, timeLeft TEXT, qualityScore INTEGER, sellerRating REAL, status TEXT, countryCode TEXT, region TEXT, ownerId TEXT)");
-        $db->exec("CREATE TABLE bids (id TEXT PRIMARY KEY, leadId TEXT, userId TEXT, bidAmount REAL, leadsPerDay INTEGER, totalDailyCost REAL, timestamp TEXT, status TEXT, buyerBusinessUrl TEXT, buyerTargetLeadUrl TEXT, leadTitle TEXT)");
+        $db->exec("CREATE TABLE bids (id TEXT PRIMARY KEY, leadId TEXT, userId TEXT, bidAmount REAL, leadsPerDay INTEGER, totalDailyCost REAL, timestamp TEXT, status TEXT, buyerBusinessUrl TEXT, buyerTargetLeadUrl TEXT, leadTitle TEXT, officeHoursStart TEXT, officeHoursEnd TEXT, operationalDays TEXT)");
         $db->exec("CREATE TABLE invoices (id TEXT PRIMARY KEY, purchaseRequestId TEXT, userId TEXT, userName TEXT, leadTitle TEXT, category TEXT, unitPrice REAL, dailyVolume INTEGER, totalSettlement REAL, timestamp TEXT, status TEXT)");
         $db->exec("CREATE TABLE notifications (id TEXT PRIMARY KEY, userId TEXT, message TEXT, type TEXT, timestamp TEXT, read INTEGER DEFAULT 0)");
         $db->exec("CREATE TABLE api_nodes (id TEXT PRIMARY KEY, type TEXT, provider TEXT, name TEXT, publicKey TEXT, secretKey TEXT, fee TEXT, status TEXT)");
@@ -37,6 +38,10 @@ try {
         
         $auth_defaults = json_encode(['googleEnabled' => false, 'googleClientId' => '', 'googleClientSecret' => '', 'facebookEnabled' => false, 'facebookAppId' => '', 'facebookAppSecret' => '']);
         $db->prepare("INSERT INTO config (key, value) VALUES (?, ?)")->execute(['auth_config', $auth_defaults]);
+
+        // Default Gateways
+        $db->prepare("INSERT INTO api_nodes (id, type, provider, name, publicKey, secretKey, fee, status) VALUES (?,?,?,?,?,?,?,?)")
+           ->execute(['gw_stripe_1', 'payment', 'stripe', 'STRIPE MASTER NODE', 'pk_test_sample', 'sk_test_sample', '2.5', 'active']);
     }
 } catch (PDOException $e) {
     echo json_encode(['error' => 'DATABASE_NODE_OFFLINE', 'message' => $e->getMessage()]);
@@ -50,7 +55,7 @@ switch ($action) {
     case 'get_data':
         echo json_encode([
             'metadata' => [
-                'version' => '4.1.0-AUDIT', 
+                'version' => '4.5.0-AUDIT', 
                 'last_updated' => date('Y-m-d H:i:s'), 
                 'db_size' => filesize($db_path), 
                 'status' => 'OPERATIONAL'
@@ -64,6 +69,15 @@ switch ($action) {
             'gateways' => $db->query("SELECT * FROM api_nodes WHERE type='payment'")->fetchAll(),
             'authConfig' => json_decode($db->query("SELECT value FROM config WHERE key='auth_config'")->fetchColumn(), true)
         ]);
+        break;
+
+    case 'update_gateways':
+        $db->exec("DELETE FROM api_nodes WHERE type='payment'");
+        $stmt = $db->prepare("INSERT INTO api_nodes (id, type, provider, name, publicKey, secretKey, fee, status) VALUES (?,?,?,?,?,?,?,?)");
+        foreach($input['gateways'] as $gw) {
+            $stmt->execute([$gw['id'], 'payment', $gw['provider'], $gw['name'], $gw['publicKey'], $gw['secretKey'], $gw['fee'], $gw['status']]);
+        }
+        echo json_encode(['status' => 'success']);
         break;
 
     case 'social_sync':
@@ -88,8 +102,23 @@ switch ($action) {
 
     case 'place_bid':
         $id = 'bid_' . bin2hex(random_bytes(4));
-        $stmt = $db->prepare("INSERT INTO bids (id, leadId, userId, bidAmount, leadsPerDay, totalDailyCost, timestamp, status, buyerBusinessUrl, buyerTargetLeadUrl, leadTitle) VALUES (?,?,?,?,?,?,?,?,?,?,?)");
-        $stmt->execute([$id, $input['leadId'], $input['userId'], $input['bidAmount'], $input['leadsPerDay'], $input['totalDailyCost'], date('Y-m-d H:i:s'), 'approved', $input['buyerBusinessUrl'], $input['buyerTargetLeadUrl'], $input['leadTitle']]);
+        $stmt = $db->prepare("INSERT INTO bids (id, leadId, userId, bidAmount, leadsPerDay, totalDailyCost, timestamp, status, buyerBusinessUrl, buyerTargetLeadUrl, leadTitle, officeHoursStart, officeHoursEnd, operationalDays) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+        $stmt->execute([
+            $id, 
+            $input['leadId'], 
+            $input['userId'], 
+            $input['bidAmount'], 
+            $input['leadsPerDay'], 
+            $input['totalDailyCost'], 
+            date('Y-m-d H:i:s'), 
+            'approved', 
+            $input['buyerBusinessUrl'], 
+            $input['buyerTargetLeadUrl'], 
+            $input['leadTitle'],
+            $input['officeHoursStart'] ?? '09:00',
+            $input['officeHoursEnd'] ?? '17:00',
+            json_encode($input['operationalDays'] ?? ['mon','tue','wed','thu','fri'])
+        ]);
         
         $db->prepare("UPDATE leads SET currentBid = ?, bidCount = bidCount + 1 WHERE id = ?")->execute([$input['bidAmount'], $input['leadId']]);
         $db->prepare("UPDATE users SET balance = balance - ?, totalSpend = totalSpend + ? WHERE id = ?")->execute([$input['totalDailyCost'], $input['totalDailyCost'], $input['userId']]);
@@ -158,7 +187,7 @@ switch ($action) {
         
         $tx_id = 'tx_' . bin2hex(random_bytes(4));
         $db->prepare("INSERT INTO wallet_activities (id, userId, type, amount, provider, timestamp, status) VALUES (?,?,?,?,?,?,?)")
-           ->execute([$tx_id, $input['userId'], 'deposit', $input['amount'], 'MANUAL_OVERRIDE', date('Y-m-d H:i:s'), 'completed']);
+           ->execute([$tx_id, $input['userId'], 'deposit', $input['amount'], $input['provider'] ?? 'MANUAL_OVERRIDE', date('Y-m-d H:i:s'), 'completed']);
         
         echo json_encode(['status' => 'success']);
         break;
