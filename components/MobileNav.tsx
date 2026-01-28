@@ -1,17 +1,17 @@
+
 import React from 'react';
 import { 
-  LayoutDashboard, 
+  LayoutGrid, 
   PlusCircle, 
-  Settings, 
-  Gavel, 
-  ShieldCheck,
+  ShieldAlert,
   Wallet,
-  CreditCard,
   User as UserIcon,
-  Globe,
-  Activity
+  Activity,
+  Heart,
+  Zap
 } from 'lucide-react';
 import { UserRole } from '../types.ts';
+import { soundService } from '../services/soundService.ts';
 
 interface MobileNavProps {
   activeTab: string;
@@ -21,34 +21,65 @@ interface MobileNavProps {
 
 const MobileNav: React.FC<MobileNavProps> = ({ activeTab, onTabChange, role }) => {
   const menuItems = [
-    { id: 'market', icon: LayoutDashboard, label: 'Market', roles: ['admin', 'user'] },
-    { id: 'action-center', icon: Activity, label: 'Status', roles: ['admin', 'user'] },
-    { id: 'profile', icon: UserIcon, label: 'Me', roles: ['admin', 'user'] },
-    { id: 'create', icon: PlusCircle, label: 'Sell', roles: ['admin', 'user'] },
-    { id: 'admin', icon: ShieldCheck, label: 'Admin', roles: ['admin'] },
-    { id: 'settings', icon: Wallet, label: 'Bank', roles: ['admin', 'user'] },
+    { id: 'market', icon: LayoutGrid, label: 'MARKET', roles: ['admin', 'user'] },
+    { id: 'action-center', icon: Activity, label: 'SYNC', roles: ['admin', 'user'] },
+    { id: 'wishlist', icon: Heart, label: 'VAULT', roles: ['admin', 'user'] },
+    { id: 'create', icon: PlusCircle, label: 'SELL', roles: ['admin', 'user'] },
+    { id: 'admin', icon: ShieldAlert, label: 'CMD', roles: ['admin'] },
   ];
 
   const visibleItems = menuItems.filter(item => item.roles.includes(role));
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-[#0a0a0a]/95 backdrop-blur-xl border-t border-neutral-900 px-4 py-3 flex justify-between items-center z-50">
-      {visibleItems.map((item) => (
-        <button
-          key={item.id}
-          onClick={() => onTabChange(item.id)}
-          className={`flex flex-col items-center gap-1 transition-all duration-300 min-w-[50px] ${
-            activeTab === item.id ? 'text-[#00e5ff]' : 'text-neutral-500'
-          }`}
-        >
-          <div className={`p-1.5 rounded-xl transition-all ${
-            activeTab === item.id ? 'bg-[#00e5ff]/10 scale-110' : ''
-          }`}>
-            <item.icon size={22} strokeWidth={activeTab === item.id ? 2.5 : 2} />
-          </div>
-          <span className="text-[9px] font-black uppercase tracking-tighter leading-none">{item.label}</span>
-        </button>
-      ))}
+    <nav className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-[400px] z-[90]">
+      <div className="bg-[#0c0c0c]/80 backdrop-blur-2xl border border-neutral-800 rounded-[2rem] p-2 flex items-center justify-between shadow-[0_20px_50px_-10px_rgba(0,0,0,1)] ring-1 ring-white/5 overflow-hidden relative">
+        {/* Scanning Line Decor */}
+        <div className="absolute top-0 left-0 w-full h-[1px] bg-white/5 animate-pulse" />
+        
+        {visibleItems.map((item) => {
+          const isActive = activeTab === item.id;
+          const isSpecial = item.id === 'admin';
+          
+          return (
+            <button
+              key={item.id}
+              onClick={() => { soundService.playClick(); onTabChange(item.id); }}
+              className={`relative flex flex-col items-center gap-1.5 transition-all duration-500 py-3 flex-1 rounded-2xl ${
+                isActive ? 'scale-105' : 'opacity-40'
+              }`}
+            >
+              <div className="relative">
+                <item.icon 
+                  size={20} 
+                  className={`transition-colors duration-500 ${
+                    isActive 
+                      ? (isSpecial ? 'text-red-500' : 'text-[#00e5ff]') 
+                      : 'text-neutral-500'
+                  }`} 
+                />
+                
+                {isActive && (
+                  <div className={`absolute inset-0 blur-md opacity-40 scale-150 transition-all ${
+                    isSpecial ? 'bg-red-500' : 'bg-[#00e5ff]'
+                  }`} />
+                )}
+              </div>
+              
+              <span className={`text-[8px] font-black uppercase tracking-widest leading-none font-futuristic transition-colors ${
+                isActive ? 'text-white' : 'text-neutral-600'
+              }`}>
+                {item.label}
+              </span>
+
+              {isActive && (
+                <div className={`absolute -bottom-1 w-1 h-1 rounded-full ${
+                  isSpecial ? 'bg-red-500 shadow-[0_0_10px_#ef4444]' : 'bg-[#00e5ff] shadow-[0_0_10px_#00e5ff]'
+                }`} />
+              )}
+            </button>
+          );
+        })}
+      </div>
     </nav>
   );
 };

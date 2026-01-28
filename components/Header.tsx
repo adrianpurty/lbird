@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Bell, 
@@ -57,8 +58,6 @@ const Header: React.FC<HeaderProps> = ({
     { id: 'wishlist', icon: Heart, label: 'SAVED_ASSETS', roles: ['admin', 'user'] },
     { id: 'create', icon: PlusCircle, label: 'ASSET_PROVISION', roles: ['admin', 'user'] },
     { id: 'admin', icon: ShieldAlert, label: 'CONTROL_CENTER', roles: ['admin'] },
-    { id: 'payment-config', icon: Settings, label: 'GATEWAY_CONFIG', roles: ['admin'] },
-    { id: 'auth-config', icon: Lock, label: 'AUTH_INFRA', roles: ['admin'] },
     { id: 'settings', icon: Database, label: 'VAULT_API', roles: ['admin', 'user'] },
   ];
 
@@ -96,8 +95,8 @@ const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* HORIZONTAL MENU - CLEAN & SMALL STYLE */}
-        <nav className="flex-1 flex items-center justify-center gap-1 overflow-x-auto scrollbar-hide">
+        {/* HORIZONTAL MENU - HIDDEN ON MOBILE (Lower than md) */}
+        <nav className="hidden md:flex flex-1 items-center justify-center gap-1 overflow-x-auto scrollbar-hide">
           {visibleItems.map((item) => (
             <button
               key={item.id}
@@ -108,12 +107,12 @@ const Header: React.FC<HeaderProps> = ({
                   : 'text-neutral-500 hover:text-neutral-300'
               }`}
             >
-              <item.icon size={13} className={`${activeTab === item.id ? 'text-[#00e5ff]' : 'text-neutral-600 group-hover:text-neutral-400'}`} />
+              <item.icon size={13} className={`${activeTab === item.id ? (item.id === 'admin' ? 'text-red-500' : 'text-[#00e5ff]') : 'text-neutral-600 group-hover:text-neutral-400'}`} />
               <span className="text-[10px] tracking-[0.1em] font-semibold uppercase whitespace-nowrap">
                 {item.label}
               </span>
               {activeTab === item.id && (
-                <div className="absolute -bottom-[18px] left-0 right-0 h-0.5 bg-[#00e5ff] shadow-[0_0_10px_#00e5ff]" />
+                <div className={`absolute -bottom-[18px] left-0 right-0 h-0.5 shadow-[0_0_10px_#00e5ff] ${item.id === 'admin' ? 'bg-red-500' : 'bg-[#00e5ff]'}`} />
               )}
             </button>
           ))}
@@ -123,7 +122,7 @@ const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center gap-4 shrink-0">
           <button 
             onClick={() => { soundService.playClick(); onTabChange('settings'); }}
-            className="hidden lg:flex items-center bg-neutral-900/40 rounded-lg px-3 py-1.5 border border-neutral-800 gap-3 hover:border-[#00e5ff]/40 hover:bg-neutral-800 transition-all cursor-pointer group"
+            className="flex items-center bg-neutral-900/40 rounded-lg px-3 py-1.5 border border-neutral-800 gap-3 hover:border-[#00e5ff]/40 hover:bg-neutral-800 transition-all cursor-pointer group"
           >
             <Wallet size={12} className="text-neutral-500 group-hover:text-[#00e5ff] transition-colors" />
             <span className="font-tactical text-lg text-white tracking-widest leading-none group-hover:text-glow">
@@ -131,7 +130,7 @@ const Header: React.FC<HeaderProps> = ({
             </span>
           </button>
 
-          <button onClick={onToggleTheme} className="p-2 text-neutral-500 hover:text-white transition-all">
+          <button onClick={onToggleTheme} className="hidden sm:block p-2 text-neutral-500 hover:text-white transition-all">
             {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
           </button>
           

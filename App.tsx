@@ -183,20 +183,20 @@ const App: React.FC = () => {
 
       <div className="flex-1 min-w-0 h-full relative overflow-hidden">
         <main className="h-full overflow-y-auto p-6 lg:p-12 scroll-smooth scrollbar-hide">
-          <div className="max-w-[1600px] mx-auto w-full pb-20">
+          <div className="max-w-[1600px] mx-auto w-full pb-32 md:pb-20">
             {activeTab === 'market' && (
               <div className="space-y-12 animate-in fade-in duration-700">
                 {/* HERO HEADER */}
                 <div className="space-y-6">
                   <div className="flex items-center gap-4">
-                    <h1 className="text-7xl font-futuristic italic font-black uppercase tracking-tighter">
+                    <h1 className="text-4xl sm:text-7xl font-futuristic italic font-black uppercase tracking-tighter">
                       SALES <span className="text-transparent" style={{ WebkitTextStroke: '2px #ffffff', opacity: 0.3 }}>FLOOR</span>
                     </h1>
                     <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_15px_#10b981]" />
                   </div>
                   <div className="flex items-center gap-8">
                     <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-[0.4em]">TACTICAL_LEAD_MARKETPLACE_V4.2</p>
-                    <div className="h-px flex-1 bg-gradient-to-r from-neutral-900 to-transparent" />
+                    <div className="hidden sm:block h-px flex-1 bg-gradient-to-r from-neutral-900 to-transparent" />
                   </div>
                 </div>
 
@@ -212,7 +212,7 @@ const App: React.FC = () => {
                     </div>
                     <div className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide -mx-4 px-4">
                       {savedLeads.map(lead => (
-                        <div key={lead.id} className="min-w-[400px] max-w-[400px]">
+                        <div key={lead.id} className="min-w-[300px] sm:min-w-[400px] max-w-[400px]">
                            <LeadGrid.TacticalLeadCard 
                              lead={lead}
                              userRole={user!.role}
@@ -235,7 +235,7 @@ const App: React.FC = () => {
                     <Layers size={16} className="text-neutral-500" />
                     <h3 className="text-sm font-black text-white italic uppercase tracking-[0.3em]">GLOBAL_LIQUIDITY_POOL</h3>
                   </div>
-                  <div className="bg-[#0c0c0c] rounded-[3rem] border border-neutral-800/40 p-10 shadow-2xl relative">
+                  <div className="bg-[#0c0c0c] rounded-[2rem] sm:rounded-[3rem] border border-neutral-800/40 p-4 sm:p-10 shadow-2xl relative">
                     <MemoizedLeadGrid 
                       leads={marketData.leads} 
                       onBid={(id) => setSelectedLeadForBid(marketData.leads.find(l => l.id === id) || null)} 
@@ -293,16 +293,18 @@ const App: React.FC = () => {
         </main>
       </div>
 
+      <MobileNav activeTab={activeTab} onTabChange={setActiveTab} role={user!.role} />
+
       {selectedLeadForBid && <BiddingModal lead={selectedLeadForBid} user={user!} gateways={marketData.gateways} onClose={() => setSelectedLeadForBid(null)} onSubmit={(d) => apiService.placeBid({ userId: user!.id, leadId: selectedLeadForBid.id, leadTitle: selectedLeadForBid.title, ...d }).then(() => { fetchAppData(); setSelectedLeadForBid(null); setActiveTab('action-center'); })} onRefill={() => { setSelectedLeadForBid(null); setActiveTab('settings'); }} />}
       {selectedLeadForEdit && <AdminLeadActionsModal lead={selectedLeadForEdit} user={user!} onClose={() => setSelectedLeadForEdit(null)} onSave={(u) => apiService.updateLead(selectedLeadForEdit.id, u).then(() => { fetchAppData(); setSelectedLeadForEdit(null); })} onDelete={(id) => apiService.deleteLead(id).then(() => { fetchAppData(); setSelectedLeadForEdit(null); })} />}
       
       {toast && (
-        <div className="fixed bottom-10 right-10 z-[1000] animate-in slide-in-from-right duration-500">
-           <div className={`px-8 py-4 rounded-2xl border-2 flex items-center gap-4 ${
+        <div className="fixed bottom-24 sm:bottom-10 right-4 sm:right-10 z-[1000] animate-in slide-in-from-right duration-500">
+           <div className={`px-6 sm:px-8 py-3 sm:py-4 rounded-2xl border-2 flex items-center gap-4 ${
              toast.type === 'error' ? 'bg-red-950/20 border-red-900/40 text-red-500' : 'bg-emerald-950/20 border-emerald-900/40 text-emerald-500'
            }`}>
-             <Zap size={20} />
-             <span className="font-black uppercase tracking-widest text-[11px]">{toast.message}</span>
+             <Zap size={16} />
+             <span className="font-black uppercase tracking-widest text-[9px] sm:text-[11px]">{toast.message}</span>
            </div>
         </div>
       )}
