@@ -1,4 +1,3 @@
-
 import { 
   collection, 
   doc, 
@@ -265,20 +264,46 @@ class ApiService {
 
   async deposit(userId: string, amount: number, provider?: string): Promise<any> {
     const userRef = doc(db, "users", userId);
-    const userSnap = await getDoc(userRef);
-    if (!userSnap.exists()) return;
+    const adminRef = doc(db, "users", "admin_1");
 
-    await updateDoc(userRef, {
-      balance: (userSnap.data().balance || 0) + amount
-    });
+    return runTransaction(db, async (transaction) => {
+      const userSnap = await transaction.get(userRef);
+      const adminSnap = await transaction.get(adminRef);
 
-    await addDoc(collection(db, "wallet_activities"), {
-      userId,
-      type: amount > 0 ? 'deposit' : 'withdrawal',
-      amount: Math.abs(amount),
-      provider: provider || 'MANUAL_OVERRIDE',
-      timestamp: new Date().toISOString(),
-      status: 'completed'
+      if (!userSnap.exists()) return;
+
+      const currentBalance = userSnap.data().balance || 0;
+      transaction.update(userRef, {
+        balance: currentBalance + amount
+      });
+
+      // If it's a deduction (withdrawal/spend), add same amount to admin
+      if (amount < 0 && adminSnap.exists()) {
+        const adminBalance = adminSnap.data().balance || 0;
+        transaction.update(adminRef, {
+          balance: adminBalance + Math.abs(amount)
+        });
+
+        // Log reciprocal for Admin
+        transaction.set(doc(collection(db, "wallet_activities")), {
+          userId: 'admin_1',
+          type: 'deposit',
+          amount: Math.abs(amount),
+          provider: `DEDUCTION_SYNC_${userId}`,
+          timestamp: new Date().toISOString(),
+          status: 'completed'
+        });
+      }
+
+      // Log for User
+      transaction.set(doc(collection(db, "wallet_activities")), {
+        userId,
+        type: amount > 0 ? 'deposit' : 'withdrawal',
+        amount: Math.abs(amount),
+        provider: provider || 'MANUAL_OVERRIDE',
+        timestamp: new Date().toISOString(),
+        status: 'completed'
+      });
     });
   }
 

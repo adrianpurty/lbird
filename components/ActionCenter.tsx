@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { PurchaseRequest, User, Lead } from '../types.ts';
 import { 
@@ -27,24 +28,50 @@ import {
   Edit3,
   Eye,
   TrendingUp,
-  BarChart3
+  BarChart3,
+  Wallet,
+  Plus,
+  Minus,
+  AlertTriangle,
+  Loader2,
+  // Fix: Added missing ShieldAlert icon import
+  ShieldAlert
 } from 'lucide-react';
 import { soundService } from '../services/soundService.ts';
+import { apiService } from '../services/apiService.ts';
 
 interface ActionCenterProps {
   requests: PurchaseRequest[];
   user: User;
   leads: Lead[];
+  allUsers?: User[];
   onEditLead: (lead: Lead) => void;
+  onWalletUpdate?: () => void;
 }
 
-const ActionCenter: React.FC<ActionCenterProps> = ({ requests = [], user, leads = [], onEditLead }) => {
-  const [activeTab, setActiveTab] = useState<'acquisitions' | 'provisions'>('acquisitions');
+const ActionCenter: React.FC<ActionCenterProps> = ({ requests = [], user, leads = [], allUsers = [], onEditLead, onWalletUpdate }) => {
+  const isAdmin = user.role === 'admin';
+  const [activeTab, setActiveTab] = useState<'acquisitions' | 'provisions' | 'wallets'>(
+    isAdmin ? 'wallets' : 'acquisitions'
+  );
   const [activeFilter, setActiveFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
   const [inspectingOrder, setInspectingOrder] = useState<{ req: PurchaseRequest, mode: 'manifest' | 'identity' } | null>(null);
+  
+  // Wallet Control State
+  const [walletSearch, setWalletSearch] = useState('');
+  const [adjustingUser, setAdjustingUser] = useState<User | null>(null);
+  const [adjustAmount, setAdjustAmount] = useState('100');
+  const [isSyncingWallet, setIsSyncingWallet] = useState(false);
 
   // Filter leads submitted by the user
   const myLeads = useMemo(() => leads.filter(l => l.ownerId === user.id), [leads, user.id]);
+
+  const filteredUsers = useMemo(() => {
+    return allUsers.filter(u => 
+      u.name.toLowerCase().includes(walletSearch.toLowerCase()) || 
+      u.email.toLowerCase().includes(walletSearch.toLowerCase())
+    );
+  }, [allUsers, walletSearch]);
 
   const stats = useMemo(() => {
     const approved = requests.filter(r => r?.status === 'approved');
@@ -75,6 +102,26 @@ const ActionCenter: React.FC<ActionCenterProps> = ({ requests = [], user, leads 
     if (activeFilter === 'all') return myLeads;
     return myLeads.filter(l => l.status === activeFilter);
   }, [myLeads, activeFilter]);
+
+  const handleAdjustWallet = async (type: 'credit' | 'debit') => {
+    if (!adjustingUser) return;
+    const amount = parseFloat(adjustAmount);
+    if (isNaN(amount) || amount <= 0) return;
+
+    setIsSyncingWallet(true);
+    soundService.playClick(true);
+    
+    try {
+      const finalAmount = type === 'credit' ? amount : -amount;
+      await apiService.deposit(adjustingUser.id, finalAmount, 'ADMIN_MANUAL_ADJUSTMENT');
+      setAdjustingUser(null);
+      if (onWalletUpdate) onWalletUpdate();
+    } catch (error) {
+      console.error("Wallet adjustment failed", error);
+    } finally {
+      setIsSyncingWallet(false);
+    }
+  };
 
   const getStatusConfig = (status: string) => {
     switch (status) {
@@ -140,6 +187,14 @@ const ActionCenter: React.FC<ActionCenterProps> = ({ requests = [], user, leads 
 
         {/* TAB SWITCHER */}
         <div className="flex bg-[#0c0c0c] border-2 border-neutral-900 rounded-2xl p-1 shadow-2xl relative z-10">
+          {isAdmin && (
+            <button 
+              onClick={() => { soundService.playClick(); setActiveTab('wallets'); }}
+              className={`flex items-center gap-3 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all ${activeTab === 'wallets' ? 'bg-red-600 text-white shadow-lg shadow-red-600/20' : 'text-neutral-500 hover:text-white'}`}
+            >
+              <Wallet size={14} fill={activeTab === 'wallets' ? "currentColor" : "none"} /> Wallet Central
+            </button>
+          )}
           <button 
             onClick={() => { soundService.playClick(); setActiveTab('acquisitions'); }}
             className={`flex items-center gap-3 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all ${activeTab === 'acquisitions' ? 'bg-white text-black shadow-lg shadow-white/5' : 'text-neutral-500 hover:text-white'}`}
@@ -155,236 +210,266 @@ const ActionCenter: React.FC<ActionCenterProps> = ({ requests = [], user, leads 
         </div>
       </div>
 
-      {/* TACTICAL STATS BAR (Dynamic based on Tab) */}
-      <div className="bg-[#0f0f0f] border border-neutral-800/60 rounded-[1.5rem] md:rounded-[2rem] p-4 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl relative overflow-hidden">
-        <div className={`absolute top-0 right-0 w-64 h-64 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none ${activeTab === 'acquisitions' ? 'bg-amber-400/5' : 'bg-[#00e5ff]/5'}`} />
-        
-        <div className="flex items-center gap-8 md:gap-16 overflow-x-auto scrollbar-hide w-full">
-          <div className="flex flex-col shrink-0">
-            <span className="text-neutral-700 font-black uppercase text-[8px] tracking-widest mb-1">{activeTab === 'acquisitions' ? 'Total Deployments' : 'Provisioned Nodes'}</span>
-            <div className="text-2xl md:text-4xl font-black text-white italic tracking-tighter flex items-baseline gap-2 font-tactical leading-none">
-              {activeTab === 'acquisitions' ? requests.length : myLeads.length} <span className="text-[10px] text-neutral-600 opacity-40 not-italic uppercase tracking-widest">Nodes</span>
-            </div>
-          </div>
-          <div className="hidden md:block h-12 w-px bg-neutral-800 shrink-0" />
-          <div className="flex flex-col shrink-0">
-            <span className="text-neutral-700 font-black uppercase text-[8px] tracking-widest mb-1">{activeTab === 'acquisitions' ? 'Daily Acquisition' : 'Aggregate Valuation'}</span>
-            <div className="text-2xl md:text-3xl font-black text-neutral-300 italic flex items-center gap-2 md:gap-3 font-tactical tracking-widest leading-none">
-               {activeTab === 'acquisitions' ? stats.dailyLoad.toLocaleString() : `$${provisionStats.totalValue.toLocaleString()}`} 
-               {activeTab === 'acquisitions' && <span className="text-[10px] text-neutral-600 not-italic uppercase">Units</span>}
-            </div>
-          </div>
-          <div className="hidden md:block h-12 w-px bg-neutral-800 shrink-0" />
-          <div className="flex flex-col shrink-0">
-            <span className="text-neutral-700 font-black uppercase text-[8px] tracking-widest mb-1">{activeTab === 'acquisitions' ? 'Sync Integrity' : 'Market Interaction'}</span>
-            <div className={`text-2xl md:text-3xl font-black italic flex items-center gap-2 md:gap-3 font-tactical tracking-widest leading-none ${activeTab === 'acquisitions' ? 'text-emerald-500/80' : 'text-[#00e5ff]/80'}`}>
-              {activeTab === 'acquisitions' ? <ShieldCheck size={18} className="animate-pulse" /> : <BarChart3 size={18} className="animate-pulse" />} 
-              {activeTab === 'acquisitions' ? `${stats.successRate}%` : `${provisionStats.totalBids} Bids`}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3 bg-black/40 p-2 rounded-2xl border border-neutral-800/40 shrink-0 w-full md:w-auto">
-           <div className="px-4 flex items-center gap-3">
-              <Activity size={16} className={`${activeTab === 'acquisitions' ? 'text-emerald-500/40' : 'text-[#00e5ff]/40'}`} />
-              <span className={`text-[10px] font-black uppercase tracking-widest font-tactical ${activeTab === 'acquisitions' ? 'text-emerald-500' : 'text-[#00e5ff]'}`}>
-                {activeTab === 'acquisitions' ? 'HANDSHAKE_READY' : 'MARKET_SYNCED'}
-              </span>
+      {activeTab === 'wallets' && isAdmin ? (
+        <div className="space-y-6 animate-in slide-in-from-bottom duration-500">
+           {/* WALLET CONTROL SEARCH */}
+           <div className="flex flex-col md:flex-row items-center gap-6 bg-[#0c0c0c] border-2 border-neutral-900 rounded-[2rem] p-6 shadow-2xl">
+              <div className="relative flex-1 w-full">
+                 <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-neutral-600" size={18} />
+                 <input 
+                   type="text" 
+                   placeholder="SEARCH_USER_LIQUIDITY_POOLS..." 
+                   className="w-full bg-black border border-neutral-800 rounded-2xl pl-16 pr-6 py-4 text-sm font-black uppercase tracking-widest text-white outline-none focus:border-[#00e5ff]/40 transition-all"
+                   value={walletSearch}
+                   onChange={e => setWalletSearch(e.target.value)}
+                 />
+              </div>
+              <div className="flex items-center gap-6 px-6 border-l border-neutral-800 hidden md:flex">
+                 <div className="text-right">
+                    <span className="text-[8px] font-black text-neutral-700 uppercase tracking-widest block">MASTER_ADMIN_UID</span>
+                    <span className="text-xs font-mono text-neutral-500">{user.id}</span>
+                 </div>
+                 <div className="w-12 h-12 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center justify-center text-red-500 shadow-glow-sm">
+                    <ShieldAlert size={24} />
+                 </div>
+              </div>
            </div>
-        </div>
-      </div>
 
-      {/* DATA FEED */}
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row items-center gap-4 bg-[#080808]/50 p-2 rounded-2xl border border-neutral-900">
-           <div className="flex items-center gap-3 px-4 border-r border-neutral-800 hidden sm:flex">
-              <Filter size={14} className="text-neutral-600" />
-              <span className="text-[10px] font-black text-neutral-600 uppercase tracking-widest">FILTER_ENGINE</span>
-           </div>
-           <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-              {[
-                { id: 'all', label: 'ALL_NODES' },
-                { id: 'pending', label: 'SYNCING' },
-                { id: 'approved', label: 'ACTIVE' },
-                { id: 'rejected', label: 'FAILED' }
-              ].map(tab => (
-                <button 
-                  key={tab.id}
-                  onClick={() => { soundService.playClick(); setActiveFilter(tab.id as any); }}
-                  className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
-                    activeFilter === tab.id 
-                      ? 'bg-white text-black shadow-lg shadow-white/5' 
-                      : 'text-neutral-500 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-           </div>
-        </div>
-
-        {activeTab === 'acquisitions' ? (
-          <div className="grid grid-cols-1 gap-6">
-            {filteredRequests.length === 0 ? (
-              <EmptyNodeState label="NO_ORDERS_FOUND" sub="INITIATE A BID FROM THE SALES FLOOR TO START ASSET CAPTURE" />
-            ) : (
-              filteredRequests.map((req) => {
-                const config = getStatusConfig(req?.status || 'pending');
-                const StatusIcon = config.icon;
-                
-                return (
-                  <div key={req?.id} className={`group relative bg-[#0c0c0c]/80 rounded-[2rem] border transition-all duration-500 hover:border-white/20 overflow-hidden scanline-effect ${config.border}`}>
-                    <div className={`absolute left-0 top-0 bottom-0 w-1.5 transition-all duration-500 ${config.bg.replace('10', '80')} ${config.glow}`} />
-                    <div className="p-6 md:p-8 flex flex-col lg:flex-row gap-8 items-start lg:items-center">
-                      <div className="flex items-center gap-6 shrink-0 w-full lg:w-auto md:min-w-[340px]">
-                        <div className={`w-16 h-16 md:w-20 md:h-20 rounded-2xl md:rounded-[1.5rem] bg-black border-2 border-neutral-900 flex items-center justify-center transition-all group-hover:scale-105 duration-500 ${config.color}`}>
-                          <StatusIcon size={32} className={req?.status === 'pending' ? 'animate-spin' : ''} />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 mb-1.5">
-                            <span className="text-[7px] md:text-[8px] font-black text-neutral-600 uppercase tracking-[0.2em] block">NETWORK_ORDER_ID</span>
-                            <div className="h-px flex-1 bg-neutral-900" />
-                            <span className="text-[8px] text-neutral-700 font-mono italic">#{req?.id?.slice(-4).toUpperCase() || '---'}</span>
-                          </div>
-                          <h3 className="text-xl md:text-2xl font-black text-white italic tracking-tighter uppercase font-futuristic leading-none truncate group-hover:text-amber-400 transition-colors">{req?.leadTitle || 'DATA_ASSET'}</h3>
-                          <div className="flex items-center gap-3 mt-3">
-                             <div className={`px-3 py-1 rounded-lg text-[8px] md:text-[9px] font-black uppercase tracking-widest border transition-all ${config.bg} ${config.border} ${config.color}`}>
-                               {config.label}
-                             </div>
-                             <div className="flex items-center gap-1.5 text-neutral-700">
-                                <Clock size={10} />
-                                <span className="text-[8px] font-black uppercase">{req?.timestamp ? new Date(req.timestamp).toLocaleDateString() : 'UNKNOWN_DATE'}</span>
-                             </div>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 flex-1 w-full lg:px-8 lg:border-x border-neutral-900/50">
-                        <div className="space-y-3">
-                          <span className="text-[7px] md:text-[8px] font-black text-neutral-700 uppercase tracking-widest block flex items-center gap-2">
-                            <Globe size={10} className="text-neutral-800" /> TARGET_URI (WEBHOOK)
-                          </span>
-                          <div className="bg-black/40 border border-neutral-800/40 rounded-xl px-4 py-2.5 flex items-center justify-between group/uri">
-                            <span className="text-[10px] md:text-[11px] font-bold text-neutral-400 truncate max-w-[200px] font-mono">
-                              {safeUrl(req?.buyerTargetLeadUrl)}
-                            </span>
-                            <ArrowRight size={12} className="text-neutral-800 group-hover/uri:text-amber-400 transition-colors" />
-                          </div>
-                        </div>
-                        <div className="space-y-3">
-                          <span className="text-[7px] md:text-[8px] font-black text-neutral-700 uppercase tracking-widest block flex items-center gap-2">
-                            <Target size={10} className="text-neutral-800" /> DAILY_THROUGHPUT
-                          </span>
-                          <div className="flex items-end gap-3">
-                            <div className="text-xl md:text-2xl font-black text-neutral-200 italic font-tactical leading-none">
-                              {req?.leadsPerDay || 0} <span className="text-[9px] text-neutral-600 not-italic uppercase tracking-widest">Units/Day</span>
-                            </div>
-                            <div className="flex-1 h-1 bg-neutral-900 rounded-full mb-1.5 overflow-hidden">
-                               <div className={`h-full transition-all duration-1000 ${req?.status === 'approved' ? 'bg-emerald-500 w-full' : 'bg-amber-400 w-1/2 animate-pulse'}`} />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="w-full lg:w-auto lg:pl-8 flex flex-row lg:flex-col items-center lg:items-end justify-between lg:justify-center gap-3">
-                         <div className="text-left lg:text-right">
-                            <span className="text-[7px] md:text-[8px] font-black text-neutral-700 uppercase tracking-widest block mb-1">AGGREGATE_DAILY_BURN</span>
-                            <div className="text-3xl md:text-4xl font-black text-white italic tracking-tighter font-tactical leading-none group-hover:text-glow transition-all">
-                              <span className="text-xs text-neutral-600 mr-1">$</span>{(req?.totalDailyCost || 0).toLocaleString()}
-                            </div>
-                         </div>
-                         <div className="flex gap-2">
-                            <button onClick={() => handleOpenHUD(req, 'manifest')} className="p-2.5 bg-neutral-950 hover:bg-white/5 border border-neutral-800 rounded-xl text-neutral-600 hover:text-white transition-all group/btn"><FileText size={16} /></button>
-                            <button onClick={() => handleOpenHUD(req, 'identity')} className="p-2.5 bg-neutral-950 hover:bg-white/5 border border-neutral-800 rounded-xl text-neutral-600 hover:text-amber-400 transition-all group/btn"><Search size={16} /></button>
-                         </div>
-                      </div>
+           {/* USER WALLET GRID */}
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredUsers.length === 0 ? (
+                <div className="col-span-full py-24 text-center border-2 border-neutral-900 border-dashed rounded-[3rem]">
+                   <UserIcon className="mx-auto text-neutral-800 mb-4 opacity-20" size={64} />
+                   <p className="text-[10px] font-black text-neutral-700 uppercase tracking-widest italic">NO_IDENTITY_NODES_MATCH_QUERY</p>
+                </div>
+              ) : (
+                filteredUsers.map(u => (
+                  <div key={u.id} className={`group relative bg-[#0c0c0c] border-2 rounded-[2rem] p-6 shadow-2xl transition-all duration-500 hover:border-neutral-700 ${adjustingUser?.id === u.id ? 'border-red-500/40 ring-4 ring-red-500/10' : 'border-neutral-900'}`}>
+                    <div className="flex items-center gap-5 mb-8">
+                       <div className="w-14 h-14 rounded-2xl border-2 border-neutral-800 overflow-hidden bg-neutral-900 flex items-center justify-center text-neutral-700 shrink-0">
+                          {u.profileImage ? <img src={u.profileImage} className="w-full h-full object-cover" /> : <UserIcon size={24} />}
+                       </div>
+                       <div className="min-w-0">
+                          <h4 className="text-sm font-black text-white italic uppercase truncate">{u.name}</h4>
+                          <p className="text-[8px] text-neutral-600 font-bold uppercase tracking-widest mt-1 truncate">{u.email}</p>
+                       </div>
                     </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-6">
-            {filteredLeads.length === 0 ? (
-              <EmptyNodeState label="NO_PROVISIONED_ASSETS" sub="SUBMIT A LEAD ASSET VIA THE PROVISIONING TAB TO START SELLING" />
-            ) : (
-              filteredLeads.map((lead) => {
-                const config = getStatusConfig(lead.status);
-                const StatusIcon = config.icon;
-                
-                return (
-                  <div key={lead.id} className={`group relative bg-[#0c0c0c]/80 rounded-[2rem] border transition-all duration-500 hover:border-white/20 overflow-hidden scanline-effect ${config.border}`}>
-                    <div className={`absolute left-0 top-0 bottom-0 w-1.5 transition-all duration-500 ${activeTab === 'provisions' ? 'bg-[#00e5ff]/80 shadow-[0_0_20px_rgba(0,229,255,0.4)]' : ''}`} />
-                    
-                    <div className="p-6 md:p-8 flex flex-col lg:flex-row gap-8 items-start lg:items-center">
-                      <div className="flex items-center gap-6 shrink-0 w-full lg:w-auto md:min-w-[340px]">
-                        <div className={`w-16 h-16 md:w-20 md:h-20 rounded-2xl md:rounded-[1.5rem] bg-black border-2 border-neutral-900 flex items-center justify-center transition-all group-hover:scale-105 duration-500 text-[#00e5ff]`}>
-                          <Layers size={32} />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 mb-1.5">
-                            <span className="text-[7px] md:text-[8px] font-black text-neutral-600 uppercase tracking-[0.2em] block">ASSET_NODE_ID</span>
-                            <div className="h-px flex-1 bg-neutral-900" />
-                            <span className="text-[8px] text-neutral-700 font-mono italic">LB_{lead.id.slice(-6).toUpperCase()}</span>
-                          </div>
-                          <h3 className="text-xl md:text-2xl font-black text-white italic tracking-tighter uppercase font-futuristic leading-none truncate group-hover:text-[#00e5ff] transition-colors">{lead.title}</h3>
-                          <div className="flex items-center gap-3 mt-3">
-                             <div className={`px-3 py-1 rounded-lg text-[8px] md:text-[9px] font-black uppercase tracking-widest border transition-all ${config.bg} ${config.border} ${config.color}`}>
-                               {config.label}
-                             </div>
-                             <div className="flex items-center gap-1.5 text-neutral-700">
-                                <Activity size={10} />
-                                <span className="text-[8px] font-black uppercase">{lead.category}</span>
-                             </div>
-                          </div>
-                        </div>
-                      </div>
 
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-8 flex-1 w-full lg:px-8 lg:border-x border-neutral-900/50">
-                        <div className="space-y-2">
-                           <span className="text-[7px] md:text-[8px] font-black text-neutral-700 uppercase tracking-widest block">MARKET_VELOCITY</span>
-                           <div className="flex items-center gap-3">
-                              <TrendingUp size={16} className="text-[#00e5ff]" />
-                              <span className="text-xl md:text-2xl font-tactical text-white italic leading-none">{lead.bidCount} Bids</span>
-                           </div>
-                        </div>
-                        <div className="space-y-2">
-                           <span className="text-[7px] md:text-[8px] font-black text-neutral-700 uppercase tracking-widest block">ASSET_INTEGRITY</span>
-                           <div className="flex items-center gap-3">
-                              <ShieldCheck size={16} className="text-emerald-500" />
-                              <span className="text-xl md:text-2xl font-tactical text-white italic leading-none">{lead.qualityScore}%</span>
-                           </div>
-                        </div>
-                        <div className="space-y-2 hidden sm:block">
-                           <span className="text-[7px] md:text-[8px] font-black text-neutral-700 uppercase tracking-widest block">TIME_REMAINING</span>
-                           <div className="flex items-center gap-3">
-                              <Clock size={16} className="text-neutral-600" />
-                              <span className="text-xl md:text-2xl font-tactical text-neutral-400 italic leading-none">{lead.timeLeft}</span>
-                           </div>
-                        </div>
-                      </div>
+                    <div className="bg-black/40 border border-neutral-800 rounded-2xl p-4 flex items-center justify-between mb-6">
+                       <div>
+                          <span className="text-[8px] font-black text-neutral-700 uppercase tracking-widest block mb-1">CURRENT_LIQUIDITY</span>
+                          <span className="text-2xl font-tactical text-emerald-500 italic tracking-widest">${u.balance.toLocaleString()}</span>
+                       </div>
+                       <div className="text-right">
+                          <span className="text-[8px] font-black text-neutral-700 uppercase tracking-widest block mb-1">NODE_ID</span>
+                          <span className="text-[10px] font-mono text-neutral-600">#{u.id.slice(-6).toUpperCase()}</span>
+                       </div>
+                    </div>
 
-                      <div className="w-full lg:w-auto lg:pl-8 flex flex-row lg:flex-col items-center lg:items-end justify-between lg:justify-center gap-3">
-                         <div className="text-left lg:text-right">
-                            <span className="text-[7px] md:text-[8px] font-black text-neutral-700 uppercase tracking-widest block mb-1">HIGHEST_MARKET_BID</span>
-                            <div className="text-3xl md:text-4xl font-black text-white italic tracking-tighter font-tactical leading-none group-hover:text-glow transition-all">
-                              <span className="text-xs text-neutral-600 mr-1">$</span>{lead.currentBid.toLocaleString()}
-                            </div>
+                    {adjustingUser?.id === u.id ? (
+                      <div className="space-y-4 animate-in zoom-in-95 duration-300">
+                         <div className="relative">
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700 font-tactical text-xl">$</span>
+                            <input 
+                              type="number" 
+                              className="w-full bg-black border border-red-500/40 rounded-xl pl-10 pr-4 py-3 text-xl font-tactical text-white outline-none"
+                              value={adjustAmount}
+                              onChange={e => setAdjustAmount(e.target.value)}
+                              autoFocus
+                            />
                          </div>
-                         <div className="flex gap-2">
-                            <button onClick={() => { soundService.playClick(); onEditLead(lead); }} className="p-3 bg-neutral-950 hover:bg-white/5 border border-neutral-800 rounded-xl text-neutral-600 hover:text-[#00e5ff] transition-all flex items-center gap-2">
-                               <Edit3 size={16} />
-                               <span className="text-[9px] font-black uppercase tracking-widest hidden sm:inline">Modify Node</span>
+                         <div className="grid grid-cols-2 gap-3">
+                            <button 
+                              onClick={() => handleAdjustWallet('credit')}
+                              disabled={isSyncingWallet}
+                              className="bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 border-b-4 border-emerald-800 active:translate-y-1"
+                            >
+                              {isSyncingWallet ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} Credit
+                            </button>
+                            <button 
+                              onClick={() => handleAdjustWallet('debit')}
+                              disabled={isSyncingWallet}
+                              className="bg-red-600 hover:bg-red-500 text-white py-3 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 border-b-4 border-red-800 active:translate-y-1"
+                            >
+                              {isSyncingWallet ? <Loader2 size={14} className="animate-spin" /> : <Minus size={14} />} Debit
                             </button>
                          </div>
+                         <button onClick={() => setAdjustingUser(null)} className="w-full py-2 text-[8px] font-black text-neutral-700 uppercase hover:text-white transition-colors">Abort Adjustment</button>
+                      </div>
+                    ) : (
+                      <button 
+                        onClick={() => { soundService.playClick(); setAdjustingUser(u); setAdjustAmount('100'); }}
+                        className="w-full py-4 bg-neutral-900 hover:bg-white text-neutral-500 hover:text-black rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all border-b-4 border-neutral-950 active:translate-y-1 active:border-b-0 flex items-center justify-center gap-3"
+                      >
+                         <Activity size={14} /> ADJ_LIQUIDITY_PROTOCOL
+                      </button>
+                    )}
+                  </div>
+                ))
+              )}
+           </div>
+        </div>
+      ) : activeTab === 'acquisitions' ? (
+        <div className="grid grid-cols-1 gap-6">
+          {filteredRequests.length === 0 ? (
+            <EmptyNodeState label="NO_ORDERS_FOUND" sub="INITIATE A BID FROM THE SALES FLOOR TO START ASSET CAPTURE" />
+          ) : (
+            filteredRequests.map((req) => {
+              const config = getStatusConfig(req?.status || 'pending');
+              const StatusIcon = config.icon;
+              
+              return (
+                <div key={req?.id} className={`group relative bg-[#0c0c0c]/80 rounded-[2rem] border transition-all duration-500 hover:border-white/20 overflow-hidden scanline-effect ${config.border}`}>
+                  <div className={`absolute left-0 top-0 bottom-0 w-1.5 transition-all duration-500 ${config.bg.replace('10', '80')} ${config.glow}`} />
+                  <div className="p-6 md:p-8 flex flex-col lg:flex-row gap-8 items-start lg:items-center">
+                    <div className="flex items-center gap-6 shrink-0 w-full lg:w-auto md:min-w-[340px]">
+                      <div className={`w-16 h-16 md:w-20 md:h-20 rounded-2xl md:rounded-[1.5rem] bg-black border-2 border-neutral-900 flex items-center justify-center transition-all group-hover:scale-105 duration-500 ${config.color}`}>
+                        <StatusIcon size={32} className={req?.status === 'pending' ? 'animate-spin' : ''} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <span className="text-[7px] md:text-[8px] font-black text-neutral-700 uppercase tracking-[0.2em] block">NETWORK_ORDER_ID</span>
+                          <div className="h-px flex-1 bg-neutral-900" />
+                          <span className="text-[8px] text-neutral-700 font-mono italic">#{req?.id?.slice(-4).toUpperCase() || '---'}</span>
+                        </div>
+                        <h3 className="text-xl md:text-2xl font-black text-white italic tracking-tighter uppercase font-futuristic leading-none truncate group-hover:text-amber-400 transition-colors">{req?.leadTitle || 'DATA_ASSET'}</h3>
+                        <div className="flex items-center gap-3 mt-3">
+                           <div className={`px-3 py-1 rounded-lg text-[8px] md:text-[9px] font-black uppercase tracking-widest border transition-all ${config.bg} ${config.border} ${config.color}`}>
+                             {config.label}
+                           </div>
+                           <div className="flex items-center gap-1.5 text-neutral-700">
+                              <Clock size={10} />
+                              <span className="text-[8px] font-black uppercase">{req?.timestamp ? new Date(req.timestamp).toLocaleDateString() : 'UNKNOWN_DATE'}</span>
+                           </div>
+                        </div>
                       </div>
                     </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 flex-1 w-full lg:px-8 lg:border-x border-neutral-900/50">
+                      <div className="space-y-3">
+                        <span className="text-[7px] md:text-[8px] font-black text-neutral-700 uppercase tracking-widest block flex items-center gap-2">
+                          <Globe size={10} className="text-neutral-800" /> TARGET_URI (WEBHOOK)
+                        </span>
+                        <div className="bg-black/40 border border-neutral-800/40 rounded-xl px-4 py-2.5 flex items-center justify-between group/uri">
+                          <span className="text-[10px] md:text-[11px] font-bold text-neutral-400 truncate max-w-[200px] font-mono">
+                            {safeUrl(req?.buyerTargetLeadUrl)}
+                          </span>
+                          <ArrowRight size={12} className="text-neutral-800 group-hover/uri:text-amber-400 transition-colors" />
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <span className="text-[7px] md:text-[8px] font-black text-neutral-700 uppercase tracking-widest block flex items-center gap-2">
+                          <Target size={10} className="text-neutral-800" /> DAILY_THROUGHPUT
+                        </span>
+                        <div className="flex items-end gap-3">
+                          <div className="text-xl md:text-2xl font-black text-neutral-200 italic font-tactical leading-none">
+                            {req?.leadsPerDay || 0} <span className="text-[9px] text-neutral-600 not-italic uppercase tracking-widest">Units/Day</span>
+                          </div>
+                          <div className="flex-1 h-1 bg-neutral-900 rounded-full mb-1.5 overflow-hidden">
+                             <div className={`h-full transition-all duration-1000 ${req?.status === 'approved' ? 'bg-emerald-500 w-full' : 'bg-amber-400 w-1/2 animate-pulse'}`} />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="w-full lg:w-auto lg:pl-8 flex flex-row lg:flex-col items-center lg:items-end justify-between lg:justify-center gap-3">
+                       <div className="text-left lg:text-right">
+                          <span className="text-[7px] md:text-[8px] font-black text-neutral-700 uppercase tracking-widest block mb-1">AGGREGATE_DAILY_BURN</span>
+                          <div className="text-3xl md:text-4xl font-black text-white italic tracking-tighter font-tactical leading-none group-hover:text-glow transition-all">
+                            <span className="text-xs text-neutral-600 mr-1">$</span>{(req?.totalDailyCost || 0).toLocaleString()}
+                          </div>
+                       </div>
+                       <div className="flex gap-2">
+                          <button onClick={() => handleOpenHUD(req, 'manifest')} className="p-2.5 bg-neutral-950 hover:bg-white/5 border border-neutral-800 rounded-xl text-neutral-600 hover:text-white transition-all group/btn"><FileText size={16} /></button>
+                          <button onClick={() => handleOpenHUD(req, 'identity')} className="p-2.5 bg-neutral-950 hover:bg-white/5 border border-neutral-800 rounded-xl text-neutral-600 hover:text-amber-400 transition-all group/btn"><Search size={16} /></button>
+                       </div>
+                    </div>
                   </div>
-                );
-              })
-            )}
-          </div>
-        )}
-      </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-6">
+          {filteredLeads.length === 0 ? (
+            <EmptyNodeState label="NO_PROVISIONED_ASSETS" sub="SUBMIT A LEAD ASSET VIA THE PROVISIONING TAB TO START SELLING" />
+          ) : (
+            filteredLeads.map((lead) => {
+              const config = getStatusConfig(lead.status);
+              const StatusIcon = config.icon;
+              
+              return (
+                <div key={lead.id} className={`group relative bg-[#0c0c0c]/80 rounded-[2rem] border transition-all duration-500 hover:border-white/20 overflow-hidden scanline-effect ${config.border}`}>
+                  <div className={`absolute left-0 top-0 bottom-0 w-1.5 transition-all duration-500 ${activeTab === 'provisions' ? 'bg-[#00e5ff]/80 shadow-[0_0_20px_rgba(0,229,255,0.4)]' : ''}`} />
+                  
+                  <div className="p-6 md:p-8 flex flex-col lg:flex-row gap-8 items-start lg:items-center">
+                    <div className="flex items-center gap-6 shrink-0 w-full lg:w-auto md:min-w-[340px]">
+                      <div className={`w-16 h-16 md:w-20 md:h-20 rounded-2xl md:rounded-[1.5rem] bg-black border-2 border-neutral-900 flex items-center justify-center transition-all group-hover:scale-105 duration-500 text-[#00e5ff]`}>
+                        <Layers size={32} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <span className="text-[7px] md:text-[8px] font-black text-neutral-700 uppercase tracking-[0.2em] block">ASSET_NODE_ID</span>
+                          <div className="h-px flex-1 bg-neutral-900" />
+                          <span className="text-[8px] text-neutral-700 font-mono italic">LB_{lead.id.slice(-6).toUpperCase()}</span>
+                        </div>
+                        <h3 className="text-xl md:text-2xl font-black text-white italic tracking-tighter uppercase font-futuristic leading-none truncate group-hover:text-[#00e5ff] transition-colors">{lead.title}</h3>
+                        <div className="flex items-center gap-3 mt-3">
+                           <div className={`px-3 py-1 rounded-lg text-[8px] md:text-[9px] font-black uppercase tracking-widest border transition-all ${config.bg} ${config.border} ${config.color}`}>
+                             {config.label}
+                           </div>
+                           <div className="flex items-center gap-1.5 text-neutral-700">
+                              <Activity size={10} />
+                              <span className="text-[8px] font-black uppercase">{lead.category}</span>
+                           </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-8 flex-1 w-full lg:px-8 lg:border-x border-neutral-900/50">
+                      <div className="space-y-2">
+                         <span className="text-[7px] md:text-[8px] font-black text-neutral-700 uppercase tracking-widest block">MARKET_VELOCITY</span>
+                         <div className="flex items-center gap-3">
+                            <TrendingUp size={16} className="text-[#00e5ff]" />
+                            <span className="text-xl md:text-2xl font-tactical text-white italic leading-none">{lead.bidCount} Bids</span>
+                         </div>
+                      </div>
+                      <div className="space-y-2">
+                         <span className="text-[7px] md:text-[8px] font-black text-neutral-700 uppercase tracking-widest block">ASSET_INTEGRITY</span>
+                         <div className="flex items-center gap-3">
+                            <ShieldCheck size={16} className="text-emerald-500" />
+                            <span className="text-xl md:text-2xl font-tactical text-white italic leading-none">{lead.qualityScore}%</span>
+                         </div>
+                      </div>
+                      <div className="space-y-2 hidden sm:block">
+                         <span className="text-[7px] md:text-[8px] font-black text-neutral-700 uppercase tracking-widest block">TIME_REMAINING</span>
+                         <div className="flex items-center gap-3">
+                            <Clock size={16} className="text-neutral-600" />
+                            <span className="text-xl md:text-2xl font-tactical text-neutral-400 italic leading-none">{lead.timeLeft}</span>
+                         </div>
+                      </div>
+                    </div>
+
+                    <div className="w-full lg:w-auto lg:pl-8 flex flex-row lg:flex-col items-center lg:items-end justify-between lg:justify-center gap-3">
+                       <div className="text-left lg:text-right">
+                          <span className="text-[7px] md:text-[8px] font-black text-neutral-700 uppercase tracking-widest block mb-1">HIGHEST_MARKET_BID</span>
+                          <div className="text-3xl md:text-4xl font-black text-white italic tracking-tighter font-tactical leading-none group-hover:text-glow transition-all">
+                            <span className="text-xs text-neutral-600 mr-1">$</span>{lead.currentBid.toLocaleString()}
+                          </div>
+                       </div>
+                       <div className="flex gap-2">
+                          <button onClick={() => { soundService.playClick(); onEditLead(lead); }} className="p-3 bg-neutral-950 hover:bg-white/5 border border-neutral-800 rounded-xl text-neutral-600 hover:text-[#00e5ff] transition-all flex items-center gap-2">
+                             <Edit3 size={16} />
+                             <span className="text-[9px] font-black uppercase tracking-widest hidden sm:inline">Modify Node</span>
+                          </button>
+                       </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
 
       {/* INSPECTION HUD OVERLAY (Acquisitions Only) */}
       {inspectingOrder && (
@@ -455,7 +540,7 @@ const ActionCenter: React.FC<ActionCenterProps> = ({ requests = [], user, leads 
                        </div>
                     </div>
                     <div className="bg-[#0f0f0f] border-2 border-neutral-900 rounded-[2.5rem] p-8 md:p-10 shadow-xl space-y-8">
-                       <div className="flex justify-between items-center border-b border-neutral-800 pb-4"><h3 className="text-xs font-black text-neutral-500 uppercase tracking-[0.3em] flex items-center gap-3"><Database size={16} className="text-amber-400" /> SETTLEMENT_LEDGER</h3><span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">FUNDS_SECURED</span></div>
+                       <div className="flex justify-between items-center border-b border-neutral-800 pb-4"><h3 className="text-xs font-black text-neutral-500 uppercase tracking-[0.2em] flex items-center gap-3"><Database size={16} className="text-amber-400" /> SETTLEMENT_LEDGER</h3><span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">FUNDS_SECURED</span></div>
                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-8">
                           <div><span className="text-[7px] font-black text-neutral-700 uppercase tracking-widest block mb-2">UNIT_BID</span><span className="text-2xl font-tactical text-white italic">${inspectingOrder.req.bidAmount.toLocaleString()}</span></div>
                           <div><span className="text-[7px] font-black text-neutral-700 uppercase tracking-widest block mb-2">DAILY_VOLUME</span><span className="text-2xl font-tactical text-white italic">{inspectingOrder.req.leadsPerDay} Units</span></div>

@@ -326,7 +326,9 @@ const App: React.FC = () => {
                 requests={marketData.purchaseRequests.filter(pr => pr.userId === user?.id)} 
                 user={user!}
                 leads={marketData.leads}
+                allUsers={marketData.users}
                 onEditLead={setSelectedLeadForDetail}
+                onWalletUpdate={fetchAppData}
               />
             )}
 
