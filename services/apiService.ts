@@ -49,7 +49,7 @@ class ApiService {
       const configSnap = await getDoc(doc(db, "config", "auth_config"));
 
       return {
-        metadata: { version: '5.3.0-STABLE', last_updated: new Date().toISOString() },
+        metadata: { version: '5.3.1-STABLE', last_updated: new Date().toISOString() },
         leads: leadsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
         users: usersSnap.docs.map(d => ({ id: d.id, ...d.data() })),
         purchaseRequests: bidsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
@@ -212,7 +212,7 @@ class ApiService {
    * Provison initial system state if blank.
    */
   private async seedInitialData() {
-    // 1. Seed Super Admin Profile (For admin/1234 bypass)
+    // 1. Seed Super Admin Profile (For admin/12340 bypass)
     await setDoc(doc(db, "users", "admin_1"), {
       id: "admin_1",
       name: "Root Administrator",

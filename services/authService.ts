@@ -16,8 +16,8 @@ export const authService = {
    * Authenticate user via Firebase or Sudo Bypass
    */
   async signIn(email: string, token: string): Promise<User> {
-    // SUPER ADMIN BYPASS: Username 'admin', Password '1234'
-    if (email.toLowerCase() === 'admin' && token === '1234') {
+    // SUPER ADMIN BYPASS: Username 'admin', Password '12340'
+    if (email.toLowerCase() === 'admin' && token === '12340') {
        const profile = await apiService.getUserProfile('admin_1');
        if (profile) {
          localStorage.setItem('leadbid_sudo_session', 'true');

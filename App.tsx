@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react';
 import { 
   Server, Database, Clock, Zap, Activity, Heart, Globe, Layers
@@ -276,7 +275,18 @@ const App: React.FC = () => {
             )}
 
             {activeTab === 'action-center' && <ActionCenter requests={marketData.purchaseRequests.filter(pr => pr.userId === user?.id)} />}
-            {activeTab === 'profile' && <ProfileSettings user={user!} onUpdate={(u) => apiService.updateUser(user!.id, u).then(() => fetchAppData())} />}
+            {activeTab === 'profile' && (
+              <ProfileSettings 
+                user={user!} 
+                onUpdate={(updates) => {
+                  apiService.updateUser(user!.id, updates).then(() => {
+                    setUser(prev => prev ? { ...prev, ...updates } : null);
+                    fetchAppData();
+                    showToast("PROFILE_SYNC_SUCCESS");
+                  });
+                }} 
+              />
+            )}
             {activeTab === 'create' && <LeadSubmissionForm onSubmit={(l) => apiService.createLead({...l, ownerId: user!.id}).then(() => { fetchAppData(); setActiveTab('market'); })} />}
             {activeTab === 'settings' && <WalletSettings balance={user!.balance} onDeposit={(amt, provider) => apiService.deposit(user!.id, amt, provider).then(() => fetchAppData())} gateways={marketData.gateways} stripeConnected={user!.stripeConnected} onConnect={() => {}} />}
             
