@@ -12,20 +12,25 @@ import { apiService } from "./apiService.ts";
 import { User } from "../types.ts";
 
 export const authService = {
+  /**
+   * Authenticate user via Firebase or Sudo Bypass
+   */
   async signIn(email: string, token: string): Promise<User> {
-    // Special check for hardcoded admin bypass if needed, 
-    // but better to manage via Firebase Auth + Firestore roles
-    if (email === 'admin' && token === '1234') {
-       // We still attempt to sign in the real admin user in Firebase if it exists
-       // for the sake of the exercise, we will fallback to standard firebase auth
-       email = 'admin@leadbid.pro';
+    // SUPER ADMIN BYPASS: Username 'admin', Password '1234'
+    if (email.toLowerCase() === 'admin' && token === '1234') {
+       const profile = await apiService.getUserProfile('admin_1');
+       if (profile) {
+         localStorage.setItem('leadbid_sudo_session', 'true');
+         return profile;
+       }
+       // If no seed exists yet, we force a sync which triggers the seed
+       throw new Error("ADMIN_PROFILE_NOT_SEEDED: Initialize the database by clicking Sign In again.");
     }
 
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, token);
       const firebaseUser = userCredential.user;
       
-      // Fetch profile details from Firestore
       const userProfile = await apiService.getUserProfile(firebaseUser.uid);
       if (!userProfile) throw new Error("USER_PROFILE_NOT_FOUND");
       
@@ -41,7 +46,6 @@ export const authService = {
       const userCredential = await createUserWithEmailAndPassword(auth, email, token);
       const firebaseUser = userCredential.user;
       
-      // Initialize Firestore profile
       const newUser = await apiService.initUserProfile(firebaseUser.uid, {
         email,
         name: name || email.split('@')[0],
@@ -76,10 +80,18 @@ export const authService = {
   },
 
   async signOut(): Promise<void> {
+    localStorage.removeItem('leadbid_sudo_session');
     await signOut(auth);
   },
 
   onAuthStateChanged(callback: (user: User | null) => void) {
+    // Check for Sudo Session first (persists until logout)
+    const isSudo = localStorage.getItem('leadbid_sudo_session');
+    if (isSudo === 'true') {
+        apiService.getUserProfile('admin_1').then(u => callback(u));
+        return () => {}; // return dummy unsubscribe
+    }
+
     return onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         try {
