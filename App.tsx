@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react';
 import { 
   Server, Database, Clock, Zap, Activity, Heart, Globe, Layers
@@ -308,7 +307,8 @@ const App: React.FC = () => {
                     <Layers size={16} className="text-neutral-500" />
                     <h3 className="text-sm font-black text-white italic uppercase tracking-[0.3em]">GLOBAL_LEAD_POOLS</h3>
                   </div>
-                  <div className="bg-[#0c0c0c] rounded-[2rem] sm:rounded-[3rem] border border-neutral-800/40 p-4 sm:p-10 shadow-2xl relative">
+                  {/* Lead component container set to pure black */}
+                  <div className="bg-black rounded-[2rem] sm:rounded-[3rem] border border-white/5 p-4 sm:p-10 shadow-2xl relative">
                     <MemoizedLeadGrid 
                       leads={marketData.leads} 
                       onBid={(id, initialBid) => setSelectedLeadForBid({ lead: marketData.leads.find(l => l.id === id)!, initialBid })} 

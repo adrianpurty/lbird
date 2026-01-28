@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Zap, 
@@ -13,6 +12,7 @@ import {
 import { User, OAuthConfig } from '../types.ts';
 import { authService } from '../services/authService.ts';
 import { soundService } from '../services/soundService.ts';
+import BiometricVerifyModal from './BiometricVerifyModal.tsx';
 
 interface LoginProps {
   onLogin: (user: User) => void;
@@ -26,6 +26,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
   const [error, setError] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
   const [isBiometricAvailable, setIsBiometricAvailable] = useState(false);
+  const [showVerifyModal, setShowVerifyModal] = useState(false);
 
   useEffect(() => {
     // Check if browser supports WebAuthn and if there's a stored indicator for biometric usage
@@ -51,15 +52,12 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
     }
   };
 
-  const handleBiometricAuth = async () => {
-    if (isSyncing) return;
-    soundService.playClick(true);
+  const executeBiometricAuth = async () => {
     setIsSyncing(true);
     setError('');
+    setShowVerifyModal(false);
 
     try {
-      // Real implementation would call navigator.credentials.get
-      // For this tactical demo, we simulate the fingerprint handshake
       const user = await authService.signInWithBiometrics();
       onLogin(user);
     } catch (err: any) {
@@ -67,6 +65,12 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
     } finally {
       setIsSyncing(false);
     }
+  };
+
+  const handleBiometricClick = () => {
+    if (isSyncing) return;
+    soundService.playClick(true);
+    setShowVerifyModal(true);
   };
 
   const handleSocialAuth = async (provider: 'google' | 'facebook') => {
@@ -172,7 +176,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
               {isBiometricAvailable && (
                 <button 
                   type="button"
-                  onClick={handleBiometricAuth}
+                  onClick={handleBiometricClick}
                   disabled={isSyncing}
                   className="w-full py-3.5 rounded-xl font-black text-[9px] uppercase tracking-[0.4em] transition-all border border-neutral-800 bg-black/60 text-[#00e5ff] hover:bg-black hover:border-[#00e5ff]/40 flex items-center justify-center gap-3 shadow-lg font-futuristic italic"
                 >
@@ -208,6 +212,13 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
           </div>
         </div>
       </div>
+
+      {showVerifyModal && (
+        <BiometricVerifyModal 
+          onSuccess={executeBiometricAuth}
+          onCancel={() => setShowVerifyModal(false)}
+        />
+      )}
     </div>
   );
 };
