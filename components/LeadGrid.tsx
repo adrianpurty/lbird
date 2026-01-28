@@ -2,7 +2,7 @@ import React, { useState, useMemo, memo } from 'react';
 import { Lead, UserRole } from '../types.ts';
 import { 
   PlaneTakeoff, Ship, Hotel, Building2, Coins, Shield, Stethoscope, BriefcaseBusiness,
-  ListFilter, Activity, Edit3, Target, Globe, Star, Info, Database, Gavel, Layers, Heart, CheckCircle, Eye, Zap
+  ListFilter, Activity, Edit3, Target, Globe, Star, Info, Database, Gavel, Layers, Heart, CheckCircle, Eye, Zap, Sparkles
 } from 'lucide-react';
 import { soundService } from '../services/soundService.ts';
 
@@ -54,21 +54,21 @@ export const TacticalLeadCard = memo(({ lead, userRole, currentUserId, onBid, on
   return (
     <div 
       className={`group relative bg-[#0a0a0a] border rounded-2xl overflow-hidden hover:bg-white/[0.03] transition-all duration-500 flex flex-col h-[200px] shadow-2xl cursor-pointer ${
-        isRecentlyBid ? 'border-emerald-500 ring-4 ring-emerald-500/20 animate-pulse' : 
+        isRecentlyBid ? 'border-emerald-500 ring-4 ring-emerald-500/20 animate-success-card' : 
         isWishlisted ? 'border-[#00e5ff]/40 shadow-[#00e5ff]/5' : 'border-white/15'
       }`}
       onClick={() => { soundService.playClick(); onEdit(lead); }}
     >
       {/* Dynamic Background Accent */}
       <div className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl -mr-16 -mt-16 transition-all ${
-        isRecentlyBid ? 'bg-emerald-500/20' : isWishlisted ? 'bg-[#00e5ff]/10' : 'bg-white/[0.02] group-hover:bg-white/[0.05]'
+        isRecentlyBid ? 'bg-emerald-500/30' : isWishlisted ? 'bg-[#00e5ff]/10' : 'bg-white/[0.02] group-hover:bg-white/[0.05]'
       }`} />
 
       {/* RECENT BID CELEBRATION OVERLAY */}
       {isRecentlyBid && (
-        <div className="absolute top-0 left-0 right-0 bg-emerald-500 py-1 flex items-center justify-center gap-2 z-20 animate-in slide-in-from-top duration-500">
-           <CheckCircle size={10} className="text-white" />
-           <span className="text-[8px] font-black text-white uppercase tracking-[0.3em]">BID_SECURED_SYNC_ACTIVE</span>
+        <div className="absolute top-0 left-0 right-0 bg-emerald-500 py-1 flex items-center justify-center gap-2 z-20 animate-in slide-in-from-top duration-500 shadow-[0_4px_15px_rgba(16,185,129,0.3)]">
+           <Sparkles size={10} className="text-white animate-pulse" />
+           <span className="text-[8px] font-black text-white uppercase tracking-[0.3em]">ACQUISITION_PROTOCOL_LOCKED</span>
         </div>
       )}
       
@@ -79,11 +79,6 @@ export const TacticalLeadCard = memo(({ lead, userRole, currentUserId, onBid, on
             <div className={`w-1.5 h-1.5 rounded-full ${isRecentlyBid ? 'bg-emerald-400 shadow-[0_0_8px_#34d399]' : isWishlisted ? 'bg-[#00e5ff] shadow-[0_0_8px_#00e5ff]' : 'bg-emerald-500 shadow-[0_0_8px_#10b981]'}`} />
             <span className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em] font-mono">NODE_{lead.id.slice(-4).toUpperCase()}</span>
           </div>
-          {lead.ownerId && (
-            <span className="text-[7px] font-black text-white/10 uppercase tracking-[0.1em] font-mono border-l border-white/5 pl-3 hidden sm:inline-block">
-              OWNER:{lead.ownerId.slice(-6).toUpperCase()}
-            </span>
-          )}
         </div>
         <div className="flex items-center gap-4">
            {/* NICHE CAPACITY INDICATOR */}
@@ -148,7 +143,7 @@ export const TacticalLeadCard = memo(({ lead, userRole, currentUserId, onBid, on
         <div className="flex flex-col items-end justify-between shrink-0 h-full border-l border-white/15 pl-5">
           <div className="text-right">
             <span className="text-[7px] font-black text-white/20 uppercase tracking-widest block mb-1">Valuation</span>
-            <div className="text-2xl font-black text-white italic tracking-tighter leading-none font-tactical">
+            <div className={`text-2xl font-black italic tracking-tighter leading-none font-tactical transition-colors ${isRecentlyBid ? 'text-emerald-400' : 'text-white'}`}>
               ${lead.currentBid}
             </div>
             <div className="flex items-center gap-1 justify-end mt-1 text-white/40">

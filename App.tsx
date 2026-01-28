@@ -147,6 +147,7 @@ const App: React.FC = () => {
     const leadsPerDay = 50;
     const totalDailyCost = bidAmount * leadsPerDay;
 
+    // Strict Rule 1 Enforcement: Sufficient funds check
     if (user.balance < totalDailyCost) {
       showToast("INSUFFICIENT_FUNDS_FOR_QUICK_BID", "error");
       setSelectedLeadForBid(lead);
@@ -156,6 +157,7 @@ const App: React.FC = () => {
     try {
       await apiService.placeBid({
         userId: user.id,
+        userName: user.name,
         leadId: lead.id,
         leadTitle: lead.title,
         buyerBusinessUrl: user.defaultBusinessUrl,
@@ -365,7 +367,33 @@ const App: React.FC = () => {
 
       <MobileNav activeTab={activeTab} onTabChange={setActiveTab} role={user!.role} />
 
-      {selectedLeadForBid && <BiddingModal lead={selectedLeadForBid} user={user!} gateways={marketData.gateways} onClose={() => setSelectedLeadForBid(null)} onSubmit={(d) => apiService.placeBid({ userId: user!.id, leadId: selectedLeadForBid.id, leadTitle: selectedLeadForBid.title, ...d }).then(() => { fetchAppData(); setLastBidLeadId(selectedLeadForBid.id); setTimeout(() => setLastBidLeadId(null), 6000); setSelectedLeadForBid(null); setActiveTab('market'); showToast("BID_DEPLOYED_SUCCESSFULLY", "success"); })} onRefill={() => { setSelectedLeadForBid(null); setActiveTab('settings'); }} />}
+      {selectedLeadForBid && (
+        <BiddingModal 
+          lead={selectedLeadForBid} 
+          user={user!} 
+          gateways={marketData.gateways} 
+          onClose={() => setSelectedLeadForBid(null)} 
+          onSubmit={async (d) => {
+            await apiService.placeBid({ 
+              userId: user!.id, 
+              userName: user!.name,
+              leadId: selectedLeadForBid.id, 
+              leadTitle: selectedLeadForBid.title, 
+              ...d 
+            });
+            fetchAppData();
+            setLastBidLeadId(selectedLeadForBid.id);
+            setTimeout(() => setLastBidLeadId(null), 6000);
+          }} 
+          onRefill={() => { setSelectedLeadForBid(null); setActiveTab('settings'); }} 
+          onRedirectToActionCenter={() => {
+            setSelectedLeadForBid(null);
+            setActiveTab('action-center');
+            showToast("NAVIGATING_TO_ACTION_CENTER", "info");
+          }}
+        />
+      )}
+      
       {selectedLeadForDetail && <AdminLeadActionsModal lead={selectedLeadForDetail} user={user!} onClose={() => setSelectedLeadForDetail(null)} onSave={(u) => apiService.updateLead(selectedLeadForDetail.id, u).then(() => { fetchAppData(); setSelectedLeadForDetail(null); })} onDelete={(id) => apiService.deleteLead(id).then(() => { fetchAppData(); setSelectedLeadForDetail(null); })} onBid={(id) => { setSelectedLeadForDetail(null); setSelectedLeadForBid(marketData.leads.find(l => l.id === id) || null); }} />}
       
       {toast && (

@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { X, Globe, Target, Phone, Zap, ChevronRight, Calculator, AlertTriangle, Wallet, Info, ArrowRight, CreditCard, RefreshCw, Calendar, Clock, Scan, Globe as GlobeIcon, Bitcoin, Smartphone, Landmark, Database } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { X, Globe, Target, Phone, Zap, ChevronRight, Calculator, AlertTriangle, Wallet, Info, ArrowRight, CreditCard, RefreshCw, Calendar, Clock, Scan, Globe as GlobeIcon, Bitcoin, Smartphone, Landmark, Database, CheckCircle2, Loader2, ArrowUpRight } from 'lucide-react';
 import { Lead, User, GatewayAPI } from '../types.ts';
 import { soundService } from '../services/soundService.ts';
 
@@ -8,8 +8,9 @@ interface BiddingModalProps {
   user: User;
   gateways: GatewayAPI[];
   onClose: () => void;
-  onSubmit: (data: BiddingFormData) => void;
+  onSubmit: (data: BiddingFormData) => Promise<void>;
   onRefill: () => void;
+  onRedirectToActionCenter: () => void;
 }
 
 export interface BiddingFormData {
@@ -34,7 +35,7 @@ const DAYS_OF_WEEK = [
   { id: 'sun', label: 'S' }
 ];
 
-const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClose, onSubmit, onRefill }) => {
+const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClose, onSubmit, onRefill, onRedirectToActionCenter }) => {
   const minBid = lead.currentBid + 1;
   const activeGateways = useMemo(() => gateways.filter(g => g.status === 'active'), [gateways]);
 
@@ -50,6 +51,8 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClo
   });
 
   const [isBridgeMode, setIsBridgeMode] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const totalDailyCost = useMemo(() => {
     return formData.bidAmount * formData.leadsPerDay;
@@ -68,15 +71,29 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClo
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleExecute = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isBidTooLow) return;
+    if (isBidTooLow || isSubmitting) return;
+    
+    // Rule 1 Enforcement: User cannot bid if insufficient funds
     if (hasInsufficientFunds && !isBridgeMode) {
       soundService.playClick(true);
       setIsBridgeMode(true);
       return;
     }
-    onSubmit({ ...formData, totalDailyCost });
+
+    setIsSubmitting(true);
+    soundService.playClick(true);
+
+    try {
+      await onSubmit({ ...formData, totalDailyCost });
+      setIsSuccess(true);
+      soundService.playClick(false);
+    } catch (error) {
+      console.error("Bid execution failed", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const getProviderIcon = (provider: string) => {
@@ -96,29 +113,66 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClo
       <div className="w-full max-w-2xl max-h-[95vh] bg-[#0c0c0c] border-2 border-neutral-800 rounded-[3rem] shadow-[0_50px_150px_-20px_rgba(0,0,0,1)] flex flex-col animate-in zoom-in-95 duration-300 overflow-hidden">
         
         {/* MODAL HEADER */}
-        <div className="flex justify-between items-center p-8 sm:p-10 border-b border-neutral-800 bg-black/40 shrink-0">
-          <div className="flex items-center gap-5">
-            <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(255,255,255,0.1)]">
-              {isBridgeMode ? <CreditCard className="text-black" size={28} /> : <Zap className="text-black" size={28} fill="currentColor" />}
+        {!isSuccess && (
+          <div className="flex justify-between items-center p-8 sm:p-10 border-b border-neutral-800 bg-black/40 shrink-0">
+            <div className="flex items-center gap-5">
+              <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(255,255,255,0.1)]">
+                {isBridgeMode ? <CreditCard className="text-black" size={28} /> : <Zap className="text-black" size={28} fill="currentColor" />}
+              </div>
+              <div>
+                <h2 className="text-2xl font-black text-white uppercase tracking-tighter leading-none italic">
+                  {isBridgeMode ? 'Financial Bridge Proxy' : 'Lead Acquisition Handshake'}
+                </h2>
+                <p className="text-neutral-500 text-[10px] font-black uppercase tracking-widest mt-2">
+                  {isBridgeMode ? 'REPLENISH_LIQUIDITY_BUFFER' : `Target Lead Asset: ${lead?.title?.toUpperCase() || 'DATA_NODE'}`}
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-2xl font-black text-white uppercase tracking-tighter leading-none italic" style={{ fontVariant: 'small-caps' }}>
-                {isBridgeMode ? 'Financial Bridge Proxy' : 'Lead Acquisition Handshake'}
-              </h2>
-              <p className="text-neutral-500 text-[10px] font-black uppercase tracking-widest mt-2" style={{ fontVariant: 'small-caps' }}>
-                {isBridgeMode ? 'REPLENISH_LIQUIDITY_BUFFER' : `Target Lead Asset: ${lead?.title?.toUpperCase() || 'DATA_NODE'}`}
-              </p>
-            </div>
+            <button onClick={onClose} className="p-3 hover:bg-neutral-800 rounded-full transition-all text-neutral-500 hover:text-white active:scale-90">
+              <X size={32} />
+            </button>
           </div>
-          <button onClick={onClose} className="p-3 hover:bg-neutral-800 rounded-full transition-all text-neutral-500 hover:text-white active:scale-90">
-            <X size={32} />
-          </button>
-        </div>
+        )}
 
         {/* MODAL CONTENT */}
         <div className="flex-1 overflow-y-auto p-8 sm:p-10 scrollbar-hide">
-          {!isBridgeMode ? (
-            <form onSubmit={handleSubmit} className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+          {isSuccess ? (
+            /* PAYMENT SUCCESSFUL UI */
+            <div className="h-full flex flex-col items-center justify-center text-center space-y-10 py-12 animate-in zoom-in-95 duration-700">
+               <div className="relative">
+                  <div className="absolute inset-0 bg-emerald-500/20 rounded-full blur-[80px] animate-pulse" />
+                  <div className="w-32 h-32 rounded-[2.5rem] bg-emerald-500 text-black flex items-center justify-center shadow-[0_0_50px_rgba(16,185,129,0.4)] relative z-10 border-4 border-black">
+                     <CheckCircle2 size={64} />
+                  </div>
+               </div>
+               
+               <div className="space-y-4">
+                  <h2 className="text-4xl font-futuristic font-black text-white italic uppercase tracking-tighter">PAYMENT SUCCESSFUL</h2>
+                  <p className="text-neutral-500 text-[11px] font-bold uppercase tracking-[0.4em] max-w-[300px] mx-auto leading-relaxed">
+                    LIQUIDITY_TRANSFERRED // CAMPAIGN_DEPLOYED_IN_PENDING_STATE
+                  </p>
+               </div>
+
+               <div className="bg-[#080808] border-2 border-neutral-900 rounded-[2rem] p-6 w-full max-w-sm flex items-center justify-between">
+                  <div className="text-left">
+                     <span className="text-[8px] font-black text-neutral-700 uppercase tracking-widest block mb-1">TOTAL_SETTLEMENT</span>
+                     <span className="text-2xl font-tactical text-emerald-500 italic tracking-widest">${totalDailyCost.toLocaleString()}</span>
+                  </div>
+                  <div className="text-right">
+                     <span className="text-[8px] font-black text-neutral-700 uppercase tracking-widest block mb-1">SETTLEMENT_TYPE</span>
+                     <span className="text-[10px] font-black text-neutral-400 uppercase">INTERNAL_WALLET</span>
+                  </div>
+               </div>
+
+               <button 
+                onClick={onRedirectToActionCenter}
+                className="group relative w-full py-6 bg-white text-black rounded-[2.5rem] font-black text-xl uppercase italic tracking-widest border-b-[8px] border-neutral-300 active:translate-y-1 active:border-b-0 transition-all flex items-center justify-center gap-6"
+               >
+                 Go to Action Center <ArrowUpRight size={28} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+               </button>
+            </div>
+          ) : !isBridgeMode ? (
+            <form onSubmit={handleExecute} className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
               
               {/* COMPLIANCE ALERT */}
               <div className="bg-neutral-900/40 p-4 rounded-2xl border border-neutral-800/60 flex items-start gap-4">
@@ -264,13 +318,17 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClo
 
               <button 
                 type="submit"
+                disabled={isSubmitting}
                 className={`w-full py-6 rounded-[2.5rem] font-black text-xl sm:text-2xl transition-all flex items-center justify-center gap-6 active:scale-[0.98] mt-4 border-b-[6px] ${
+                  isSubmitting ? 'bg-neutral-800 text-neutral-500 border-neutral-900 cursor-not-allowed' :
                   hasInsufficientFunds 
                     ? 'bg-amber-400 text-black border-amber-600 hover:bg-amber-500' 
                     : 'bg-white text-black border-neutral-300 hover:bg-neutral-100'
                 }`}
               >
-                {hasInsufficientFunds ? 'Initiate Bridge Protocol' : 'Authorize Acquisition'} <ArrowRight size={24} />
+                {isSubmitting ? <Loader2 size={24} className="animate-spin" /> : 
+                 hasInsufficientFunds ? 'Initiate Bridge Protocol' : 'Authorize Acquisition'} 
+                {!isSubmitting && <ArrowRight size={24} />}
               </button>
             </form>
           ) : (
