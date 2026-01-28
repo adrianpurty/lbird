@@ -4,7 +4,7 @@ import {
   Search, Filter, ArrowRight, Gavel, Trash2, Edit3, 
   CheckCircle2, XCircle, DollarSign, History, Zap, 
   Layers, Lock, Unlock, Globe, RefreshCw, AlertTriangle, Eye, User as UserIcon, Calendar, Clock, Fingerprint, X,
-  Target, ShieldCheck, Radar, BarChart3, Gauge, ArrowUpRight, ChevronLeft, ChevronRight, MapPin
+  Target, ShieldCheck, Radar, BarChart3, Gauge, ArrowUpRight, ChevronLeft, ChevronRight, MapPin, ChevronUp, ChevronDown, Settings
 } from 'lucide-react';
 import { Lead, User, PurchaseRequest, WalletActivity } from '../types.ts';
 import { soundService } from '../services/soundService.ts';
@@ -203,9 +203,15 @@ const UserAuditHUD: React.FC<{
 const AdminControlCenter: React.FC<AdminControlCenterProps> = ({ 
   leads, users, bids, walletActivities, onUpdateLead, onDeleteLead, onUpdateUser 
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'leads' | 'users' | 'ledger'>('leads');
+  const [activeSubTab, setActiveSubTab] = useState<'leads' | 'users' | 'user-mgmt' | 'ledger'>('leads');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUserForAudit, setSelectedUserForAudit] = useState<User | null>(null);
+  const [adjustingUser, setAdjustingUser] = useState<User | null>(null);
+  const [adjustAmount, setAdjustAmount] = useState<string>('');
+  const [sortConfig, setSortConfig] = useState<{ key: keyof User; direction: 'asc' | 'desc' } | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const stats = useMemo(() => ({
@@ -214,12 +220,38 @@ const AdminControlCenter: React.FC<AdminControlCenterProps> = ({
     activeLeads: leads.filter(l => l.status === 'approved').length
   }), [leads, users]);
 
+  const sortedUsers = useMemo(() => {
+    let result = [...users];
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      result = result.filter(u => u.name?.toLowerCase().includes(term) || u.email?.toLowerCase().includes(term) || u.id.toLowerCase().includes(term));
+    }
+    if (sortConfig) {
+      result.sort((a, b) => {
+        const valA = a[sortConfig.key] || '';
+        const valB = b[sortConfig.key] || '';
+        if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+    return result;
+  }, [users, searchTerm, sortConfig]);
+
+  const paginatedUsers = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return sortedUsers.slice(start, start + itemsPerPage);
+  }, [sortedUsers, currentPage]);
+
+  const totalPages = Math.ceil(sortedUsers.length / itemsPerPage);
+
   const filteredData = useMemo(() => {
     const term = searchTerm.toLowerCase();
     if (activeSubTab === 'leads') return leads.filter(l => l.title?.toLowerCase().includes(term) || l.category?.toLowerCase().includes(term));
     if (activeSubTab === 'users') return users.filter(u => u.name?.toLowerCase().includes(term) || u.email?.toLowerCase().includes(term));
+    if (activeSubTab === 'user-mgmt') return paginatedUsers;
     return walletActivities.filter(wa => wa.provider?.toLowerCase().includes(term) || wa.userId?.toLowerCase().includes(term));
-  }, [leads, users, walletActivities, activeSubTab, searchTerm]);
+  }, [leads, users, paginatedUsers, walletActivities, activeSubTab, searchTerm]);
 
   const handleAuditUser = (user: User) => {
     soundService.playClick(true);
@@ -237,10 +269,29 @@ const AdminControlCenter: React.FC<AdminControlCenterProps> = ({
     }
   };
 
+  const handleSort = (key: keyof User) => {
+    soundService.playClick();
+    setSortConfig(prev => ({
+      key,
+      direction: prev?.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  const handleAdjustBalance = async () => {
+    if (!adjustingUser || !adjustAmount) return;
+    const amount = parseFloat(adjustAmount);
+    if (isNaN(amount)) return;
+
+    soundService.playClick(true);
+    onUpdateUser(adjustingUser.id, { balance: amount });
+    setAdjustingUser(null);
+    setAdjustAmount('');
+  };
+
   return (
     <div className="max-w-[1600px] mx-auto space-y-6 md:space-y-8 pb-32 animate-in fade-in duration-700 font-rajdhani">
       
-      {/* HERO HEADER - MATCHES SAVED ASSETS HUD */}
+      {/* HERO HEADER */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-5 border-b border-neutral-900/60 pb-8">
         <div className="space-y-4">
           <h1 className="text-2xl sm:text-4xl font-futuristic italic font-black uppercase tracking-tighter">
@@ -254,7 +305,6 @@ const AdminControlCenter: React.FC<AdminControlCenterProps> = ({
           </div>
         </div>
 
-        {/* SYSTEM INTEGRITY WIDGET */}
         <div className="bg-[#0c0c0c] border-2 border-neutral-800 p-3 md:p-5 rounded-[1.5rem] flex items-center gap-5 shadow-2xl group hover:border-red-500/30 transition-all cursor-default">
           <div className="w-10 h-10 bg-red-500/10 rounded-xl flex items-center justify-center text-red-500 shrink-0 group-hover:scale-110 transition-transform">
             <ShieldCheck size={20} />
@@ -279,7 +329,7 @@ const AdminControlCenter: React.FC<AdminControlCenterProps> = ({
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700" size={14} />
                 <input 
                   type="text"
-                  placeholder={`SEARCH_${activeSubTab.toUpperCase()}_LOGS...`}
+                  placeholder={`SEARCH_${activeSubTab.replace('-','_').toUpperCase()}_LOGS...`}
                   className="w-full bg-black border border-neutral-800 rounded-lg pl-10 pr-4 py-2.5 text-[9px] font-black uppercase tracking-[0.2em] text-white outline-none focus:border-red-500/40 transition-all font-mono"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -287,13 +337,17 @@ const AdminControlCenter: React.FC<AdminControlCenterProps> = ({
              </div>
 
              <div className="flex bg-neutral-900/50 p-1 rounded-lg border border-neutral-800 shrink-0">
-                {['leads', 'users', 'ledger'].map((tab) => (
+                {['leads', 'users', 'user-mgmt', 'ledger'].map((tab) => (
                   <button 
                     key={tab}
-                    onClick={() => { soundService.playClick(); setActiveSubTab(tab as any); }}
+                    onClick={() => { 
+                      soundService.playClick(); 
+                      setActiveSubTab(tab as any); 
+                      if(tab === 'user-mgmt') setCurrentPage(1);
+                    }}
                     className={`px-5 py-1.5 rounded-md text-[8px] font-black uppercase tracking-widest transition-all italic font-futuristic ${activeSubTab === tab ? 'bg-white text-black shadow-lg' : 'text-neutral-500 hover:text-white'}`}
                   >
-                    {tab}
+                    {tab.replace('-', ' ')}
                   </button>
                 ))}
              </div>
@@ -308,103 +362,132 @@ const AdminControlCenter: React.FC<AdminControlCenterProps> = ({
             <div className="flex items-center justify-between mb-6 px-1">
                <div className="flex items-center gap-3">
                   <div className="w-1.5 h-5 bg-red-500 rounded-full shadow-[0_0_10px_#ef4444]" />
-                  <h3 className="text-xs font-futuristic font-black text-white italic uppercase tracking-[0.3em]">{activeSubTab.toUpperCase()}_REGISTRY_VIEW</h3>
+                  <h3 className="text-xs font-futuristic font-black text-white italic uppercase tracking-[0.3em]">{activeSubTab.replace('-','_').toUpperCase()}_REGISTRY_VIEW</h3>
                   <span className="text-[7px] font-mono text-neutral-700 uppercase tracking-widest ml-4">SEQ_A_0041</span>
                </div>
                
                {activeSubTab === 'leads' && filteredData.length > 0 && (
                  <div className="flex items-center gap-2">
-                    <button 
-                      onClick={() => scrollSlider('left')}
-                      className="p-1.5 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 rounded-lg text-neutral-500 hover:text-white transition-all"
-                    >
+                    <button onClick={() => scrollSlider('left')} className="p-1.5 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 rounded-lg text-neutral-500 hover:text-white transition-all">
                       <ChevronLeft size={16} />
                     </button>
-                    <button 
-                      onClick={() => scrollSlider('right')}
-                      className="p-1.5 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 rounded-lg text-neutral-500 hover:text-white transition-all"
-                    >
+                    <button onClick={() => scrollSlider('right')} className="p-1.5 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 rounded-lg text-neutral-500 hover:text-white transition-all">
                       <ChevronRight size={16} />
                     </button>
                  </div>
                )}
             </div>
 
-            {/* LEADS SLIDER IMPLEMENTATION */}
+            {/* TAB CONTENT */}
             {activeSubTab === 'leads' ? (
-              <div 
-                ref={scrollContainerRef}
-                className="flex gap-6 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-4 relative z-10 -mx-1 px-1"
-              >
-                {filteredData.length > 0 ? (
-                  filteredData.map((item: any) => (
-                    <div 
-                      key={item.id} 
-                      className="snap-center shrink-0 w-[300px] md:w-[380px] group/card relative bg-black/40 border-2 border-neutral-800/60 rounded-[2.5rem] p-6 transition-all duration-500 hover:bg-white/[0.02] hover:border-red-500/20 scanline-effect overflow-hidden flex flex-col gap-6"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div className="w-12 h-12 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-600 group-hover/card:text-red-500 transition-colors">
-                          <Zap size={24} />
-                        </div>
-                        <div className="text-right">
-                           <span className="text-[7px] font-mono text-neutral-700 tracking-widest block mb-1">NODE_ID: #{item.id?.slice(-6).toUpperCase()}</span>
-                           <span className={`text-[7px] font-black uppercase px-2 py-0.5 rounded border tracking-widest ${
-                             item.status === 'approved' ? 'border-emerald-900/40 text-emerald-500 bg-emerald-500/5' : 'border-red-900/40 text-red-500 bg-red-500/5'
-                           }`}>
-                             {item.status}
-                           </span>
-                        </div>
+              <div ref={scrollContainerRef} className="flex gap-6 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-4 relative z-10 -mx-1 px-1">
+                {filteredData.map((item: any) => (
+                  <div key={item.id} className="snap-center shrink-0 w-[300px] md:w-[380px] group/card relative bg-black/40 border-2 border-neutral-800/60 rounded-[2.5rem] p-6 transition-all duration-500 hover:bg-white/[0.02] hover:border-red-500/20 scanline-effect overflow-hidden flex flex-col gap-6">
+                    <div className="flex justify-between items-start">
+                      <div className="w-12 h-12 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-600 group-hover/card:text-red-500 transition-colors">
+                        <Zap size={24} />
                       </div>
-
-                      <div className="space-y-1">
-                        <h4 className="text-lg font-futuristic font-black text-white italic truncate uppercase tracking-wide group-hover/card:text-red-400 transition-colors">{item.title}</h4>
-                        <p className="text-[8px] text-neutral-500 font-bold uppercase tracking-[0.2em] font-mono">{item.category}</p>
-                      </div>
-
-                      <div className="bg-black/40 border border-neutral-800/40 rounded-2xl p-4 grid grid-cols-2 gap-4">
-                         <div>
-                            <span className="text-[7px] font-black text-neutral-700 uppercase tracking-widest block mb-1">BID_FLOOR</span>
-                            <span className="text-xl font-tactical text-white italic tracking-widest leading-none">${item.currentBid}</span>
-                         </div>
-                         <div className="text-right border-l border-neutral-900 pl-4">
-                            <span className="text-[7px] font-black text-neutral-700 uppercase tracking-widest block mb-1">INTEGRITY</span>
-                            <span className="text-xl font-tactical text-emerald-500 italic tracking-widest leading-none">{item.qualityScore}%</span>
-                         </div>
-                      </div>
-
-                      <div className="space-y-3 flex-1">
-                         <div className="space-y-1">
-                            <span className="text-[7px] font-black text-neutral-700 uppercase tracking-widest block flex items-center gap-1.5"><Globe size={10} /> Origin_URI</span>
-                            <p className="text-[9px] font-mono text-neutral-500 truncate bg-neutral-950 px-2 py-1 rounded border border-neutral-900">{item.businessUrl}</p>
-                         </div>
-                         <div className="space-y-1">
-                            <span className="text-[7px] font-black text-neutral-700 uppercase tracking-widest block flex items-center gap-1.5"><Target size={10} /> Delivery_Node</span>
-                            <p className="text-[9px] font-mono text-neutral-500 truncate bg-neutral-950 px-2 py-1 rounded border border-neutral-900">{item.targetLeadUrl}</p>
-                         </div>
-                      </div>
-
-                      <div className="flex gap-3 pt-4 border-t border-neutral-900">
-                        <button 
-                          onClick={() => onUpdateLead(item)} 
-                          className="flex-1 bg-white text-black py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all hover:bg-neutral-200 active:scale-95 flex items-center justify-center gap-2 italic"
-                        >
-                          <Edit3 size={14} /> MODIFY_ASSET
-                        </button>
-                        <button 
-                          onClick={() => onDeleteLead(item.id)} 
-                          className="p-2.5 bg-neutral-950 border border-neutral-800 rounded-xl text-neutral-600 hover:text-red-500 transition-all active:scale-95"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                      <div className="text-right">
+                         <span className="text-[7px] font-mono text-neutral-700 tracking-widest block mb-1">NODE_ID: #{item.id?.slice(-6).toUpperCase()}</span>
+                         <span className={`text-[7px] font-black uppercase px-2 py-0.5 rounded border tracking-widest ${item.status === 'approved' ? 'border-emerald-900/40 text-emerald-500 bg-emerald-500/5' : 'border-red-900/40 text-red-500 bg-red-500/5'}`}>{item.status}</span>
                       </div>
                     </div>
-                  ))
-                ) : (
-                  <div className="w-full py-24 text-center opacity-20 col-span-full">
-                     <Radar size={64} className="mx-auto text-neutral-700 mb-5 animate-spin-slow" strokeWidth={1} />
-                     <h4 className="text-neutral-500 font-futuristic text-lg uppercase tracking-[0.4em] italic">NO_DATA_SYNCED</h4>
+                    <div className="space-y-1">
+                      <h4 className="text-lg font-futuristic font-black text-white italic truncate uppercase tracking-wide group-hover/card:text-red-400 transition-colors">{item.title}</h4>
+                      <p className="text-[8px] text-neutral-500 font-bold uppercase tracking-[0.2em] font-mono">{item.category}</p>
+                    </div>
+                    <div className="bg-black/40 border border-neutral-800/40 rounded-2xl p-4 grid grid-cols-2 gap-4">
+                       <div><span className="text-[7px] font-black text-neutral-700 uppercase tracking-widest block mb-1">BID_FLOOR</span><span className="text-xl font-tactical text-white italic tracking-widest leading-none">${item.currentBid}</span></div>
+                       <div className="text-right border-l border-neutral-900 pl-4"><span className="text-[7px] font-black text-neutral-700 uppercase tracking-widest block mb-1">INTEGRITY</span><span className="text-xl font-tactical text-emerald-500 italic tracking-widest leading-none">{item.qualityScore}%</span></div>
+                    </div>
+                    <div className="space-y-3 flex-1">
+                       <div className="space-y-1"><span className="text-[7px] font-black text-neutral-700 uppercase tracking-widest block flex items-center gap-1.5"><Globe size={10} /> Origin_URI</span><p className="text-[9px] font-mono text-neutral-500 truncate bg-neutral-950 px-2 py-1 rounded border border-neutral-900">{item.businessUrl}</p></div>
+                       <div className="space-y-1"><span className="text-[7px] font-black text-neutral-700 uppercase tracking-widest block flex items-center gap-1.5"><Target size={10} /> Delivery_Node</span><p className="text-[9px] font-mono text-neutral-500 truncate bg-neutral-950 px-2 py-1 rounded border border-neutral-900">{item.targetLeadUrl}</p></div>
+                    </div>
+                    <div className="flex gap-3 pt-4 border-t border-neutral-900">
+                      <button onClick={() => onUpdateLead(item)} className="flex-1 bg-white text-black py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all hover:bg-neutral-200 active:scale-95 flex items-center justify-center gap-2 italic"><Edit3 size={14} /> MODIFY_ASSET</button>
+                      <button onClick={() => onDeleteLead(item.id)} className="p-2.5 bg-neutral-950 border border-neutral-800 rounded-xl text-neutral-600 hover:text-red-500 transition-all active:scale-95"><Trash2 size={16} /></button>
+                    </div>
                   </div>
-                )}
+                ))}
+              </div>
+            ) : activeSubTab === 'user-mgmt' ? (
+              <div className="space-y-4 animate-in fade-in duration-500 relative z-10">
+                <div className="overflow-x-auto border border-neutral-800/40 rounded-2xl bg-black/20">
+                  <table className="w-full text-left border-collapse min-w-[800px]">
+                    <thead>
+                      <tr className="border-b border-neutral-800 bg-neutral-900/40">
+                        {(['id', 'name', 'email', 'role', 'status', 'balance', 'last_active_at'] as const).map(key => (
+                          <th key={key} onClick={() => handleSort(key as any)} className="p-4 text-[9px] font-black text-neutral-500 uppercase tracking-widest cursor-pointer hover:text-white transition-colors group">
+                            <div className="flex items-center gap-2">
+                              {key.replace(/_/g, ' ')}
+                              <div className="flex flex-col opacity-0 group-hover:opacity-100 transition-opacity">
+                                <ChevronUp size={8} className={sortConfig?.key === key && sortConfig.direction === 'asc' ? 'text-red-500' : ''} />
+                                <ChevronDown size={8} className={sortConfig?.key === key && sortConfig.direction === 'desc' ? 'text-red-500' : ''} />
+                              </div>
+                            </div>
+                          </th>
+                        ))}
+                        <th className="p-4 text-[9px] font-black text-neutral-500 uppercase tracking-widest text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-900">
+                      {filteredData.map((u: any) => (
+                        <tr key={u.id} className="hover:bg-white/[0.02] transition-colors group/row">
+                          <td className="p-4 text-[9px] font-mono text-neutral-600 truncate max-w-[100px]">#{u.id.slice(-6).toUpperCase()}</td>
+                          <td className="p-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-7 h-7 rounded-lg border border-neutral-800 bg-neutral-900 overflow-hidden flex items-center justify-center text-neutral-700">
+                                {u.profileImage ? <img src={u.profileImage} className="w-full h-full object-cover" /> : <UserIcon size={14} />}
+                              </div>
+                              <span className="text-[11px] font-futuristic font-black text-white italic uppercase tracking-wider">{u.name}</span>
+                            </div>
+                          </td>
+                          <td className="p-4 text-[10px] text-neutral-500 font-bold font-mono">{u.email}</td>
+                          <td className="p-4">
+                            <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded border tracking-widest ${u.role === 'admin' ? 'border-red-900/40 text-red-500 bg-red-500/5' : 'border-neutral-800 text-neutral-600'}`}>{u.role}</span>
+                          </td>
+                          <td className="p-4">
+                            <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded border tracking-widest ${u.status === 'active' ? 'border-emerald-900/40 text-emerald-500 bg-emerald-500/5' : 'border-red-900/40 text-red-500 bg-red-500/5'}`}>{u.status}</span>
+                          </td>
+                          <td className="p-4">
+                            <span className="text-xl font-tactical text-emerald-500 italic tracking-widest">${u.balance?.toLocaleString()}</span>
+                          </td>
+                          <td className="p-4 text-[9px] text-neutral-600 font-mono italic">
+                            {u.last_active_at ? new Date(u.last_active_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'N/A'}
+                          </td>
+                          <td className="p-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button onClick={() => { soundService.playClick(); setAdjustingUser(u); setAdjustAmount(u.balance.toString()); }} className="p-2 bg-neutral-900 hover:bg-emerald-500/10 border border-neutral-800 rounded-lg text-neutral-600 hover:text-emerald-500 transition-all" title="Adjust Balance"><DollarSign size={14} /></button>
+                              <button onClick={() => onUpdateUser(u.id, { status: u.status === 'active' ? 'restricted' : 'active' })} className={`p-2 rounded-lg border transition-all ${u.status === 'active' ? 'bg-neutral-900 border-neutral-800 text-neutral-600 hover:text-red-500 hover:border-red-900/40' : 'bg-emerald-600 border-emerald-800 text-white hover:bg-emerald-500'}`} title={u.status === 'active' ? 'Restrict User' : 'Activate User'}>
+                                {u.status === 'active' ? <Lock size={14} /> : <Unlock size={14} />}
+                              </button>
+                              <button onClick={() => handleAuditUser(u)} className="p-2 bg-neutral-900 hover:bg-white text-neutral-600 hover:text-black border border-neutral-800 rounded-lg transition-all"><Eye size={14} /></button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* PAGINATION HUD */}
+                <div className="flex items-center justify-between bg-neutral-900/40 p-4 rounded-2xl border border-neutral-800/60">
+                   <div className="flex items-center gap-4">
+                      <span className="text-[9px] font-black text-neutral-600 uppercase tracking-widest">Page {currentPage} of {totalPages}</span>
+                      <div className="h-4 w-px bg-neutral-800" />
+                      <span className="text-[9px] font-black text-neutral-700 uppercase tracking-widest">{sortedUsers.length} Nodes Indexed</span>
+                   </div>
+                   <div className="flex items-center gap-2">
+                      <button disabled={currentPage === 1} onClick={() => { soundService.playClick(); setCurrentPage(p => Math.max(1, p - 1)); }} className="p-2 bg-neutral-950 border border-neutral-800 rounded-lg text-neutral-600 hover:text-white disabled:opacity-20 transition-all"><ChevronLeft size={16} /></button>
+                      <div className="flex gap-1">
+                        {Array.from({ length: totalPages }).map((_, i) => (
+                          <button key={i} onClick={() => { soundService.playClick(); setCurrentPage(i + 1); }} className={`w-8 h-8 rounded-lg text-[10px] font-black uppercase transition-all ${currentPage === i + 1 ? 'bg-white text-black' : 'bg-neutral-950 text-neutral-600 hover:bg-neutral-900'}`}>{i + 1}</button>
+                        ))}
+                      </div>
+                      <button disabled={currentPage === totalPages} onClick={() => { soundService.playClick(); setCurrentPage(p => Math.min(totalPages, p + 1)); }} className="p-2 bg-neutral-950 border border-neutral-800 rounded-lg text-neutral-600 hover:text-white disabled:opacity-20 transition-all"><ChevronRight size={16} /></button>
+                   </div>
+                </div>
               </div>
             ) : (
               /* STANDARD VERTICAL LIST FOR OTHER TABS */
@@ -420,18 +503,13 @@ const AdminControlCenter: React.FC<AdminControlCenterProps> = ({
                           <div className="flex items-center gap-2 mb-0.5">
                              <span className="text-[7px] font-mono text-neutral-700 tracking-widest">#{item.id?.slice(-6).toUpperCase()}</span>
                              {item.status && (
-                               <span className={`text-[6px] font-black uppercase px-1 py-0.5 rounded border tracking-widest ${
-                                 item.status === 'active' || item.status === 'approved' ? 'border-emerald-900/40 text-emerald-500 bg-emerald-500/5' : 'border-red-900/40 text-red-500 bg-red-500/5'
-                               }`}>
-                                 {item.status}
-                               </span>
+                               <span className={`text-[6px] font-black uppercase px-1 py-0.5 rounded border tracking-widest ${item.status === 'active' || item.status === 'approved' ? 'border-emerald-900/40 text-emerald-500 bg-emerald-500/5' : 'border-red-900/40 text-red-500 bg-red-500/5'}`}>{item.status}</span>
                              )}
                           </div>
                           <h4 className="text-sm font-futuristic font-black text-white italic truncate uppercase leading-none group-hover/card:text-red-400 transition-colors tracking-wide">{item.name || item.provider}</h4>
                           <p className="text-[8px] text-neutral-500 font-bold uppercase tracking-[0.2em] mt-1.5 truncate max-w-[200px] font-mono">{item.email || item.timestamp}</p>
                         </div>
                       </div>
-
                       <div className="flex items-center gap-5 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 md:border-l border-neutral-900/50 pt-3 md:pt-0 md:pl-6">
                          {activeSubTab === 'users' && (
                            <div className="text-right">
@@ -442,72 +520,44 @@ const AdminControlCenter: React.FC<AdminControlCenterProps> = ({
                          {activeSubTab === 'ledger' && (
                            <div className="text-right">
                              <span className="text-[6px] font-black text-neutral-700 uppercase tracking-widest block mb-0.5">FLOW_AMT</span>
-                             <span className={`text-2xl font-tactical italic tracking-widest leading-none ${item.type === 'deposit' ? 'text-emerald-500' : 'text-red-400'}`}>
-                               {item.type === 'deposit' ? '+' : '-'} ${item.amount}
-                             </span>
+                             <span className={`text-2xl font-tactical italic tracking-widest leading-none ${item.type === 'deposit' ? 'text-emerald-500' : 'text-red-400'}`}>{item.type === 'deposit' ? '+' : '-'} ${item.amount}</span>
                            </div>
                          )}
-
                          <div className="flex gap-2">
                            {activeSubTab === 'users' && (
                              <>
-                               <button 
-                                 onClick={() => handleAuditUser(item)}
-                                 className="p-2 bg-neutral-950 border border-neutral-800 rounded-lg text-neutral-600 hover:text-cyan-400 transition-all"
-                               >
-                                 <Eye size={14} />
-                               </button>
-                               <button 
-                                 onClick={() => onUpdateUser(item.id, { status: item.status === 'active' ? 'restricted' : 'active' })} 
-                                 className={`px-3 py-2 rounded-lg text-[8px] font-black uppercase tracking-[0.2em] border transition-all italic font-futuristic ${
-                                   item.status === 'active' ? 'bg-emerald-600 text-white border-emerald-800' : 'bg-red-700 text-white border-red-900'
-                                 }`}
-                               >
-                                 {item.status === 'active' ? 'AUTHORIZE' : 'ISOLATE'}
-                               </button>
+                               <button onClick={() => handleAuditUser(item)} className="p-2 bg-neutral-950 border border-neutral-800 rounded-lg text-neutral-600 hover:text-cyan-400 transition-all"><Eye size={14} /></button>
+                               <button onClick={() => onUpdateUser(item.id, { status: item.status === 'active' ? 'restricted' : 'active' })} className={`px-3 py-2 rounded-lg text-[8px] font-black uppercase tracking-[0.2em] border transition-all italic font-futuristic ${item.status === 'active' ? 'bg-emerald-600 text-white border-emerald-800' : 'bg-red-700 text-white border-red-900'}`}>{item.status === 'active' ? 'AUTHORIZE' : 'ISOLATE'}</button>
                              </>
                            )}
                            {activeSubTab === 'ledger' && (
-                              <button className="p-2 bg-neutral-950 border border-neutral-800 rounded-lg text-neutral-600 hover:text-white transition-all">
-                                 <RefreshCw size={14} />
-                              </button>
+                              <button className="p-2 bg-neutral-950 border border-neutral-800 rounded-lg text-neutral-600 hover:text-white transition-all"><RefreshCw size={14} /></button>
                            )}
                          </div>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="py-24 text-center opacity-20">
-                     <Radar size={64} className="mx-auto text-neutral-700 mb-5 animate-spin-slow" strokeWidth={1} />
-                     <h4 className="text-neutral-500 font-futuristic text-lg uppercase tracking-[0.4em] italic">NO_DATA_SYNCED</h4>
-                  </div>
+                  <div className="py-24 text-center opacity-20"><Radar size={64} className="mx-auto text-neutral-700 mb-5 animate-spin-slow" strokeWidth={1} /><h4 className="text-neutral-500 font-futuristic text-lg uppercase tracking-[0.4em] italic">NO_DATA_SYNCED</h4></div>
                 )}
               </div>
             )}
           </div>
 
-          {/* VALUATION ROW - MATCHES VAULT API BALANCE SECTION */}
+          {/* VALUATION ROW */}
           <div className="bg-[#0c0c0c] border border-neutral-800/40 rounded-[2rem] p-6 flex flex-col md:flex-row items-center justify-between gap-8 shadow-xl relative overflow-hidden">
             <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500/50" />
             <div className="space-y-2">
-              <span className="text-[9px] font-black text-neutral-600 uppercase tracking-widest px-1.5 flex items-center gap-2.5 italic font-futuristic">
-                <TrendingUp size={14} className="text-red-500" /> AGGREGATE_MARKET_CAPITALIZATION
-              </span>
-              <div className="text-3xl font-black text-white italic font-tactical tracking-widest px-1.5 leading-none">
-                <span className="text-neutral-700 mr-1.5">$</span>{stats.marketCap.toLocaleString()}
-              </div>
+              <span className="text-[9px] font-black text-neutral-600 uppercase tracking-widest px-1.5 flex items-center gap-2.5 italic font-futuristic"><TrendingUp size={14} className="text-red-500" /> AGGREGATE_MARKET_CAPITALIZATION</span>
+              <div className="text-3xl font-black text-white italic font-tactical tracking-widest px-1.5 leading-none"><span className="text-neutral-700 mr-1.5">$</span>{stats.marketCap.toLocaleString()}</div>
             </div>
-            
             <div className="flex-1 flex items-center justify-center border-2 border-neutral-900 border-dashed rounded-[1.5rem] p-6 group cursor-pointer hover:border-red-500/20 transition-colors">
-              <div className="flex items-center gap-3 text-neutral-700 group-hover:text-neutral-500 transition-colors">
-                <BarChart3 size={16} />
-                <span className="text-[10px] font-black uppercase tracking-[0.4em] font-futuristic italic">EXECUTE_SYSTEM_AUDIT</span>
-              </div>
+              <div className="flex items-center gap-3 text-neutral-700 group-hover:text-neutral-500 transition-colors"><BarChart3 size={16} /><span className="text-[10px] font-black uppercase tracking-[0.4em] font-futuristic italic">EXECUTE_SYSTEM_AUDIT</span></div>
             </div>
           </div>
         </div>
 
-        {/* RIGHT COLUMN: DIAGNOSTICS (Col 4) */}
+        {/* RIGHT COLUMN: DIAGNOSTICS */}
         <div className="lg:col-span-4 space-y-6 h-full">
           <div className="bg-[#0c0c0c] border border-neutral-800/40 rounded-[2.5rem] p-8 h-full flex flex-col shadow-2xl relative overflow-hidden group">
             <div className="flex items-center gap-3 mb-10">
@@ -517,7 +567,6 @@ const AdminControlCenter: React.FC<AdminControlCenterProps> = ({
             </div>
 
             <div className="flex-1 space-y-10 py-6">
-               {/* STATS CIRCLE */}
                <div className="relative flex flex-col items-center justify-center text-center">
                   <div className="absolute inset-0 bg-red-500/5 rounded-full blur-3xl animate-pulse" />
                   <div className="w-40 h-40 rounded-full border-4 border-neutral-900 border-t-red-500 animate-spin-slow relative flex items-center justify-center">
@@ -534,22 +583,12 @@ const AdminControlCenter: React.FC<AdminControlCenterProps> = ({
                    <span className="text-[7px] font-black text-neutral-700 uppercase tracking-widest block mb-0.5 italic">THROUGHPUT_DISTRIBUTION</span>
                    <div className="space-y-2.5">
                       <div className="space-y-1">
-                         <div className="flex justify-between text-[8px] font-black text-neutral-500 uppercase tracking-widest font-futuristic italic">
-                            <span>Market Liquidity</span>
-                            <span>{Math.round((stats.marketCap / 1000000) * 100)}%</span>
-                         </div>
-                         <div className="h-1 w-full bg-neutral-900 rounded-full overflow-hidden">
-                            <div className="h-full bg-emerald-500/40 transition-all duration-1000" style={{ width: `${Math.round((stats.marketCap / 1000000) * 100)}%` }} />
-                         </div>
+                         <div className="flex justify-between text-[8px] font-black text-neutral-500 uppercase tracking-widest font-futuristic italic"><span>Market Liquidity</span><span>{Math.round((stats.marketCap / 1000000) * 100)}%</span></div>
+                         <div className="h-1 w-full bg-neutral-900 rounded-full overflow-hidden"><div className="h-full bg-emerald-500/40 transition-all duration-1000" style={{ width: `${Math.round((stats.marketCap / 1000000) * 100)}%` }} /></div>
                       </div>
                       <div className="space-y-1">
-                         <div className="flex justify-between text-[8px] font-black text-neutral-500 uppercase tracking-widest font-futuristic italic">
-                            <span>Asset Density</span>
-                            <span>{Math.min(100, stats.activeLeads * 5)}%</span>
-                         </div>
-                         <div className="h-1 w-full bg-neutral-900 rounded-full overflow-hidden">
-                            <div className="h-full bg-cyan-500/40 transition-all duration-1000" style={{ width: `${Math.min(100, stats.activeLeads * 5)}%` }} />
-                         </div>
+                         <div className="flex justify-between text-[8px] font-black text-neutral-500 uppercase tracking-widest font-futuristic italic"><span>Asset Density</span><span>{Math.min(100, stats.activeLeads * 5)}%</span></div>
+                         <div className="h-1 w-full bg-neutral-900 rounded-full overflow-hidden"><div className="h-full bg-cyan-500/40 transition-all duration-1000" style={{ width: `${Math.min(100, stats.activeLeads * 5)}%` }} /></div>
                       </div>
                    </div>
                  </div>
@@ -558,29 +597,11 @@ const AdminControlCenter: React.FC<AdminControlCenterProps> = ({
 
             <div className="space-y-8 mt-auto">
               <div className="grid grid-cols-2 gap-5">
-                <div className="space-y-2">
-                  <span className="text-[7px] font-black text-neutral-700 uppercase tracking-widest block mb-0.5 italic">FIREWALL_STATE</span>
-                  <div className="bg-black/60 border border-neutral-800 p-3 rounded-lg flex items-center gap-2">
-                    <ShieldCheck size={10} className="text-emerald-500" />
-                    <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest italic font-futuristic">ACTIVE</span>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <span className="text-[7px] font-black text-neutral-700 uppercase tracking-widest block mb-0.5 italic">LEDGER_SYNC</span>
-                  <div className="bg-black/60 border border-neutral-800 p-3 rounded-lg text-center">
-                    <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest font-mono">0ms_LATENCY</span>
-                  </div>
-                </div>
+                <div className="space-y-2"><span className="text-[7px] font-black text-neutral-700 uppercase tracking-widest block mb-0.5 italic">FIREWALL_STATE</span><div className="bg-black/60 border border-neutral-800 p-3 rounded-lg flex items-center gap-2"><ShieldCheck size={10} className="text-emerald-500" /><span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest italic font-futuristic">ACTIVE</span></div></div>
+                <div className="space-y-2"><span className="text-[7px] font-black text-neutral-700 uppercase tracking-widest block mb-0.5 italic">LEDGER_SYNC</span><div className="bg-black/60 border border-neutral-800 p-3 rounded-lg text-center"><span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest font-mono">0ms_LATENCY</span></div></div>
               </div>
-
-              <button 
-                onClick={() => { soundService.playClick(); }}
-                className="w-full bg-white text-black rounded-[1.5rem] py-6 md:py-8 flex flex-col items-center justify-center gap-3 transition-all group/btn border-b-[10px] border-neutral-300 shadow-2xl hover:bg-neutral-100 active:translate-y-0.5 active:border-b-4 overflow-hidden relative"
-              >
-                <div className="flex items-center gap-5 relative z-10">
-                  <span className="text-xl font-black italic tracking-widest uppercase font-tactical">BROADCAST_SYSTEM_UPDATE</span>
-                  <ArrowUpRight size={24} className="group-hover/btn:translate-x-1 group-hover/btn:-translate-y-1 transition-transform" />
-                </div>
+              <button onClick={() => { soundService.playClick(); }} className="w-full bg-white text-black rounded-[1.5rem] py-6 md:py-8 flex flex-col items-center justify-center gap-3 transition-all group/btn border-b-[10px] border-neutral-300 shadow-2xl hover:bg-neutral-100 active:translate-y-0.5 active:border-b-4 overflow-hidden relative">
+                <div className="flex items-center gap-5 relative z-10"><span className="text-xl font-black italic tracking-widest uppercase font-tactical">BROADCAST_SYSTEM_UPDATE</span><ArrowUpRight size={24} className="group-hover/btn:translate-x-1 group-hover/btn:-translate-y-1 transition-transform" /></div>
                 <div className="absolute inset-0 bg-red-500/5 opacity-0 group-hover/btn:opacity-100 transition-opacity pointer-events-none" />
               </button>
             </div>
@@ -590,16 +611,55 @@ const AdminControlCenter: React.FC<AdminControlCenterProps> = ({
 
       {/* DISCLOSURE FOOTER */}
       <div className="bg-[#0f0f0f] border-2 border-neutral-900 p-6 rounded-[2.5rem] shadow-xl flex items-start gap-6 max-w-4xl mx-auto group hover:border-red-500/20 transition-all">
-        <div className="w-10 h-10 bg-red-500/5 border border-red-500/20 rounded-xl flex items-center justify-center text-red-500 shrink-0 group-hover:scale-110 transition-transform">
-          <ShieldAlert size={20} />
-        </div>
+        <div className="w-10 h-10 bg-red-500/5 border border-red-500/20 rounded-xl flex items-center justify-center text-red-500 shrink-0 group-hover:scale-110 transition-transform"><ShieldAlert size={20} /></div>
         <div>
            <h4 className="text-xs font-futuristic font-black text-white italic uppercase tracking-[0.3em] mb-2">ADMINISTRATIVE_OVERSIGHT_PROTOCOL</h4>
-           <p className="text-[9px] text-neutral-600 font-medium leading-relaxed uppercase italic tracking-tighter font-rajdhani">
-             System synchronization is live. Any state transition (isolation, authorization, or ledger correction) is permanently indexed in the immutable global administrative audit trail and cross-verified by root-level watchdog nodes.
-           </p>
+           <p className="text-[9px] text-neutral-600 font-medium leading-relaxed uppercase italic tracking-tighter font-rajdhani">System synchronization is live. Any state transition (isolation, authorization, or ledger correction) is permanently indexed in the immutable global administrative audit trail and cross-verified by root-level watchdog nodes.</p>
         </div>
       </div>
+
+      {/* BALANCE ADJUSTMENT PROMPT */}
+      {adjustingUser && (
+        <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl animate-in fade-in duration-300">
+           <div className="w-full max-w-md bg-[#0c0c0c] border-2 border-neutral-800 rounded-[2.5rem] shadow-2xl p-8 space-y-8 animate-in zoom-in-95 duration-300 relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none"><Database size={100} /></div>
+              <div className="flex justify-between items-center relative z-10">
+                 <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center text-emerald-500 shadow-glow-sm"><DollarSign size={20} /></div>
+                    <h3 className="text-xl font-futuristic font-black text-white italic uppercase tracking-tighter">LIQUIDITY_OVERRIDE</h3>
+                 </div>
+                 <button onClick={() => setAdjustingUser(null)} className="p-2 hover:bg-neutral-900 rounded-lg text-neutral-500 hover:text-white transition-all"><X size={20} /></button>
+              </div>
+              <div className="bg-black/60 border border-neutral-800 p-4 rounded-xl space-y-2 relative z-10">
+                 <span className="text-[8px] font-black text-neutral-700 uppercase tracking-widest block">TARGET_NODE</span>
+                 <p className="text-xs font-black text-white uppercase italic">{adjustingUser.name}</p>
+                 <p className="text-[9px] text-neutral-600 font-mono italic">{adjustingUser.id}</p>
+              </div>
+              <div className="space-y-4 relative z-10">
+                 <div className="space-y-2">
+                    <label className="text-[9px] font-black text-neutral-700 uppercase tracking-widest px-1 italic">NEW_VAULT_BALANCE ($)</label>
+                    <div className="relative">
+                       <span className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700 font-tactical text-xl">$</span>
+                       <input 
+                         type="number" 
+                         className="w-full bg-black border-2 border-neutral-800 rounded-xl pl-10 pr-4 py-4 text-2xl font-tactical text-white outline-none focus:border-[#00e5ff]/40 transition-all"
+                         value={adjustAmount}
+                         onChange={e => setAdjustAmount(e.target.value)}
+                         autoFocus
+                       />
+                    </div>
+                 </div>
+                 <button 
+                   onClick={handleAdjustBalance}
+                   className="w-full py-4 bg-white text-black rounded-2xl font-black text-sm uppercase italic tracking-[0.2em] transition-all border-b-4 border-neutral-300 active:translate-y-0.5 active:border-b-0 flex items-center justify-center gap-3"
+                 >
+                   <ShieldCheck size={18} /> AUTHORIZE_CHANGE
+                 </button>
+                 <p className="text-[8px] text-center text-neutral-600 uppercase tracking-widest font-rajdhani">This action bypasses standard deposit protocols and is logged in the aggregate ledger.</p>
+              </div>
+           </div>
+        </div>
+      )}
 
       {selectedUserForAudit && (
         <UserAuditHUD 

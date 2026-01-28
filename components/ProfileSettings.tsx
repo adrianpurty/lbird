@@ -1,9 +1,8 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   ShieldCheck, Mail, User as UserIcon, Lock, Camera, Save, RefreshCw, FileText, 
   Globe, MonitorSmartphone, Briefcase, Target, Activity, Cpu, Database, 
-  Fingerprint, Zap, ArrowRight, ShieldAlert
+  Fingerprint, Zap, ArrowRight, ShieldAlert, Circle, CheckCircle2, Phone
 } from 'lucide-react';
 import { User } from '../types.ts';
 import { NICHE_PROTOCOLS } from '../services/apiService.ts';
@@ -27,7 +26,8 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onUpdate }) => 
     industryFocus: user.industryFocus || '',
     preferredContact: user.preferredContact || 'email',
     defaultBusinessUrl: user.defaultBusinessUrl || '',
-    defaultTargetUrl: user.defaultTargetUrl || ''
+    defaultTargetUrl: user.defaultTargetUrl || '',
+    biometricEnabled: user.biometricEnabled || false
   });
   const [isSaving, setIsSaving] = useState(false);
   const [telemetry, setTelemetry] = useState({
@@ -44,6 +44,11 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onUpdate }) => 
     setIsSaving(true);
     onUpdate({ ...formData });
     setTimeout(() => setIsSaving(false), 800);
+  };
+
+  const toggleBiometrics = (enabled: boolean) => {
+    soundService.playClick();
+    setFormData(prev => ({ ...prev, biometricEnabled: enabled }));
   };
 
   return (
@@ -89,6 +94,36 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onUpdate }) => 
               </div>
             </div>
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-[8px] font-black text-neutral-700 uppercase tracking-widest px-1 italic flex items-center gap-2">
+                   <Phone size={10} className="text-emerald-500" /> Secure Line (Phone)
+                </label>
+                <input 
+                  type="tel" 
+                  className="w-full bg-black border border-neutral-800 rounded-lg px-3 py-2 text-[11px] text-white outline-none focus:border-[#00e5ff]/40 font-mono" 
+                  placeholder="+X XXX XXX XXXX"
+                  value={formData.phone} 
+                  onChange={e => setFormData({...formData, phone: e.target.value})} 
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[8px] font-black text-neutral-700 uppercase tracking-widest px-1 italic flex items-center gap-2">
+                   <Mail size={10} className="text-purple-500" /> Contact Preference
+                </label>
+                <select 
+                  className="w-full bg-black border border-neutral-800 rounded-lg px-3 py-2 text-[11px] text-white outline-none focus:border-[#00e5ff]/40"
+                  value={formData.preferredContact}
+                  onChange={e => setFormData({...formData, preferredContact: e.target.value as any})}
+                >
+                  <option value="email">EMAIL_ONLY</option>
+                  <option value="phone">PHONE_CALL</option>
+                  <option value="whatsapp">WHATSAPP</option>
+                  <option value="telegram">TELEGRAM</option>
+                </select>
+              </div>
+            </div>
+
             <div className="space-y-1">
               <label className="text-[8px] font-black text-neutral-700 uppercase tracking-widest px-1">Biographical Manifest</label>
               <textarea rows={2} className="w-full bg-black border border-neutral-800 rounded-lg px-3 py-2 text-[10px] text-neutral-300 outline-none focus:border-[#00e5ff]/40 resize-none italic" value={formData.bio} onChange={e => setFormData({...formData, bio: e.target.value})} />
@@ -112,6 +147,47 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onUpdate }) => 
                   </select>
                 </div>
              </div>
+          </div>
+
+          {/* BIOMETRIC SECURITY NODE */}
+          <div className="bg-[#0c0c0c] border border-neutral-800/40 rounded-2xl p-4 shadow-lg space-y-4 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity">
+              <Fingerprint size={80} />
+            </div>
+            
+            <h3 className="text-[8px] font-black text-neutral-700 uppercase tracking-widest italic flex items-center gap-2">
+              <ShieldCheck size={10} className="text-emerald-500" /> Secure_Access_Node
+            </h3>
+
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="space-y-1">
+                <h4 className="text-[11px] font-black text-white uppercase tracking-widest flex items-center gap-2">
+                  <Fingerprint size={14} className="text-[#00e5ff]" /> Biometric Authentication
+                </h4>
+                <p className="text-[9px] text-neutral-600 uppercase tracking-tight max-w-xs italic">
+                  Toggle hardware-level fingerprint verification for subsequent terminal sessions.
+                </p>
+              </div>
+
+              <div className="flex bg-black/40 border border-neutral-800 p-1 rounded-xl shrink-0">
+                <button 
+                  type="button"
+                  onClick={() => toggleBiometrics(false)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${!formData.biometricEnabled ? 'bg-red-950/20 text-red-500 border border-red-900/30' : 'text-neutral-600 hover:text-neutral-400'}`}
+                >
+                  {!formData.biometricEnabled ? <CheckCircle2 size={12} /> : <Circle size={12} />}
+                  Disabled
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => toggleBiometrics(true)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${formData.biometricEnabled ? 'bg-emerald-950/20 text-emerald-500 border border-emerald-900/30' : 'text-neutral-600 hover:text-neutral-400'}`}
+                >
+                  {formData.biometricEnabled ? <CheckCircle2 size={12} /> : <Circle size={12} />}
+                  Enabled
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 

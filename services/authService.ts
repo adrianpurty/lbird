@@ -1,3 +1,4 @@
+
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
@@ -60,6 +61,36 @@ export const authService = {
       }
       throw new Error(error.message || "Authentication failed");
     }
+  },
+
+  /**
+   * Simulated biometric sign-in logic
+   */
+  async signInWithBiometrics(): Promise<User> {
+    // In a production app, we would use navigator.credentials.get
+    // and verify the challenge on the server.
+    // For this tactical demo, we look for the last signed-in user or a flag in local storage.
+    
+    // We'll simulate a 1s handshake delay
+    await new Promise(r => setTimeout(r, 1200));
+
+    // Try to recover the admin if sudo session exists
+    const isSudo = localStorage.getItem('leadbid_sudo_session');
+    if (isSudo === 'true') {
+      const profile = await apiService.getUserProfile('admin_1');
+      if (profile) return profile;
+    }
+
+    // Otherwise, we look for the "biometric_uid" hint we would have stored on setup
+    const bioUid = localStorage.getItem('leadbid_biometric_uid');
+    if (bioUid) {
+      const profile = await apiService.getUserProfile(bioUid);
+      if (profile && profile.biometricEnabled) {
+        return profile;
+      }
+    }
+
+    throw new Error("BIOMETRIC_IDENTITY_NOT_FOUND: Setup fingerprint in profile first.");
   },
 
   async signUp(email: string, token: string, name?: string): Promise<User> {

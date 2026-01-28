@@ -1,3 +1,4 @@
+
 import { 
   collection, 
   doc, 
@@ -41,7 +42,8 @@ class ApiService {
       status: 'active',
       stripeConnected: true,
       wishlist: [],
-      totalSpend: 0
+      totalSpend: 0,
+      biometricEnabled: false
     });
 
     const sampleLeads = [
@@ -166,6 +168,7 @@ class ApiService {
       stripeConnected: false,
       wishlist: [],
       profileImage: data.profileImage || '',
+      biometricEnabled: false,
       ...data
     };
     await setDoc(doc(db, "users", uid), newUser);
@@ -195,6 +198,9 @@ class ApiService {
 
   async updateUser(id: string, updates: Partial<User>): Promise<any> {
     await updateDoc(doc(db, "users", id), updates);
+    if (updates.biometricEnabled) {
+      localStorage.setItem('leadbid_biometric_uid', id);
+    }
   }
 
   async placeBid(bidData: any): Promise<any> {

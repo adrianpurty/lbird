@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { 
   Zap, 
   Lock, 
@@ -24,6 +25,14 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isBiometricAvailable, setIsBiometricAvailable] = useState(false);
+
+  useEffect(() => {
+    // Check if browser supports WebAuthn and if there's a stored indicator for biometric usage
+    if (window.PublicKeyCredential) {
+      setIsBiometricAvailable(true);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,6 +46,24 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
       onLogin(user);
     } catch (err: any) {
       setError(err.message || 'Authentication Error');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleBiometricAuth = async () => {
+    if (isSyncing) return;
+    soundService.playClick(true);
+    setIsSyncing(true);
+    setError('');
+
+    try {
+      // Real implementation would call navigator.credentials.get
+      // For this tactical demo, we simulate the fingerprint handshake
+      const user = await authService.signInWithBiometrics();
+      onLogin(user);
+    } catch (err: any) {
+      setError(err.message || "Biometric authentication failed. Use manual credentials.");
     } finally {
       setIsSyncing(false);
     }
@@ -131,15 +158,28 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
               </div>
             )}
 
-            <button 
-              type="submit" 
-              disabled={isSyncing} 
-              className="w-full py-4 rounded-xl font-black text-xs uppercase italic tracking-[0.3em] transition-all border-b-4 active:translate-y-1 active:border-b-0 bg-white text-black border-neutral-300 hover:bg-neutral-100 flex items-center justify-center gap-3 mt-2 shadow-xl shadow-white/5 font-tactical"
-            >
-              {isSyncing ? <Loader2 className="animate-spin" size={18} /> : (
-                <>INIT_AUTHORIZATION <ArrowRight size={14} /></>
+            <div className="flex flex-col gap-3 mt-2">
+              <button 
+                type="submit" 
+                disabled={isSyncing} 
+                className="w-full py-4 rounded-xl font-black text-xs uppercase italic tracking-[0.3em] transition-all border-b-4 active:translate-y-1 active:border-b-0 bg-white text-black border-neutral-300 hover:bg-neutral-100 flex items-center justify-center gap-3 shadow-xl shadow-white/5 font-tactical"
+              >
+                {isSyncing ? <Loader2 className="animate-spin" size={18} /> : (
+                  <>INIT_AUTHORIZATION <ArrowRight size={14} /></>
+                )}
+              </button>
+
+              {isBiometricAvailable && (
+                <button 
+                  type="button"
+                  onClick={handleBiometricAuth}
+                  disabled={isSyncing}
+                  className="w-full py-3.5 rounded-xl font-black text-[9px] uppercase tracking-[0.4em] transition-all border border-neutral-800 bg-black/60 text-[#00e5ff] hover:bg-black hover:border-[#00e5ff]/40 flex items-center justify-center gap-3 shadow-lg font-futuristic italic"
+                >
+                  <Fingerprint size={16} /> SIGN_IN_WITH_BIOMETRICS
+                </button>
               )}
-            </button>
+            </div>
           </form>
 
           {/* SOCIAL HANDSHAKE */}

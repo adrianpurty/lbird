@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react';
 import { 
   Server, Database, Clock, Zap, Activity, Heart, Globe, Layers
@@ -18,6 +19,7 @@ import AdminPaymentSettings from './components/AdminPaymentSettings.tsx';
 import AdminOAuthSettings from './components/AdminOAuthSettings.tsx';
 import AdminControlCenter from './components/AdminControlCenter.tsx';
 import SavedAssets from './components/SavedAssets.tsx';
+import BiometricPrompt from './components/BiometricPrompt.tsx';
 import { Lead, User, PurchaseRequest, Notification, PlatformAnalytics, OAuthConfig, Invoice, GatewayAPI, WalletActivity } from './types.ts';
 import { apiService } from './services/apiService.ts';
 import { authService } from './services/authService.ts';
@@ -57,8 +59,9 @@ const App: React.FC = () => {
 
   const [user, setUser] = useState<User | null>(null);
   const [theme, setTheme] = useState<'light' | 'dark'>(() => 'dark');
+  const [showBiometricPrompt, setShowBiometricPrompt] = useState(false);
 
-  const [selectedLeadForBid, setSelectedLeadForBid] = useState<Lead | null>(null);
+  const [selectedLeadForBid, setSelectedLeadForBid] = useState<{ lead: Lead, initialBid?: number } | null>(null);
   const [selectedLeadForDetail, setSelectedLeadForDetail] = useState<Lead | null>(null);
   const [lastBidLeadId, setLastBidLeadId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -139,7 +142,7 @@ const App: React.FC = () => {
 
     if (!user.defaultBusinessUrl || !user.defaultTargetUrl) {
       showToast("SET_DEFAULTS_IN_PROFILE_FOR_QUICK_BID", "info");
-      setSelectedLeadForBid(lead);
+      setSelectedLeadForBid({ lead });
       return;
     }
 
@@ -147,10 +150,9 @@ const App: React.FC = () => {
     const leadsPerDay = 50;
     const totalDailyCost = bidAmount * leadsPerDay;
 
-    // Strict Rule 1 Enforcement: Sufficient funds check
     if (user.balance < totalDailyCost) {
       showToast("INSUFFICIENT_FUNDS_FOR_QUICK_BID", "error");
-      setSelectedLeadForBid(lead);
+      setSelectedLeadForBid({ lead });
       return;
     }
 
@@ -187,7 +189,31 @@ const App: React.FC = () => {
     setAuthView('app');
     setActiveTab('market');
     fetchAppData();
+    
+    // Logic to show biometric prompt if not already enabled and browser supports it
+    if (!loggedUser.biometricEnabled && window.PublicKeyCredential) {
+      setShowBiometricPrompt(true);
+    }
+
     showToast(`AUTHORIZED: ${loggedUser.name.toUpperCase()}`);
+  };
+
+  const handleEnableBiometrics = async () => {
+    if (!user) return;
+    try {
+      // Simulated biometric registration handshake
+      // In a real app, this calls navigator.credentials.create
+      const simulatedKey = `bio_${Math.random().toString(36).substr(2, 9)}`;
+      await apiService.updateUser(user.id, { 
+        biometricEnabled: true, 
+        biometricKey: simulatedKey 
+      });
+      setUser({ ...user, biometricEnabled: true, biometricKey: simulatedKey });
+      setShowBiometricPrompt(false);
+      showToast("BIOMETRICS_SYNCED", "success");
+    } catch (error) {
+      showToast("BIOMETRIC_SYNC_FAILED", "error");
+    }
   };
 
   const handleLogout = useCallback(async () => { 
@@ -233,7 +259,6 @@ const App: React.FC = () => {
           <div className="max-w-[1600px] mx-auto w-full pb-32 md:pb-20">
             {activeTab === 'market' && (
               <div className="space-y-12 animate-in fade-in duration-700">
-                {/* HERO HEADER */}
                 <div className="space-y-6">
                   <div className="flex items-center gap-4">
                     <h1 className="text-4xl sm:text-7xl font-futuristic italic font-black uppercase tracking-tighter">
@@ -249,7 +274,6 @@ const App: React.FC = () => {
 
                 <DashboardStats leads={marketData.leads} user={user!} gateways={marketData.gateways} />
 
-                {/* SAVED ASSETS SECTION (CAROUSEL STYLE) */}
                 {savedLeads.length > 0 && (
                   <section className="space-y-6 animate-in slide-in-from-left duration-500">
                     <div className="flex items-center gap-3">
@@ -264,7 +288,7 @@ const App: React.FC = () => {
                              lead={lead}
                              userRole={user!.role}
                              currentUserId={user!.id}
-                             onBid={(id) => setSelectedLeadForBid(marketData.leads.find(l => l.id === id) || null)}
+                             onBid={(id, initialBid) => setSelectedLeadForBid({ lead: marketData.leads.find(l => l.id === id)!, initialBid })}
                              onQuickBid={handleQuickBid}
                              onEdit={setSelectedLeadForDetail}
                              nicheCount={marketData.leads.filter(l => l.category === lead.category).length}
@@ -279,16 +303,15 @@ const App: React.FC = () => {
                   </section>
                 )}
 
-                {/* MAIN MARKETPLACE SECTION */}
                 <section className="space-y-8">
                   <div className="flex items-center gap-3">
                     <Layers size={16} className="text-neutral-500" />
-                    <h3 className="text-sm font-black text-white italic uppercase tracking-[0.3em]">GLOBAL_LIQUIDITY_POOL</h3>
+                    <h3 className="text-sm font-black text-white italic uppercase tracking-[0.3em]">GLOBAL_LEAD_POOLS</h3>
                   </div>
                   <div className="bg-[#0c0c0c] rounded-[2rem] sm:rounded-[3rem] border border-neutral-800/40 p-4 sm:p-10 shadow-2xl relative">
                     <MemoizedLeadGrid 
                       leads={marketData.leads} 
-                      onBid={(id) => setSelectedLeadForBid(marketData.leads.find(l => l.id === id) || null)} 
+                      onBid={(id, initialBid) => setSelectedLeadForBid({ lead: marketData.leads.find(l => l.id === id)!, initialBid })} 
                       onQuickBid={handleQuickBid}
                       onEdit={setSelectedLeadForDetail} 
                       userRole={user!.role} 
@@ -305,7 +328,7 @@ const App: React.FC = () => {
             {activeTab === 'wishlist' && (
               <SavedAssets 
                 leads={savedLeads} 
-                onBid={(id) => setSelectedLeadForBid(marketData.leads.find(l => l.id === id) || null)} 
+                onBid={(id) => setSelectedLeadForBid({ lead: marketData.leads.find(l => l.id === id)! })} 
                 onRemove={toggleWishlist} 
               />
             )}
@@ -369,7 +392,8 @@ const App: React.FC = () => {
 
       {selectedLeadForBid && (
         <BiddingModal 
-          lead={selectedLeadForBid} 
+          lead={selectedLeadForBid.lead} 
+          initialBid={selectedLeadForBid.initialBid}
           user={user!} 
           gateways={marketData.gateways} 
           onClose={() => setSelectedLeadForBid(null)} 
@@ -377,13 +401,14 @@ const App: React.FC = () => {
             await apiService.placeBid({ 
               userId: user!.id, 
               userName: user!.name,
-              leadId: selectedLeadForBid.id, 
-              leadTitle: selectedLeadForBid.title, 
+              leadId: selectedLeadForBid.lead.id, 
+              leadTitle: selectedLeadForBid.lead.title, 
               ...d 
             });
             fetchAppData();
-            setLastBidLeadId(selectedLeadForBid.id);
+            setLastBidLeadId(selectedLeadForBid.lead.id);
             setTimeout(() => setLastBidLeadId(null), 6000);
+            showToast(selectedLeadForBid.initialBid ? "ACQUISITION_LOCKED" : "BID_BROADCAST_SUCCESS");
           }} 
           onRefill={() => { setSelectedLeadForBid(null); setActiveTab('settings'); }} 
           onRedirectToActionCenter={() => {
@@ -394,8 +419,15 @@ const App: React.FC = () => {
         />
       )}
       
-      {selectedLeadForDetail && <AdminLeadActionsModal lead={selectedLeadForDetail} user={user!} onClose={() => setSelectedLeadForDetail(null)} onSave={(u) => apiService.updateLead(selectedLeadForDetail.id, u).then(() => { fetchAppData(); setSelectedLeadForDetail(null); })} onDelete={(id) => apiService.deleteLead(id).then(() => { fetchAppData(); setSelectedLeadForDetail(null); })} onBid={(id) => { setSelectedLeadForDetail(null); setSelectedLeadForBid(marketData.leads.find(l => l.id === id) || null); }} />}
+      {selectedLeadForDetail && <AdminLeadActionsModal lead={selectedLeadForDetail} user={user!} onClose={() => setSelectedLeadForDetail(null)} onSave={(u) => apiService.updateLead(selectedLeadForDetail.id, u).then(() => { fetchAppData(); setSelectedLeadForDetail(null); })} onDelete={(id) => apiService.deleteLead(id).then(() => { fetchAppData(); setSelectedLeadForDetail(null); })} onBid={(id) => { setSelectedLeadForDetail(null); setSelectedLeadForBid({ lead: marketData.leads.find(l => l.id === id)! }); }} />}
       
+      {showBiometricPrompt && (
+        <BiometricPrompt 
+          onEnable={handleEnableBiometrics}
+          onSkip={() => setShowBiometricPrompt(false)}
+        />
+      )}
+
       {toast && (
         <div className="fixed bottom-24 sm:bottom-10 right-4 sm:right-10 z-[1000] animate-in slide-in-from-right duration-500">
            <div className={`px-6 sm:px-8 py-3 sm:py-4 rounded-2xl border-2 flex items-center gap-4 ${

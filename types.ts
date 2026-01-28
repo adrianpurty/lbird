@@ -105,6 +105,8 @@ export interface User {
   defaultTargetUrl?: string;
   last_active_at?: string;
   current_page?: string;
+  biometricEnabled?: boolean;
+  biometricKey?: string;
 }
 
 export interface OAuthConfig {
