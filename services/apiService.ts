@@ -49,7 +49,7 @@ class ApiService {
       const configSnap = await getDoc(doc(db, "config", "auth_config"));
 
       return {
-        metadata: { version: '5.3.4-STABLE', last_updated: new Date().toISOString() },
+        metadata: { version: '5.3.5-STABLE', last_updated: new Date().toISOString() },
         leads: leadsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
         users: usersSnap.docs.map(d => ({ id: d.id, ...d.data() })),
         purchaseRequests: bidsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
@@ -302,11 +302,17 @@ class ApiService {
       facebookEnabled: false, facebookAppId: '', facebookAppSecret: '' 
     });
 
-    // 4. Default Gateway
-    await addDoc(collection(db, "api_nodes"), { 
-      id: 'gw_stripe_primary', provider: 'stripe', name: 'Global Settlement Node', 
-      publicKey: 'pk_test_sample', secretKey: 'sk_test_sample', fee: '2.5', status: 'active' 
-    });
+    // 4. Diverse Gateways
+    const defaultGateways = [
+      { id: 'gw_stripe_primary', provider: 'stripe', name: 'Global Settlement Node', publicKey: 'pk_test_sample', secretKey: 'sk_test_sample', fee: '2.5', status: 'active' },
+      { id: 'gw_binance_sync', provider: 'binance', name: 'Binance Smart Node', publicKey: '0x_binance_vault', secretKey: '********', fee: '1.0', status: 'active' },
+      { id: 'gw_upi_india', provider: 'upi', name: 'UPI Real-time Node', publicKey: 'leadbid@upi', secretKey: '********', fee: '0.0', status: 'active' },
+      { id: 'gw_crypto_vault', provider: 'crypto', name: 'BTC/ETH Decentralized Node', publicKey: '3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy', secretKey: '********', fee: '0.5', status: 'active' }
+    ];
+
+    for (const g of defaultGateways) {
+       await addDoc(collection(db, "api_nodes"), g);
+    }
 
     // 5. Initial Notification
     await addDoc(collection(db, "notifications"), {

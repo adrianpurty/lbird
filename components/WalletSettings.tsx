@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   CreditCard, 
@@ -221,7 +220,7 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
                 
                 <div className="py-2">
                   {flowMode === 'deposit' ? (
-                    selectedGateway?.provider === 'crypto' || selectedGateway?.provider === 'binance' ? (
+                    selectedGateway?.provider === 'crypto' || selectedGateway?.provider === 'binance' || selectedGateway?.provider === 'upi' ? (
                       <div className="flex flex-col items-center gap-4 bg-black/40 rounded-2xl p-6 border border-neutral-800">
                         <QrCode size={120} className="text-white" />
                         <div className="text-center w-full px-2">
