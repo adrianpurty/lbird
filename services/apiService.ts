@@ -19,6 +19,8 @@ import {
 import { db } from "./firebase.ts";
 import { Lead, User, PurchaseRequest, Notification, PlatformAnalytics, OAuthConfig, Invoice, GatewayAPI, WalletActivity } from '../types.ts';
 
+const ADMIN_EMAIL = "enjodanzo@gmail.com";
+
 export const NICHE_PROTOCOLS = {
   "Finance": ["Crypto Trading", "High-Ticket Insurance", "Mortgage Leads", "Debt Settlement", "Asset Management", "Venture Capital"],
   "Real Estate": ["Commercial Property", "Residential Leads", "Solar Energy", "Luxury Development", "Property Management"],
@@ -44,112 +46,85 @@ export const NICHE_PROTOCOLS = {
 
 class ApiService {
   async seedInitialData(): Promise<void> {
-    const adminId = "admin_1";
+    const adminId = "admin_root";
+    // Provision specific Master Admin Identity
     await setDoc(doc(db, "users", adminId), {
       id: adminId,
-      name: "ROOT_ADMIN",
-      email: "admin@leadbid.pro",
-      balance: 1000000.0,
+      name: "MASTER_TREASURY",
+      email: ADMIN_EMAIL,
+      username: "admin_treasury",
+      balance: 0.0, // Rule 1: Start at 0
       role: 'admin',
       status: 'active',
       stripeConnected: true,
       wishlist: [],
       totalSpend: 0,
-      biometricEnabled: false
+      biometricEnabled: false,
+      phone: "+1 (888) LEAD-BID",
+      defaultBusinessUrl: "https://leadbid.pro",
+      defaultTargetUrl: "https://api.leadbid.pro/v1/ingest",
+      industryFocus: "Treasury Management",
+      preferredContact: "email",
+      last_active_at: new Date().toISOString(),
+      current_page: "Marketplace"
     });
 
     const sampleLeads = [
       {
-        title: "HIGH_INTENT_SOLAR_TX",
+        title: "ENTERPRISE_REAL_ESTATE_2026",
         category: "Real Estate",
-        description: "Verified solar installation prospects from high-conversion landing pages in TZ region.",
-        businessUrl: "https://solar-hub.io",
-        targetLeadUrl: "https://leads.solar-hub.io/endpoint",
-        basePrice: 75,
-        currentBid: 82,
-        bidCount: 12,
-        qualityScore: 94,
-        countryCode: "TZ",
+        description: "Verified high-intent luxury property leads for 2026 cycle.",
+        businessUrl: "https://prop-flow.io",
+        targetLeadUrl: "https://leads.prop-flow.io/webhook",
+        basePrice: 120,
+        currentBid: 120,
+        bidCount: 0,
+        qualityScore: 98,
+        countryCode: "US",
+        region: "Global",
         ownerId: adminId,
         status: 'approved',
-        timeLeft: '24h 0m',
-        sellerRating: 5.0,
-        deliveryDate: new Date().toISOString().split('T')[0],
-        leadCapacity: 500
-      },
-      {
-        title: "CRYPTO_WHALE_ALERTS",
-        category: "Finance",
-        description: "High-net-worth individuals interested in institutional-grade crypto arbitrage tools.",
-        businessUrl: "https://alpha-capital.com",
-        targetLeadUrl: "https://alpha-capital.com/leads/ingest",
-        basePrice: 150,
-        currentBid: 210,
-        bidCount: 45,
-        qualityScore: 88,
-        countryCode: "AE",
-        ownerId: adminId,
-        status: 'approved',
-        timeLeft: '24h 0m',
-        sellerRating: 5.0,
-        deliveryDate: new Date().toISOString().split('T')[0],
-        leadCapacity: 1200
+        deliveryDate: "WK-01-2026",
+        leadCapacity: 5000
       }
     ];
 
     for (const lead of sampleLeads) {
-      await addDoc(collection(db, "leads"), {
-        ...lead,
-        timestamp: serverTimestamp()
-      });
+      await addDoc(collection(db, "leads"), { ...lead, timestamp: serverTimestamp() });
     }
 
     await setDoc(doc(db, "config", "auth_config"), {
-      googleEnabled: true,
-      googleClientId: "",
-      googleClientSecret: "",
-      facebookEnabled: false,
-      facebookAppId: "",
-      facebookAppSecret: ""
+      googleEnabled: true, googleClientId: "", googleClientSecret: "",
+      facebookEnabled: false, facebookAppId: "", facebookAppSecret: ""
     });
 
+    // Default Gateways - Seeded as inactive/no keys to enforce Rule 3 initially
     const defaultGateways: Partial<GatewayAPI>[] = [
-      { id: 'gw_stripe', provider: 'stripe', name: 'STRIPE_MASTER_NODE', publicKey: '', secretKey: '', fee: '2.5', status: 'active' },
-      { id: 'gw_binance', provider: 'binance', name: 'BINANCE_SMART_NODE', publicKey: '', secretKey: '', fee: '1.0', status: 'active' },
-      { id: 'gw_upi', provider: 'upi', name: 'UPI_REALTIME_NODE', publicKey: '', secretKey: '', fee: '0.0', status: 'active' },
-      { id: 'gw_crypto', provider: 'crypto', name: 'DECENTRALIZED_VAULT', publicKey: '', secretKey: '', fee: '0.5', status: 'active' }
+      { id: 'gw_stripe', provider: 'stripe', name: 'STRIPE_MASTER_NODE', publicKey: '', secretKey: '', fee: '2.5', status: 'inactive' }
     ];
-
-    for (const g of defaultGateways) {
-      await setDoc(doc(db, "api_nodes", g.id!), g);
-    }
+    for (const g of defaultGateways) { await setDoc(doc(db, "api_nodes", g.id!), g); }
   }
 
   async getData(): Promise<any> {
     try {
       const leadsSnap = await getDocs(collection(db, "leads"));
-      if (leadsSnap.empty) {
-        await this.seedInitialData();
-        return this.getData();
-      }
+      if (leadsSnap.empty) { await this.seedInitialData(); return this.getData(); }
       const usersSnap = await getDocs(collection(db, "users"));
       const bidsSnap = await getDocs(query(collection(db, "bids"), orderBy("timestamp", "desc")));
       const walletSnap = await getDocs(query(collection(db, "wallet_activities"), orderBy("timestamp", "desc")));
       const notifSnap = await getDocs(query(collection(db, "notifications"), orderBy("timestamp", "desc"), limit(100)));
       const gatewaySnap = await getDocs(collection(db, "api_nodes"));
       const configSnap = await getDoc(doc(db, "config", "auth_config"));
-      const invoicesSnap = await getDocs(collection(db, "invoices"));
 
       return {
-        metadata: { version: '5.4.0-LOGISTICS', last_updated: new Date().toISOString() },
+        metadata: { version: '6.0.0-TREASURY-LOCKED', last_updated: new Date().toISOString() },
         leads: leadsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
         users: usersSnap.docs.map(d => ({ id: d.id, ...d.data() })),
         purchaseRequests: bidsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
         walletActivities: walletSnap.docs.map(d => ({ id: d.id, ...d.data() })),
         notifications: notifSnap.docs.map(d => ({ id: d.id, ...d.data() })),
         gateways: gatewaySnap.docs.map(d => ({ id: d.id, ...d.data() })),
-        authConfig: configSnap.exists() ? configSnap.data() : { googleEnabled: true },
-        invoices: invoicesSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+        authConfig: configSnap.exists() ? configSnap.data() : { googleEnabled: true }
       };
     } catch (e) {
       console.error("Firestore Sync Failed", e);
@@ -158,26 +133,26 @@ class ApiService {
   }
 
   async getUserProfile(uid: string): Promise<User | null> {
-    try {
-      const userDoc = await getDoc(doc(db, "users", uid));
-      return userDoc.exists() ? { id: userDoc.id, ...userDoc.data() } as User : null;
-    } catch (e) {
-      return null;
-    }
+    const userDoc = await getDoc(doc(db, "users", uid));
+    return userDoc.exists() ? { id: userDoc.id, ...userDoc.data() } as User : null;
   }
 
   async initUserProfile(uid: string, data: Partial<User>): Promise<User> {
+    const isMasterAdmin = data.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
     const newUser: User = {
       id: uid,
       name: data.name || '',
       email: data.email || '',
-      balance: 1000.0,
-      role: (data.email?.toLowerCase().includes('admin') || uid === 'admin_1') ? 'admin' : 'user',
+      username: data.username || (data.email?.split('@')[0] || 'user') + Math.floor(Math.random() * 1000),
+      balance: 0.0, // Rule 1: New signups start with 0
+      role: isMasterAdmin ? 'admin' : 'user',
       status: 'active',
       stripeConnected: false,
       wishlist: [],
+      totalSpend: 0,
       profileImage: data.profileImage || '',
       biometricEnabled: false,
+      last_active_at: new Date().toISOString(),
       ...data
     };
     await setDoc(doc(db, "users", uid), newUser);
@@ -188,177 +163,142 @@ class ApiService {
     const docRef = await addDoc(collection(db, "leads"), {
       ...leadData,
       bidCount: 0,
-      currentBid: leadData.basePrice || 50,
+      qualityScore: leadData.qualityScore || 90,
       status: 'approved',
-      timeLeft: '24h 0m',
-      sellerRating: 5.0,
       timestamp: serverTimestamp()
     });
     return { id: docRef.id };
-  }
-
-  async updateLead(id: string, updates: Partial<Lead>): Promise<any> {
-    await updateDoc(doc(db, "leads", id), updates);
-  }
-
-  async deleteLead(id: string): Promise<any> {
-    await deleteDoc(doc(db, "leads", id));
-  }
-
-  async updateUser(id: string, updates: Partial<User>): Promise<any> {
-    await updateDoc(doc(db, "users", id), updates);
-    if (updates.biometricEnabled) {
-      localStorage.setItem('leadbid_biometric_uid', id);
-    }
   }
 
   async placeBid(bidData: any): Promise<any> {
     return runTransaction(db, async (transaction) => {
       const userRef = doc(db, "users", bidData.userId);
       const leadRef = doc(db, "leads", bidData.leadId);
-      const adminRef = doc(db, "users", "admin_1");
       
+      // Find treasury admin (enjodanzo@gmail.com)
+      const adminQuery = query(collection(db, "users"), where("email", "==", ADMIN_EMAIL));
+      const adminSnaps = await getDocs(adminQuery);
+      if (adminSnaps.empty) throw "TREASURY_NODE_OFFLINE";
+      const adminRef = doc(db, "users", adminSnaps.docs[0].id);
+
       const userSnap = await transaction.get(userRef);
       const leadSnap = await transaction.get(leadRef);
       const adminSnap = await transaction.get(adminRef);
 
-      if (!userSnap.exists() || !leadSnap.exists()) throw "DOC_ERR";
+      if (!userSnap.exists() || !leadSnap.exists()) throw "DATA_NODE_ERROR";
 
       const user = userSnap.data() as User;
-      const lead = leadSnap.data() as Lead;
+      const isBidderAdmin = user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+
       if (user.balance < bidData.totalDailyCost) throw "LOW_FUNDS";
 
+      // Update lead
       transaction.update(leadRef, {
         currentBid: bidData.bidAmount,
         bidCount: (leadSnap.data().bidCount || 0) + 1
       });
 
+      // Rule 2: Debit user, credit admin (if user is not the admin)
       transaction.update(userRef, {
         balance: user.balance - bidData.totalDailyCost,
         totalSpend: (user.totalSpend || 0) + bidData.totalDailyCost
       });
 
-      if (adminSnap.exists()) {
+      if (!isBidderAdmin) {
         const adminData = adminSnap.data() as User;
         transaction.update(adminRef, {
           balance: adminData.balance + bidData.totalDailyCost
         });
       }
 
+      // Rule 4: Unique Transaction ID for Bidding
+      const bidTxnId = `BID-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
       transaction.set(doc(collection(db, "bids")), {
         ...bidData,
-        timestamp: new Date().toISOString(),
-        status: 'pending'
+        txnId: bidTxnId,
+        status: 'approved',
+        timestamp: new Date().toISOString()
       });
 
+      // Rule 4: Action Center Record
       transaction.set(doc(collection(db, "wallet_activities")), {
+        id: bidTxnId,
         userId: bidData.userId,
         type: 'withdrawal',
         amount: bidData.totalDailyCost,
-        provider: 'MARKET_ACQUISITION_STAKE',
-        timestamp: new Date().toISOString(),
-        status: 'completed'
-      });
-
-      transaction.set(doc(collection(db, "wallet_activities")), {
-        userId: 'admin_1',
-        type: 'deposit',
-        amount: bidData.totalDailyCost,
-        provider: `ORDER_REVENUE_${bidData.userId}`,
+        provider: `TREASURY_CLEARANCE_${bidData.leadId.slice(-4)}`,
         timestamp: new Date().toISOString(),
         status: 'completed'
       });
     });
-  }
-
-  async updateBidStatus(bidId: string, status: 'approved' | 'rejected'): Promise<void> {
-    await updateDoc(doc(db, "bids", bidId), { status });
   }
 
   async deposit(userId: string, amount: number, provider?: string): Promise<any> {
-    const userRef = doc(db, "users", userId);
-    const adminRef = doc(db, "users", "admin_1");
+    // Rule 3: Crediting only when payment gateway is active with API keys
+    const gatewaySnap = await getDocs(collection(db, "api_nodes"));
+    const activeGateways = gatewaySnap.docs
+      .map(d => d.data() as GatewayAPI)
+      .filter(g => g.status === 'active' && g.publicKey?.length > 5 && g.secretKey?.length > 5);
 
+    if (activeGateways.length === 0) {
+      throw new Error("GATEWAY_PROTOCOL_OFFLINE: Active API keys required for vault sync.");
+    }
+
+    const userRef = doc(db, "users", userId);
     return runTransaction(db, async (transaction) => {
       const userSnap = await transaction.get(userRef);
-      const adminSnap = await transaction.get(adminRef);
-
       if (!userSnap.exists()) return;
-
       const currentBalance = userSnap.data().balance || 0;
-      transaction.update(userRef, {
-        balance: currentBalance + amount
+      
+      const txnId = `SYNC-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+      
+      transaction.update(userRef, { balance: currentBalance + amount });
+      transaction.set(doc(collection(db, "wallet_activities")), {
+        id: txnId,
+        userId,
+        type: 'deposit',
+        amount: Math.abs(amount),
+        provider: provider || 'VAULT_SYNC',
+        timestamp: new Date().toISOString(),
+        status: 'completed'
       });
 
-      if (amount < 0 && adminSnap.exists()) {
-        const adminBalance = adminSnap.data().balance || 0;
-        transaction.update(adminRef, {
-          balance: adminBalance + Math.abs(amount)
-        });
-
-        transaction.set(doc(collection(db, "wallet_activities")), {
-          userId: 'admin_1',
-          type: 'deposit',
-          amount: Math.abs(amount),
-          provider: `PLATFORM_YIELD_${userId}`,
-          timestamp: new Date().toISOString(),
-          status: 'completed'
-        });
-      }
-
-      transaction.set(doc(collection(db, "wallet_activities")), {
+      // Rule 4: Record Notification for Action Center
+      transaction.set(doc(collection(db, "notifications")), {
         userId,
-        type: amount > 0 ? 'deposit' : 'withdrawal',
-        amount: Math.abs(amount),
-        provider: provider || 'VAULT_INTERNAL_SYNC',
+        message: `VAULT_SYNC_SUCCESS: [${txnId}] Credited $${amount.toLocaleString()} via ${provider}`,
+        type: 'system',
         timestamp: new Date().toISOString(),
-        status: 'completed',
-        gateway_protocol: 'OIDC_SIGNED'
+        read: false
       });
     });
   }
 
+  async updateLead(id: string, updates: Partial<Lead>): Promise<any> { await updateDoc(doc(db, "leads", id), updates); }
+  async deleteLead(id: string): Promise<any> { await deleteDoc(doc(db, "leads", id)); }
+  async updateUser(id: string, updates: Partial<User>): Promise<any> { await updateDoc(doc(db, "users", id), updates); }
+  async updateBidStatus(bidId: string, status: 'approved' | 'rejected'): Promise<void> { await updateDoc(doc(db, "bids", bidId), { status }); }
   async toggleWishlist(userId: string, leadId: string): Promise<any> {
     const userRef = doc(db, "users", userId);
     const userSnap = await getDoc(userRef);
     if (!userSnap.exists()) return;
-    const currentWishlist = userSnap.data().wishlist || [];
-    const newWishlist = currentWishlist.includes(leadId)
-      ? currentWishlist.filter((id: string) => id !== leadId)
-      : [...currentWishlist, leadId];
+    const wishlist = userSnap.data().wishlist || [];
+    const newWishlist = wishlist.includes(leadId) ? wishlist.filter((id: string) => id !== leadId) : [...wishlist, leadId];
     await updateDoc(userRef, { wishlist: newWishlist });
   }
-
-  async getCategories() { return NICHE_PROTOCOLS; }
-
-  async logNotification(userId: string, message: string, type: 'buy' | 'sell' | 'system' | 'approval') {
-    await addDoc(collection(db, "notifications"), {
-      userId, message, type, timestamp: new Date().toISOString(), read: false
-    });
-  }
-
   async clearNotifications() {
     const snap = await getDocs(collection(db, "notifications"));
     await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
   }
-
-  async updateAuthConfig(config: OAuthConfig) {
-    await setDoc(doc(db, "config", "auth_config"), config);
-  }
-
+  async updateAuthConfig(config: OAuthConfig) { await setDoc(doc(db, "config", "auth_config"), config); }
   async updateGateways(gateways: GatewayAPI[]) {
     const snap = await getDocs(collection(db, "api_nodes"));
     await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
-    for (const g of gateways) {
-       await setDoc(doc(db, "api_nodes", g.id), g);
-    }
+    for (const g of gateways) { await setDoc(doc(db, "api_nodes", g.id), g); }
   }
-
   async triggerManualSeed() {
     const leadsSnap = await getDocs(collection(db, "leads"));
-    if (leadsSnap.empty) {
-      await this.seedInitialData();
-    }
+    if (leadsSnap.empty) { await this.seedInitialData(); }
   }
 }
 
