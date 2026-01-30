@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { X, Globe, Target, Phone, Zap, ChevronRight, Calculator, AlertTriangle, Wallet, Info, ArrowRight, CreditCard, RefreshCw, Calendar, Clock, Scan, Globe as GlobeIcon, Bitcoin, Smartphone, Landmark, Database, CheckCircle2, Loader2, ArrowUpRight, ShieldCheck, Briefcase, ShieldAlert, ArrowLeft } from 'lucide-react';
 import { Lead, User, GatewayAPI } from '../types.ts';
@@ -157,35 +158,39 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClo
           {isSuccess ? (
             <div className="h-full flex flex-col items-center justify-center text-center space-y-10 py-12 animate-in zoom-in-95 duration-700">
                <div className="relative">
-                  <div className="absolute inset-0 bg-emerald-500/20 rounded-full blur-[80px] animate-pulse" />
-                  <div className="w-32 h-32 rounded-[2.5rem] bg-emerald-500 text-white flex items-center justify-center shadow-xl relative z-10">
-                     <CheckCircle2 size={64} />
+                  <div className="absolute inset-0 bg-amber-500/20 rounded-full blur-[80px] animate-pulse" />
+                  <div className="w-32 h-32 rounded-[2.5rem] bg-amber-500 text-black flex items-center justify-center shadow-xl relative z-10">
+                     <Clock size={64} />
                   </div>
                </div>
                
                <div className="space-y-4">
-                  <h2 className="text-4xl font-futuristic font-black text-white italic uppercase tracking-tighter">LEAD FLOW SECURED</h2>
+                  <h2 className="text-4xl font-futuristic font-black text-white italic uppercase tracking-tighter leading-none">ESCROW SECURED</h2>
                   <p className="text-dim text-[11px] font-bold uppercase tracking-[0.4em] max-w-[300px] mx-auto leading-relaxed">
-                    CONTRACT_DEPLOYED // HANDSHAKE_ESTABLISHED
+                    AWAITING_ADMIN_AUTHORIZATION // VAULT_FUNDS_LOCKED
                   </p>
                </div>
 
                <div className="bg-black/60 border border-bright rounded-[2rem] p-6 w-full max-w-sm flex items-center justify-between">
                   <div className="text-left">
-                     <span className="text-[8px] font-black text-neutral-500 uppercase tracking-widest block mb-1">UNIT_SETTLEMENT</span>
-                     <span className="text-2xl font-tactical text-emerald-500 italic tracking-widest">${formData.bidAmount.toLocaleString()} / Lead</span>
+                     <span className="text-[8px] font-black text-neutral-500 uppercase tracking-widest block mb-1">UNIT_ACQUISITION</span>
+                     <span className="text-2xl font-tactical text-amber-500 italic tracking-widest">${formData.bidAmount.toLocaleString()} / Unit</span>
                   </div>
                   <div className="text-right">
-                     <span className="text-[8px] font-black text-neutral-500 uppercase tracking-widest block mb-1">SETTLEMENT_TYPE</span>
-                     <span className="text-[10px] font-black text-neutral-400 uppercase">VAULT_DEDUCTION</span>
+                     <span className="text-[8px] font-black text-neutral-500 uppercase tracking-widest block mb-1">SETTLEMENT</span>
+                     <span className="text-[10px] font-black text-neutral-400 uppercase">HELD IN ESCROW</span>
                   </div>
                </div>
+
+               <p className="text-[10px] text-neutral-600 font-bold uppercase tracking-widest leading-relaxed max-w-md">
+                 Your funds have been moved to the treasury vault. An administrator will verify your delivery endpoints before authorizing traffic flow.
+               </p>
 
                <button 
                 onClick={onRedirectToActionCenter}
                 className="group relative w-full py-6 bg-white text-black rounded-[2.5rem] font-black text-xl uppercase italic tracking-widest border-b-[8px] border-neutral-300 active:translate-y-1 active:border-b-0 transition-all flex items-center justify-center gap-6"
                >
-                 Review Campaigns <ArrowUpRight size={28} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                 Track in Action Center <ArrowUpRight size={28} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
                </button>
             </div>
           ) : isConfirming ? (
@@ -193,9 +198,9 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClo
                <div className="bg-red-500/5 border border-red-500/20 p-8 rounded-[2.5rem] flex items-start gap-6">
                   <ShieldAlert className="text-red-500 shrink-0" size={32} />
                   <div className="space-y-2">
-                     <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Confirm Acquisition Handshake</h3>
+                     <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Authorize Escrow Lock</h3>
                      <p className="text-[10px] text-dim leading-relaxed font-bold uppercase tracking-widest">
-                       You are authorizing an immutable daily settlement commitment from your liquidity vault. Ensure all delivery parameters match your terminal endpoint.
+                       Funds will be immediately deducted from your vault and held in the admin escrow node. Acquisition is subject to manual verification of your terminal endpoints.
                      </p>
                   </div>
                </div>
@@ -209,9 +214,9 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClo
                      </div>
                   </div>
                   <div className="bg-black/60 border border-bright rounded-[2rem] p-6 space-y-4">
-                     <span className="text-[8px] font-black text-neutral-500 uppercase tracking-[0.3em]">DAILY_VAULT_SETTLEMENT</span>
+                     <span className="text-[8px] font-black text-neutral-500 uppercase tracking-[0.3em]">DAILY_ESCROW_SETTLEMENT</span>
                      <div className="flex items-baseline gap-2">
-                        <span className="text-3xl font-tactical text-emerald-500 italic font-black">${totalDailyCost.toLocaleString()}</span>
+                        <span className="text-3xl font-tactical text-amber-500 italic font-black">${totalDailyCost.toLocaleString()}</span>
                         <span className="text-[9px] text-neutral-600 font-bold uppercase tracking-widest">/ 24H</span>
                      </div>
                   </div>
@@ -243,10 +248,10 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClo
                   <button 
                     onClick={finalSubmit}
                     disabled={isSubmitting}
-                    className="py-5 bg-emerald-600 text-white rounded-[2.5rem] font-black text-lg uppercase italic tracking-widest border-b-[8px] border-emerald-800 hover:bg-emerald-500 transition-all flex items-center justify-center gap-4 shadow-xl active:translate-y-1 active:border-b-0"
+                    className="py-5 bg-amber-600 text-black rounded-[2.5rem] font-black text-lg uppercase italic tracking-widest border-b-[8px] border-amber-800 hover:bg-amber-500 transition-all flex items-center justify-center gap-4 shadow-xl active:translate-y-1 active:border-b-0"
                   >
-                    {isSubmitting ? <Loader2 size={24} className="animate-spin" /> : 'Authorize Protocol'}
-                    {!isSubmitting && <CheckCircle2 size={24} />}
+                    {isSubmitting ? <Loader2 className="animate-spin" size={24} /> : 'Authorize Escrow Lock'}
+                    {!isSubmitting && <ShieldCheck size={24} />}
                   </button>
                </div>
             </div>
@@ -256,7 +261,7 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClo
               <div className="bg-accent/5 p-4 rounded-2xl border border-accent/20 flex items-start gap-4">
                 <ShieldCheck className="text-accent shrink-0 mt-0.5" size={16} />
                 <p className="text-[9px] text-dim uppercase leading-relaxed font-bold tracking-widest">
-                  Buyer Identity Verification: Provisioning of official business assets is mandatory for lead-flow authentication.
+                  Escrow Protocol: Placing a bid locks funds in the marketplace treasury until an admin authorizes the handshake.
                 </p>
               </div>
 
@@ -382,7 +387,7 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClo
 
                 <div className="bg-black border border-bright p-4 rounded-2xl flex flex-col justify-center items-center text-center relative group overflow-hidden shadow-sm">
                   <div className="absolute top-0 right-0 p-2 opacity-5 pointer-events-none scale-150 text-white"><Calculator size={40} /></div>
-                  <span className="text-[7px] font-black text-neutral-600 uppercase tracking-[0.2em] mb-1">ESTIMATED_DAILY_BURN</span>
+                  <span className="text-[7px] font-black text-neutral-600 uppercase tracking-[0.2em] mb-1">ESTIMATED_ESCROW_LOCK</span>
                   <div className={`text-3xl font-black italic font-tactical tracking-tighter transition-colors ${hasInsufficientFunds ? 'text-red-500' : 'text-white'}`}>
                     ${totalDailyCost.toLocaleString()}
                   </div>
@@ -402,7 +407,7 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClo
                     : 'bg-white text-black border-neutral-300 hover:bg-[#00e5ff]'
                 }`}
               >
-                {isSubmitting ? <Loader2 size={24} className="animate-spin" /> : 
+                {isSubmitting ? <Loader2 className="animate-spin" size={24} /> : 
                  hasInsufficientFunds ? 'Initiate Liquidity Sync' : initialBid ? 'Authorize Acquisition' : 'Broadcast Asset Bid'} 
                 {!isSubmitting && <ArrowRight size={24} />}
               </button>

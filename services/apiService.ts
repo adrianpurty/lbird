@@ -20,6 +20,7 @@ import { db } from "./firebase.ts";
 import { Lead, User, PurchaseRequest, Notification, PlatformAnalytics, OAuthConfig, Invoice, GatewayAPI, WalletActivity } from '../types.ts';
 
 const ADMIN_EMAIL = "enjodanzo@gmail.com";
+const ADMIN_ROOT_ID = "admin_root";
 
 export const NICHE_PROTOCOLS = {
   "Finance": ["Crypto Trading", "High-Ticket Insurance", "Mortgage Leads", "Debt Settlement", "Asset Management", "Venture Capital"],
@@ -46,7 +47,7 @@ export const NICHE_PROTOCOLS = {
 
 class ApiService {
   async seedInitialData(): Promise<void> {
-    const adminId = "admin_root";
+    const adminId = ADMIN_ROOT_ID;
     await setDoc(doc(db, "users", adminId), {
       id: adminId,
       name: "MASTER_TREASURY",
@@ -118,7 +119,7 @@ class ApiService {
       const configSnap = await getDoc(doc(db, "config", "auth_config"));
 
       return {
-        metadata: { version: '6.2.0-GATEWAY-SYNCED', last_updated: new Date().toISOString() },
+        metadata: { version: '6.5.0-ESCROW-V2', last_updated: new Date().toISOString() },
         leads: leadsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
         users: usersSnap.docs.map(d => ({ id: d.id, ...d.data() })),
         purchaseRequests: bidsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
@@ -171,48 +172,45 @@ class ApiService {
     return { id: docRef.id };
   }
 
+  /**
+   * Places a bid and moves funds to Escrow (Admin Balance)
+   * Status defaults to 'pending' awaiting admin approval.
+   */
   async placeBid(bidData: any): Promise<any> {
     return runTransaction(db, async (transaction) => {
       const userRef = doc(db, "users", bidData.userId);
       const leadRef = doc(db, "leads", bidData.leadId);
-      const adminQuery = query(collection(db, "users"), where("email", "==", ADMIN_EMAIL));
-      const adminSnaps = await getDocs(adminQuery);
-      if (adminSnaps.empty) throw "TREASURY_NODE_OFFLINE";
-      const adminRef = doc(db, "users", adminSnaps.docs[0].id);
+      const adminRef = doc(db, "users", ADMIN_ROOT_ID);
 
       const userSnap = await transaction.get(userRef);
       const leadSnap = await transaction.get(leadRef);
       const adminSnap = await transaction.get(adminRef);
 
-      if (!userSnap.exists() || !leadSnap.exists()) throw "DATA_NODE_ERROR";
+      if (!userSnap.exists() || !leadSnap.exists() || !adminSnap.exists()) {
+        throw "TREASURY_NODE_OFFLINE";
+      }
 
       const user = userSnap.data() as User;
-      const isBidderAdmin = user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
-
+      const adminData = adminSnap.data() as User;
+      
       if (user.balance < bidData.totalDailyCost) throw "LOW_FUNDS";
 
-      transaction.update(leadRef, {
-        currentBid: bidData.bidAmount,
-        bidCount: (leadSnap.data().bidCount || 0) + 1
-      });
-
+      // Deduct from user
       transaction.update(userRef, {
         balance: user.balance - bidData.totalDailyCost,
         totalSpend: (user.totalSpend || 0) + bidData.totalDailyCost
       });
 
-      if (!isBidderAdmin) {
-        const adminData = adminSnap.data() as User;
-        transaction.update(adminRef, {
-          balance: adminData.balance + bidData.totalDailyCost
-        });
-      }
+      // Credit to Admin Escrow
+      transaction.update(adminRef, {
+        balance: adminData.balance + bidData.totalDailyCost
+      });
 
       const bidTxnId = `BID-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
       transaction.set(doc(collection(db, "bids")), {
         ...bidData,
         txnId: bidTxnId,
-        status: 'approved',
+        status: 'pending', // IMPORTANT: All bids start as pending
         timestamp: new Date().toISOString()
       });
 
@@ -221,16 +219,126 @@ class ApiService {
         userId: bidData.userId,
         type: 'withdrawal',
         amount: bidData.totalDailyCost,
-        provider: `TREASURY_CLEARANCE_${bidData.leadId.slice(-4)}`,
+        provider: `ESCROW_LOCK_${bidData.leadId.slice(-4)}`,
         timestamp: new Date().toISOString(),
-        status: 'completed'
+        status: 'pending'
+      });
+
+      // Notify Admin
+      transaction.set(doc(collection(db, "notifications")), {
+        userId: ADMIN_ROOT_ID,
+        message: `PENDING_AUTHORIZATION: ${user.name} placed a $${bidData.bidAmount} bid on ${bidData.leadTitle}. Funds held in Escrow.`,
+        type: 'approval',
+        timestamp: new Date().toISOString(),
+        read: false
       });
     });
   }
 
   /**
-   * Finalizes a verified transaction in the vault
+   * Admin Authorization: Finalizes a pending bid.
    */
+  async authorizeBid(bidId: string): Promise<void> {
+    const bidRef = doc(db, "bids", bidId);
+    const bidSnap = await getDoc(bidRef);
+    if (!bidSnap.exists()) return;
+    
+    const bid = bidSnap.data();
+    const leadRef = doc(db, "leads", bid.leadId);
+    const leadSnap = await getDoc(leadRef);
+
+    await runTransaction(db, async (transaction) => {
+      transaction.update(bidRef, { status: 'approved' });
+      
+      if (leadSnap.exists()) {
+        transaction.update(leadRef, {
+          currentBid: bid.bidAmount,
+          bidCount: (leadSnap.data().bidCount || 0) + 1
+        });
+      }
+
+      // Update wallet activity status
+      const walletQuery = query(collection(db, "wallet_activities"), where("id", "==", bid.txnId || ''));
+      const walletSnaps = await getDocs(walletQuery);
+      walletSnaps.forEach(wDoc => {
+        transaction.update(wDoc.ref, { status: 'completed' });
+      });
+
+      // Notify User
+      transaction.set(doc(collection(db, "notifications")), {
+        userId: bid.userId,
+        message: `ACQUISITION_AUTHORIZED: Your bid for ${bid.leadTitle} has been authorized. Traffic node sync starting.`,
+        type: 'approval',
+        timestamp: new Date().toISOString(),
+        read: false
+      });
+    });
+  }
+
+  /**
+   * Admin Rejection: Revokes a bid and performs a fund rollback.
+   */
+  async rejectBid(bidId: string): Promise<void> {
+    const bidRef = doc(db, "bids", bidId);
+    const bidSnap = await getDoc(bidRef);
+    if (!bidSnap.exists()) return;
+    
+    const bid = bidSnap.data();
+
+    await runTransaction(db, async (transaction) => {
+      const userRef = doc(db, "users", bid.userId);
+      const adminRef = doc(db, "users", ADMIN_ROOT_ID);
+      
+      const userSnap = await transaction.get(userRef);
+      const adminSnap = await transaction.get(adminRef);
+
+      if (!userSnap.exists() || !adminSnap.exists()) throw "IDENTITY_NODE_FAILURE";
+
+      const userData = userSnap.data() as User;
+      const adminData = adminSnap.data() as User;
+
+      // Rollback Funds
+      transaction.update(userRef, {
+        balance: userData.balance + bid.totalDailyCost,
+        totalSpend: Math.max(0, (userData.totalSpend || 0) - bid.totalDailyCost)
+      });
+
+      transaction.update(adminRef, {
+        balance: Math.max(0, adminData.balance - bid.totalDailyCost)
+      });
+
+      transaction.update(bidRef, { status: 'rejected' });
+
+      // Create refund activity
+      const refundId = `REF-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+      transaction.set(doc(collection(db, "wallet_activities")), {
+        id: refundId,
+        userId: bid.userId,
+        type: 'deposit',
+        amount: bid.totalDailyCost,
+        provider: `ESCROW_ROLLBACK_${bid.leadId.slice(-4)}`,
+        timestamp: new Date().toISOString(),
+        status: 'completed'
+      });
+
+      // Update original pending activity
+      const walletQuery = query(collection(db, "wallet_activities"), where("id", "==", bid.txnId || ''));
+      const walletSnaps = await getDocs(walletQuery);
+      walletSnaps.forEach(wDoc => {
+        transaction.update(wDoc.ref, { status: 'rejected' });
+      });
+
+      // Notify User
+      transaction.set(doc(collection(db, "notifications")), {
+        userId: bid.userId,
+        message: `ACQUISITION_REVOKED: Your bid for ${bid.leadTitle} was declined. Funds have been returned to your vault.`,
+        type: 'system',
+        timestamp: new Date().toISOString(),
+        read: false
+      });
+    });
+  }
+
   async deposit(userId: string, amount: number, providerName: string, txnId: string): Promise<any> {
     const userRef = doc(db, "users", userId);
     
@@ -265,7 +373,6 @@ class ApiService {
   async updateLead(id: string, updates: Partial<Lead>): Promise<any> { await updateDoc(doc(db, "leads", id), updates); }
   async deleteLead(id: string): Promise<any> { await deleteDoc(doc(db, "leads", id)); }
   async updateUser(id: string, updates: Partial<User>): Promise<any> { await updateDoc(doc(db, "users", id), updates); }
-  async updateBidStatus(bidId: string, status: 'approved' | 'rejected'): Promise<void> { await updateDoc(doc(db, "bids", bidId), { status }); }
   async toggleWishlist(userId: string, leadId: string): Promise<any> {
     const userRef = doc(db, "users", userId);
     const userSnap = await getDoc(userRef);

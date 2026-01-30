@@ -34,7 +34,7 @@ try {
         $db->exec("CREATE TABLE wallet_activities (id TEXT PRIMARY KEY, userId TEXT, type TEXT, amount REAL, provider TEXT, timestamp TEXT, status TEXT)");
 
         $db->prepare("INSERT INTO users (id, name, username, password, email, balance, role, status, stripeConnected, wishlist, last_active_at, current_page) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)")
-           ->execute(['admin_1', 'System Administrator', 'admin', '1234', 'admin@leadbid.pro', 1000000, 'admin', 'active', 1, '[]', date('c'), 'Control Room']);
+           ->execute(['admin_root', 'System Administrator', 'admin', '1234', 'admin@leadbid.pro', 0, 'admin', 'active', 1, '[]', date('c'), 'Control Room']);
         
         $auth_defaults = json_encode(['googleEnabled' => false, 'googleClientId' => '', 'googleClientSecret' => '', 'facebookEnabled' => false, 'facebookAppId' => '', 'facebookAppSecret' => '']);
         $db->prepare("INSERT INTO config (key, value) VALUES (?, ?)")->execute(['auth_config', $auth_defaults]);
@@ -71,73 +71,50 @@ switch ($action) {
         ]);
         break;
 
-    case 'update_gateways':
-        $db->exec("DELETE FROM api_nodes WHERE type='payment'");
-        $stmt = $db->prepare("INSERT INTO api_nodes (id, type, provider, name, publicKey, secretKey, fee, status, qrCode) VALUES (?,?,?,?,?,?,?,?,?)");
-        foreach($input['gateways'] as $gw) {
-            $stmt->execute([$gw['id'], 'payment', $gw['provider'], $gw['name'], $gw['publicKey'], $gw['secretKey'], $gw['fee'], $gw['status'], $gw['qrCode']]);
-        }
-        echo json_encode(['status' => 'success']);
-        break;
-
-    case 'deposit':
-        // Rule: On the backend, we would verify the txnId with the provider API here
-        $userId = $input['userId'];
-        $amount = $input['amount'];
-        $provider = $input['provider'] ?? 'GATEWAY_MESH';
-        $txnId = $input['txnId'] ?? 'LB-' . bin2hex(random_bytes(4));
-
-        $db->prepare("UPDATE users SET balance = balance + ? WHERE id = ?")->execute([$amount, $userId]);
-        
-        $db->prepare("INSERT INTO wallet_activities (id, userId, type, amount, provider, timestamp, status) VALUES (?,?,?,?,?,?,?)")
-           ->execute([$txnId, $userId, 'deposit', $amount, $provider, date('Y-m-d H:i:s'), 'completed']);
-        
-        // Log Audit Event
-        $notif_id = 'log_' . bin2hex(random_bytes(6));
-        $msg = "SETTLEMENT_VERIFIED: Received \${$amount} via {$provider}. Handshake protocol complete.";
-        $db->prepare("INSERT INTO notifications (id, userId, message, type, timestamp) VALUES (?,?,?,?,?)")
-           ->execute([$notif_id, $userId, $msg, 'system', date('Y-m-d H:i:s')]);
-        
-        echo json_encode(['status' => 'success']);
-        break;
-
     case 'place_bid':
         $id = 'bid_' . bin2hex(random_bytes(4));
-        $stmt = $db->prepare("INSERT INTO bids (id, leadId, userId, bidAmount, leadsPerDay, totalDailyCost, timestamp, status, buyerBusinessUrl, buyerTargetLeadUrl, leadTitle, officeHoursStart, officeHoursEnd, operationalDays) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
-        $stmt->execute([
-            $id, 
-            $input['leadId'], 
-            $input['userId'], 
-            $input['bidAmount'], 
-            $input['leadsPerDay'], 
-            $input['totalDailyCost'], 
-            date('Y-m-d H:i:s'), 
-            'approved', 
-            $input['buyerBusinessUrl'], 
-            $input['buyerTargetLeadUrl'], 
-            $input['leadTitle'],
-            $input['officeHoursStart'] ?? '09:00',
-            $input['officeHoursEnd'] ?? '17:00',
-            json_encode($input['operationalDays'] ?? ['mon','tue','wed','thu','fri'])
-        ]);
-        
-        $db->prepare("UPDATE leads SET currentBid = ?, bidCount = bidCount + 1 WHERE id = ?")->execute([$input['bidAmount'], $input['leadId']]);
-        $db->prepare("UPDATE users SET balance = balance - ?, totalSpend = totalSpend + ? WHERE id = ?")->execute([$input['totalDailyCost'], $input['totalDailyCost'], $input['userId']]);
-        
-        $tx_id = 'tx_' . bin2hex(random_bytes(4));
-        $db->prepare("INSERT INTO wallet_activities (id, userId, type, amount, provider, timestamp, status) VALUES (?,?,?,?,?,?,?)")
-           ->execute([$tx_id, $input['userId'], 'withdrawal', $input['totalDailyCost'], 'MARKET_ACQUISITION', date('Y-m-d H:i:s'), 'completed']);
-        
-        echo json_encode(['status' => 'success']);
+        $db->beginTransaction();
+        try {
+            $stmt = $db->prepare("INSERT INTO bids (id, leadId, userId, bidAmount, leadsPerDay, totalDailyCost, timestamp, status, buyerBusinessUrl, buyerTargetLeadUrl, leadTitle, officeHoursStart, officeHoursEnd, operationalDays) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+            $stmt->execute([
+                $id, 
+                $input['leadId'], 
+                $input['userId'], 
+                $input['bidAmount'], 
+                $input['leadsPerDay'], 
+                $input['totalDailyCost'], 
+                date('Y-m-d H:i:s'), 
+                'pending', // IMPORTANT: Start as pending
+                $input['buyerBusinessUrl'], 
+                $input['buyerTargetLeadUrl'], 
+                $input['leadTitle'],
+                $input['officeHoursStart'] ?? '09:00',
+                $input['officeHoursEnd'] ?? '17:00',
+                json_encode($input['operationalDays'] ?? ['mon','tue','wed','thu','fri'])
+            ]);
+            
+            // Deduct from user
+            $db->prepare("UPDATE users SET balance = balance - ?, totalSpend = totalSpend + ? WHERE id = ?")
+               ->execute([$input['totalDailyCost'], $input['totalDailyCost'], $input['userId']]);
+            
+            // Credit Admin Escrow
+            $db->prepare("UPDATE users SET balance = balance + ? WHERE id = 'admin_root'")
+               ->execute([$input['totalDailyCost']]);
+
+            $tx_id = 'tx_' . bin2hex(random_bytes(4));
+            $db->prepare("INSERT INTO wallet_activities (id, userId, type, amount, provider, timestamp, status) VALUES (?,?,?,?,?,?,?)")
+               ->execute([$tx_id, $input['userId'], 'withdrawal', $input['totalDailyCost'], 'ESCROW_LOCK', date('Y-m-d H:i:s'), 'pending']);
+            
+            $db->commit();
+            echo json_encode(['status' => 'success']);
+        } catch (Exception $e) {
+            $db->rollBack();
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        }
         break;
 
-    case 'authenticate_user':
-        $user = $db->prepare("SELECT * FROM users WHERE (username = ? OR email = ?) AND password = ?");
-        $user->execute([$input['username'], $input['username'], $input['token']]);
-        $found = $user->fetch();
-        echo json_encode(['status' => 'success', 'user' => $found ?: null]);
-        break;
-
+    // Additional admin approval actions would go here...
+    
     default:
         http_response_code(404);
         echo json_encode(['error' => 'ACTION_NOT_FOUND']);
