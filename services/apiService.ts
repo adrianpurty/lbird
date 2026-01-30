@@ -15,7 +15,7 @@ import {
   runTransaction,
   serverTimestamp,
   Timestamp
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+} from "firebase/firestore";
 import { db } from "./firebase.ts";
 import { Lead, User, PurchaseRequest, Notification, PlatformAnalytics, OAuthConfig, Invoice, GatewayAPI, WalletActivity } from '../types.ts';
 

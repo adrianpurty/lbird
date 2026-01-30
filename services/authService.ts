@@ -7,7 +7,7 @@ import {
   GoogleAuthProvider,
   FacebookAuthProvider,
   signInWithPopup
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+} from "firebase/auth";
 import { auth } from "./firebase.ts";
 import { apiService } from "./apiService.ts";
 import { User } from "../types.ts";

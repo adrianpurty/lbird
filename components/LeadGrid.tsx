@@ -163,7 +163,7 @@ export const TacticalLeadCard = memo(({ lead, userRole, currentUserId, onBid, on
   );
 });
 
-const LeadGrid: React.FC<LeadGridProps> = ({ leads, onBid, onEdit, userRole, currentUserId, wishlist, onToggleWishlist, lastBidLeadId }) => {
+const LeadGrid: React.FC<LeadGridProps> & { TacticalLeadCard: typeof TacticalLeadCard } = ({ leads, onBid, onEdit, userRole, currentUserId, wishlist, onToggleWishlist, lastBidLeadId }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -298,7 +298,6 @@ const LeadGrid: React.FC<LeadGridProps> = ({ leads, onBid, onEdit, userRole, cur
               <div className="flex items-center gap-1.5 justify-center">
                 {Array.from({ length: totalPages }, (_, i) => i + 1)
                   .filter(p => {
-                    // Optimized for various mobile widths: 1 window on mobile, 2 on tablet
                     const isMobile = typeof window !== 'undefined' && window.innerWidth < 480;
                     const windowSize = isMobile ? 0 : 1;
                     return p === 1 || p === totalPages || Math.abs(p - currentPage) <= windowSize;
@@ -354,4 +353,5 @@ const LeadGrid: React.FC<LeadGridProps> = ({ leads, onBid, onEdit, userRole, cur
   );
 };
 
+LeadGrid.TacticalLeadCard = TacticalLeadCard;
 export default LeadGrid;
