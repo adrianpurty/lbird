@@ -1,14 +1,13 @@
-
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   ShieldCheck, Wallet, Bitcoin, Smartphone, Zap, Activity, History, ArrowDownLeft, 
-  ArrowUpRight, Database, DollarSign, CreditCard, Scan, Download, Globe, ArrowRight, 
-  Cpu, AlertTriangle, CheckCircle2, RefreshCw, Lock, Terminal, Hash, Key, User as UserIcon, Briefcase, ChevronRight, Landmark, Loader2,
-  ShieldAlert, X, Radio, Server, Link2, Box
+  ArrowUpRight, Database, DollarSign, CreditCard, Scan, Globe, ArrowRight, 
+  Cpu, AlertTriangle, CheckCircle2, RefreshCw, Lock, Terminal, Hash, 
+  ShieldAlert, Radio, Server, Link2, Box, Landmark, Loader2
 } from 'lucide-react';
 import { GatewayAPI, WalletActivity } from '../types.ts';
 import { soundService } from '../services/soundService.ts';
-import { paymentService } from '../services/paymentService.ts';
+import GatewayPortal from './GatewayPortal.tsx';
 
 interface WalletSettingsProps {
   stripeConnected: boolean;
@@ -22,117 +21,23 @@ interface WalletSettingsProps {
 const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gateways, walletActivities = [] }) => {
   const [amount, setAmount] = useState<string>('500');
   const [selectedGatewayId, setSelectedGatewayId] = useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [procStep, setProcStep] = useState('');
-  const [procStatus, setProcStatus] = useState<'handshake' | 'validating' | 'settling' | 'success' | 'failed'>('handshake');
   const [flowMode, setFlowMode] = useState<'deposit' | 'withdraw'>('deposit');
-  const [error, setError] = useState<string | null>(null);
-
-  // Stripe Elements Refs
-  const stripeElementsRef = useRef<any>(null);
-  const cardElementRef = useRef<HTMLDivElement>(null);
-
-  const [vpaId, setVpaId] = useState('');
-  const [walletAddr, setWalletAddr] = useState('');
+  const [showPortal, setShowPortal] = useState(false);
 
   const selectedGateway = useMemo(() => gateways.find(g => g.id === selectedGatewayId), [gateways, selectedGatewayId]);
 
-  // Mount Stripe Elements when Stripe is selected
-  useEffect(() => {
-    if (selectedGateway?.provider === 'stripe' && cardElementRef.current && !stripeElementsRef.current) {
-      paymentService.getStripe(selectedGateway.publicKey).then(stripe => {
-        const elements = stripe.elements();
-        const card = elements.create('card', {
-          style: {
-            base: {
-              color: '#ffffff',
-              fontFamily: '"JetBrains Mono", monospace',
-              fontSmoothing: 'antialiased',
-              fontSize: '16px',
-              '::placeholder': { color: '#444444' },
-              backgroundColor: 'transparent',
-            },
-            invalid: { color: '#ef4444', iconColor: '#ef4444' },
-          },
-        });
-        card.mount(cardElementRef.current);
-        stripeElementsRef.current = card;
-      });
-    }
-    return () => {
-      if (stripeElementsRef.current) {
-        stripeElementsRef.current.destroy();
-        stripeElementsRef.current = null;
-      }
-    };
-  }, [selectedGatewayId]);
-
-  const isFormValid = useMemo(() => {
-    const num = parseFloat(amount) || 0;
-    if (!selectedGateway || num <= 0 || selectedGateway.status !== 'active') return false;
-    
-    const p = selectedGateway.provider;
-    if (p === 'stripe') return true; // Validated by Stripe Elements internally
-    if (p === 'upi') return vpaId.includes('@');
-    if (p === 'crypto' || p === 'binance') return walletAddr.length >= 26;
-    return true;
-  }, [selectedGateway, amount, vpaId, walletAddr]);
-
-  const handleVaultSync = async () => {
-    if (!isFormValid || isProcessing || !selectedGateway) return;
-    setError(null);
-    setIsProcessing(true);
-    setProcStatus('handshake');
+  const handleInitSettlement = () => {
+    if (!selectedGateway || !amount || parseFloat(amount) <= 0) return;
     soundService.playClick(true);
+    setShowPortal(true);
+  };
 
-    try {
-      setProcStep(`INIT_BRIDGE: ${selectedGateway.name}...`);
-      await new Promise(r => setTimeout(r, 800));
-      
-      setProcStatus('validating');
-      setProcStep(`ESTABLISHING_TLS_HANDSHAKE...`);
-      const validation = await paymentService.validateGateway(selectedGateway);
-      if (!validation.success) throw new Error(validation.message);
-
-      setProcStatus('settling');
-      setProcStep(`AWAITING_STRIPE_CONSENSUS...`);
-      
-      let result;
-      if (selectedGateway.provider === 'stripe') {
-        // LIVE STRIPE FLOW
-        result = await paymentService.processLiveStripe(
-          selectedGateway, 
-          parseFloat(amount), 
-          stripeElementsRef.current
-        );
-      } else {
-        // OTHER GATEWAYS (Simulated Handshake)
-        result = await paymentService.processTransaction(
-          selectedGateway, 
-          parseFloat(amount)
-        );
-      }
-      
-      if (!result.verified) throw new Error("VAULT_REJECTION: Handshake signature mismatch.");
-
-      setProcStatus('success');
-      setProcStep("LEDGER_COMMIT: $"+amount+" CREDITED");
-      const finalAmount = flowMode === 'deposit' ? parseFloat(amount) : -parseFloat(amount);
-      await onDeposit(finalAmount, selectedGateway.name, result.txnId);
-      
-      setTimeout(() => {
-        setAmount('500');
-        setVpaId('');
-        setWalletAddr('');
-        setSelectedGatewayId(null);
-        setIsProcessing(false);
-      }, 2500);
-      
-    } catch (e: any) {
-      setProcStatus('failed');
-      setError(e.message || "GATEWAY_COMM_FAILURE");
-      setTimeout(() => setIsProcessing(false), 3500);
-    }
+  const handlePortalSuccess = async (txnId: string) => {
+    setShowPortal(false);
+    if (!selectedGateway) return;
+    const finalAmount = flowMode === 'deposit' ? parseFloat(amount) : -parseFloat(amount);
+    await onDeposit(finalAmount, selectedGateway.name, txnId);
+    setSelectedGatewayId(null);
   };
 
   const getProviderIcon = (provider: string) => {
@@ -147,6 +52,7 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
   return (
     <div className="max-w-[1400px] mx-auto space-y-4 pb-32 font-rajdhani animate-in fade-in duration-500 px-4 lg:px-0 relative">
       
+      {/* HUD HEADER */}
       <div className="flex flex-col sm:flex-row items-center gap-4 w-full">
          <div className="flex-1 w-full bg-surface border border-bright rounded-[2rem] p-5 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-xl relative overflow-hidden">
             <div className="flex items-center gap-4 sm:gap-6 w-full sm:w-auto">
@@ -165,13 +71,6 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
             </div>
          </div>
       </div>
-
-      {error && !isProcessing && (
-        <div className="bg-red-500/10 border border-red-500/30 p-5 rounded-2xl flex items-center gap-4 text-red-500 animate-in shake duration-300">
-          <AlertTriangle size={18} className="shrink-0" />
-          <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest leading-none">{error}</span>
-        </div>
-      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-8 space-y-6">
@@ -198,45 +97,22 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
                     </div>
                  </div>
 
-                 {selectedGateway ? (
-                   <div className="p-5 sm:p-6 bg-black border border-bright rounded-[1.5rem] sm:rounded-[2rem] space-y-5 sm:space-y-6 animate-in slide-in-from-top-4">
-                      <div className="flex items-center justify-between border-b border-bright pb-3 sm:pb-4">
-                        <div className="flex items-center gap-3">
-                           <Lock size={12} className="text-accent" />
-                           <span className="text-[8px] sm:text-[9px] font-black text-dim uppercase tracking-widest">PCI_COMPLIANT_HANDSHAKE</span>
-                        </div>
-                      </div>
-
-                      {selectedGateway.provider === 'stripe' && (
-                        <div className="space-y-4">
-                           <label className="text-[7px] sm:text-[8px] font-black text-neutral-600 uppercase tracking-widest px-1 italic">SECURE_CARD_IF_ELEMENT</label>
-                           <div className="w-full bg-surface border border-neutral-800 rounded-xl px-4 py-4 focus-within:border-accent transition-all shadow-inner">
-                              <div ref={cardElementRef} />
-                           </div>
-                           <p className="text-[8px] text-neutral-700 uppercase font-bold text-center">Data encrypted at terminal level before transmission.</p>
-                        </div>
-                      )}
-
-                      {selectedGateway.provider === 'upi' && (
-                        <div className="space-y-1.5">
-                           <label className="text-[7px] sm:text-[8px] font-black text-neutral-600 uppercase tracking-widest px-1 italic">VIRTUAL_PAYMENT_ADDRESS</label>
-                           <input placeholder="identifier@bankhost" className="w-full bg-surface border border-neutral-800 rounded-xl px-4 py-3 text-main text-[10px] sm:text-xs font-mono outline-none focus:border-accent" value={vpaId} onChange={e => setVpaId(e.target.value)} />
-                        </div>
-                      )}
-
-                      {(selectedGateway.provider === 'crypto' || selectedGateway.provider === 'binance') && (
-                        <div className="space-y-1.5">
-                           <label className="text-[7px] sm:text-[8px] font-black text-neutral-600 uppercase tracking-widest px-1 italic">USER_ADDRESS_HASH</label>
-                           <input placeholder="0x..." className="w-full bg-surface border border-neutral-800 rounded-xl px-4 py-3 text-main text-[9px] sm:text-[10px] font-mono outline-none focus:border-accent" value={walletAddr} onChange={e => setWalletAddr(e.target.value)} />
-                        </div>
-                      )}
-                   </div>
-                 ) : (
-                   <div className="p-8 border-2 border-dashed border-bright rounded-[2rem] text-center space-y-4">
-                      <ShieldAlert className="mx-auto text-dim opacity-40" size={32} />
-                      <p className="text-[9px] font-black text-dim uppercase tracking-widest">Select an active financial node to begin sync</p>
-                   </div>
-                 )}
+                 <div className="p-8 border-2 border-dashed border-bright rounded-[2rem] text-center space-y-4 flex flex-col items-center justify-center bg-black/20">
+                    {selectedGateway ? (
+                       <div className="animate-in zoom-in duration-300 flex flex-col items-center">
+                          <div className="w-16 h-16 bg-accent/10 rounded-2xl flex items-center justify-center text-accent mb-4 border border-accent/20 shadow-lg">
+                             <Lock size={28} />
+                          </div>
+                          <span className="text-[10px] font-black text-white uppercase tracking-widest italic mb-1">{selectedGateway.name}</span>
+                          <p className="text-[8px] text-dim uppercase font-bold tracking-widest leading-relaxed">Secure tunnel encrypted at endpoint level.</p>
+                       </div>
+                    ) : (
+                       <>
+                         <ShieldAlert className="mx-auto text-dim opacity-40" size={32} />
+                         <p className="text-[9px] font-black text-dim uppercase tracking-widest">Select an active financial node to begin sync</p>
+                       </>
+                    )}
+                 </div>
               </div>
 
               <div className="space-y-4 sm:space-y-6">
@@ -285,11 +161,11 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
 
             <div className="mt-8 sm:mt-10 pt-8 sm:pt-8 border-t border-bright relative z-10 flex flex-col items-center">
                <button 
-                onClick={handleVaultSync} 
-                disabled={!isFormValid || isProcessing} 
-                className={`w-full sm:w-auto sm:px-12 py-4 rounded-xl font-black text-lg uppercase italic tracking-[0.2em] transition-all border-b-4 flex items-center justify-center gap-4 shadow-xl active:translate-y-1 active:border-b-0 ${isFormValid ? 'bg-white text-black border-neutral-300 hover:bg-emerald-500 hover:text-white hover:border-emerald-800' : 'bg-neutral-900 text-neutral-700 border-neutral-950 cursor-not-allowed'}`}
+                onClick={handleInitSettlement} 
+                disabled={!selectedGateway || !amount || parseFloat(amount) <= 0} 
+                className={`w-full sm:w-auto sm:px-12 py-4 rounded-xl font-black text-lg uppercase italic tracking-[0.2em] transition-all border-b-4 flex items-center justify-center gap-4 shadow-xl active:translate-y-1 active:border-b-0 ${selectedGateway ? 'bg-white text-black border-neutral-300 hover:bg-emerald-500 hover:text-white hover:border-emerald-800' : 'bg-neutral-900 text-neutral-700 border-neutral-950 cursor-not-allowed'}`}
                >
-                {isProcessing ? <Loader2 className="animate-spin" size={20} /> : <>INIT_SETTLEMENT <ArrowRight size={20} /></>}
+                 Open Secure Portal <ArrowRight size={20} />
               </button>
             </div>
           </div>
@@ -338,42 +214,15 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
         </div>
       </div>
 
-      {isProcessing && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/95 backdrop-blur-3xl animate-in fade-in duration-500">
-           <div className="w-full max-w-lg bg-[#080808] border-2 border-neutral-800 rounded-[3rem] p-10 flex flex-col items-center text-center space-y-10 shadow-[0_0_100px_rgba(124,58,237,0.15)] relative overflow-hidden">
-              <div className="relative group">
-                 <div className={`w-32 h-32 rounded-[2.5rem] bg-black border-2 border-neutral-800 flex items-center justify-center shadow-2xl transition-all duration-700 ${procStatus === 'success' ? 'border-emerald-500 text-emerald-500' : procStatus === 'failed' ? 'border-red-500 text-red-500' : 'border-accent text-accent'}`}>
-                    {procStatus === 'handshake' && <Server size={56} className="animate-pulse" />}
-                    {procStatus === 'validating' && <Link2 size={56} className="animate-bounce" />}
-                    {procStatus === 'settling' && <RefreshCw size={56} className="animate-spin" />}
-                    {procStatus === 'success' && <CheckCircle2 size={56} className="animate-in zoom-in duration-500" />}
-                    {procStatus === 'failed' && <ShieldAlert size={56} className="animate-in shake duration-500" />}
-                 </div>
-              </div>
-
-              <div className="space-y-4">
-                 <h2 className="text-3xl font-futuristic text-main italic uppercase tracking-tighter">
-                   {procStatus === 'success' ? 'SETTLEMENT_VERIFIED' : procStatus === 'failed' ? 'HANDSHAKE_ERROR' : 'STRIPE_GATEWAY_SYNC'}
-                 </h2>
-                 <p className="text-[10px] font-black text-accent uppercase tracking-[0.4em] font-mono leading-none animate-pulse">
-                   {procStep}
-                 </p>
-              </div>
-
-              <div className="w-full space-y-6">
-                 <div className="bg-black border border-neutral-800 rounded-2xl p-6 grid grid-cols-2 gap-4">
-                    <div className="text-left border-r border-neutral-800">
-                       <span className="text-[8px] font-black text-neutral-600 uppercase block mb-1">Target_Node</span>
-                       <span className="text-sm font-bold text-main uppercase truncate block">{selectedGateway?.name}</span>
-                    </div>
-                    <div className="text-right">
-                       <span className="text-[8px] font-black text-neutral-600 uppercase block mb-1">Vault_Credit</span>
-                       <span className="text-xl font-tactical font-black text-main italic tracking-widest block">${amount}</span>
-                    </div>
-                 </div>
-              </div>
-           </div>
-        </div>
+      {/* GATEWAY PORTAL OVERLAY */}
+      {showPortal && selectedGateway && (
+        <GatewayPortal 
+          gateway={selectedGateway}
+          amount={parseFloat(amount)}
+          userId="prod_user" // In real App use user.id
+          onSuccess={handlePortalSuccess}
+          onCancel={() => setShowPortal(false)}
+        />
       )}
     </div>
   );
