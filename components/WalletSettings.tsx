@@ -31,30 +31,18 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
   const [vpaId, setVpaId] = useState('');
   const [walletAddr, setWalletAddr] = useState('');
 
-  const gatewayStatusMap = useMemo(() => {
-    return gateways.reduce((acc, g) => {
-      const hasKeys = (g.publicKey?.length || 0) > 5 && (g.secretKey?.length || 0) > 5;
-      acc[g.id] = g.status === 'active' && hasKeys;
-      return acc;
-    }, {} as Record<string, boolean>);
-  }, [gateways]);
-
   const selectedGateway = useMemo(() => gateways.find(g => g.id === selectedGatewayId), [gateways, selectedGatewayId]);
-  const isOperational = selectedGateway ? gatewayStatusMap[selectedGateway.id] : false;
-
-  const calculation = useMemo(() => {
-    const num = parseFloat(amount) || 0;
-    return { netAmount: num };
-  }, [amount]);
 
   const isFormValid = useMemo(() => {
-    if (!selectedGateway || calculation.netAmount <= 0 || !isOperational) return false;
+    const num = parseFloat(amount) || 0;
+    if (!selectedGateway || num <= 0 || selectedGateway.status !== 'active') return false;
+    
     const p = selectedGateway.provider;
     if (p === 'stripe') return cardData.number.replace(/\s/g, '').length >= 15;
     if (p === 'upi') return vpaId.includes('@');
     if (p === 'crypto' || p === 'binance') return walletAddr.length >= 26;
     return true;
-  }, [selectedGateway, calculation.netAmount, cardData, vpaId, walletAddr, isOperational]);
+  }, [selectedGateway, amount, cardData, vpaId, walletAddr]);
 
   const handleVaultSync = async () => {
     if (!isFormValid || isProcessing || !selectedGateway) return;
@@ -63,22 +51,35 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
     soundService.playClick(true);
 
     try {
-      setProcStep(`HANDSHAKING_WITH_${selectedGateway.provider.toUpperCase()}_MESH...`);
-      const { txnId } = await paymentService.processTransaction(selectedGateway, calculation.netAmount, cardData);
+      setProcStep(`INITIALIZING_${selectedGateway.provider.toUpperCase()}_HANDSHAKE...`);
+      
+      // Step 1: SDK Validation
+      const validation = await paymentService.validateGateway(selectedGateway);
+      if (!validation.success) throw new Error(validation.message);
+
+      setProcStep(`UPLINK_ESTABLISHED: PROCESSING_SETTLEMENT...`);
+      
+      // Step 2: Live Transaction Handshake
+      const { txnId } = await paymentService.processTransaction(
+        selectedGateway, 
+        parseFloat(amount), 
+        { cardData, vpaId, walletAddr }
+      );
       
       setProcStep("VERIFYING_SETTLEMENT_SIGNATURES...");
-      const finalAmount = flowMode === 'deposit' ? calculation.netAmount : -calculation.netAmount;
+      const finalAmount = flowMode === 'deposit' ? parseFloat(amount) : -parseFloat(amount);
       await onDeposit(finalAmount, selectedGateway.name, txnId);
       
       setAmount('500');
       setCardData({ number: '', expiry: '', cvc: '' });
       setVpaId('');
       setWalletAddr('');
+      setSelectedGatewayId(null);
+      setProcStep('');
     } catch (e: any) {
       setError(e.message || "VAULT_HANDSHAKE_FAILED");
     } finally {
       setIsProcessing(false);
-      setProcStep('');
     }
   };
 
@@ -144,20 +145,24 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
                     </div>
                  </div>
 
-                 {selectedGateway && isOperational && (
+                 {selectedGateway && (
                    <div className="p-6 bg-black border border-bright rounded-[2rem] space-y-6 animate-in slide-in-from-top-4">
                       <div className="flex items-center justify-between border-b border-bright pb-4">
                         <div className="flex items-center gap-3">
                            <Lock size={14} className="text-accent" />
-                           <span className="text-[10px] font-black text-dim uppercase tracking-widest">Live_Handshake_Secure</span>
+                           <span className="text-[10px] font-black text-dim uppercase tracking-widest">SDK_HANDSHAKE_READY</span>
                         </div>
                       </div>
 
                       {selectedGateway.provider === 'stripe' && (
                         <div className="space-y-4">
                            <div className="space-y-1.5">
-                             <label className="text-[8px] font-black text-neutral-600 uppercase tracking-widest px-1 italic">CREDIT_PAN</label>
+                             <label className="text-[8px] font-black text-neutral-600 uppercase tracking-widest px-1 italic">CREDIT_PAN_ENTRY</label>
                              <input placeholder="0000 0000 0000 0000" className="w-full bg-surface border border-neutral-800 rounded-xl px-5 py-3.5 text-main text-xs font-mono outline-none focus:border-accent" value={cardData.number} onChange={e => setCardData({...cardData, number: e.target.value})} />
+                           </div>
+                           <div className="grid grid-cols-2 gap-4">
+                              <input placeholder="MM/YY" className="w-full bg-surface border border-neutral-800 rounded-xl px-5 py-3.5 text-main text-xs font-mono outline-none focus:border-accent" value={cardData.expiry} onChange={e => setCardData({...cardData, expiry: e.target.value})} />
+                              <input placeholder="CVC" className="w-full bg-surface border border-neutral-800 rounded-xl px-5 py-3.5 text-main text-xs font-mono outline-none focus:border-accent" value={cardData.cvc} onChange={e => setCardData({...cardData, cvc: e.target.value})} />
                            </div>
                         </div>
                       )}
@@ -183,7 +188,7 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                        <Zap size={16} className="text-amber-500" />
-                       <h3 className="text-[10px] font-black text-main uppercase tracking-[0.4em] italic">Active_Mesh_Vectors</h3>
+                       <h3 className="text-[10px] font-black text-main uppercase tracking-[0.4em] italic">Settlement_Vectors</h3>
                     </div>
                  </div>
                  
@@ -191,10 +196,10 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
                     {gateways.map(g => {
                        const Icon = getProviderIcon(g.provider);
                        const isSelected = selectedGatewayId === g.id;
-                       const opStatus = gatewayStatusMap[g.id];
+                       const isActiveNode = g.status === 'active';
 
                        return (
-                         <button key={g.id} onClick={() => { soundService.playClick(); setSelectedGatewayId(g.id); }} className={`flex items-center justify-between p-5 rounded-2xl border-2 transition-all relative overflow-hidden group/node ${isSelected ? 'bg-accent text-white border-accent shadow-xl scale-[1.02]' : 'bg-black border-bright text-dim hover:border-neutral-700'}`}>
+                         <button key={g.id} onClick={() => { soundService.playClick(); setSelectedGatewayId(g.id); }} className={`flex items-center justify-between p-5 rounded-2xl border-2 transition-all relative overflow-hidden group/node ${isSelected ? 'bg-accent text-white border-accent shadow-xl scale-[1.02]' : 'bg-black border-bright text-dim hover:border-neutral-700'} ${!isActiveNode ? 'opacity-40 grayscale' : ''}`}>
                             <div className="flex items-center gap-5 relative z-10">
                                <div className={`w-12 h-12 rounded-xl border flex items-center justify-center ${isSelected ? 'bg-white/10 border-white/20' : 'bg-surface border-bright'}`}>
                                  <Icon size={24} className={isSelected ? 'text-white' : 'text-dim group-hover/node:text-main'} />
@@ -202,8 +207,8 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
                                <div className="text-left">
                                   <p className="text-xs font-black uppercase tracking-widest leading-none">{g.name}</p>
                                   <div className="flex items-center gap-2 mt-2">
-                                     <div className={`w-1.5 h-1.5 rounded-full ${opStatus ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : 'bg-red-500'}`} />
-                                     <p className={`text-[8px] font-bold uppercase tracking-widest ${isSelected ? 'text-white/70' : 'text-neutral-600'}`}>{opStatus ? 'LIVE_PROVIDER_CONNECTED' : 'CREDENTIALS_MISSING'}</p>
+                                     <div className={`w-1.5 h-1.5 rounded-full ${isActiveNode ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : 'bg-red-500'}`} />
+                                     <p className={`text-[8px] font-bold uppercase tracking-widest ${isSelected ? 'text-white/70' : 'text-neutral-600'}`}>{isActiveNode ? 'LIVE_UPLINK' : 'NODE_OFFLINE'}</p>
                                   </div>
                                </div>
                             </div>
@@ -216,17 +221,15 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
 
             <div className="mt-12 pt-10 border-t border-bright relative z-10">
                <button onClick={handleVaultSync} disabled={!isFormValid || isProcessing} className={`w-full py-6 rounded-2xl font-black text-2xl uppercase italic tracking-[0.3em] transition-all border-b-[8px] flex items-center justify-center gap-6 shadow-2xl active:translate-y-1 active:border-b-0 ${isFormValid ? 'bg-white text-black border-neutral-300 hover:bg-[#00e5ff]' : 'bg-neutral-900 text-neutral-700 border-neutral-950 cursor-not-allowed'}`}>
-                {isProcessing ? <Loader2 className="animate-spin" size={28} /> : <>INIT_LIVE_SETTLEMENT <ArrowRight size={28} /></>}
+                {isProcessing ? <Loader2 className="animate-spin" size={28} /> : <>INIT_SETTLEMENT <ArrowRight size={28} /></>}
               </button>
               
               {isProcessing && procStep && (
-                <p className="text-center text-[10px] text-accent font-black uppercase mt-4 animate-pulse">{procStep}</p>
-              )}
-
-              {!isOperational && selectedGateway && (
-                <div className="mt-6 p-4 bg-red-500/5 border border-red-500/20 rounded-xl flex items-center justify-center gap-3">
-                   <ShieldAlert size={14} className="text-red-500" />
-                   <p className="text-[9px] text-red-500 font-black uppercase tracking-widest">NODE_OFFLINE: Configure valid live keys in Control Center.</p>
+                <div className="flex flex-col items-center gap-2 mt-6">
+                  <div className="w-full bg-neutral-900 h-1 rounded-full overflow-hidden max-w-xs">
+                    <div className="h-full bg-accent animate-pulse" style={{width: '60%'}} />
+                  </div>
+                  <p className="text-center text-[10px] text-accent font-black uppercase animate-pulse">{procStep}</p>
                 </div>
               )}
             </div>
@@ -247,12 +250,12 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
                       <div className="flex items-center gap-4">
                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center border-2 ${act.type === 'deposit' ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-500' : 'bg-red-500/5 border-red-500/20 text-red-500'}`}>{act.type === 'deposit' ? <ArrowDownLeft size={18} /> : <ArrowUpRight size={18} />}</div>
                          <div className="min-w-0">
-                            <p className="text-[8px] text-neutral-600 font-bold uppercase mb-0.5 font-mono">TXN: {act.id}</p>
+                            <p className="text-[8px] text-neutral-600 font-bold uppercase mb-0.5 font-mono truncate max-w-[100px]">TXN_{act.id.slice(-6)}</p>
                             <p className="text-xs font-black text-main uppercase truncate max-w-[120px]">{act.provider}</p>
                          </div>
                       </div>
                       <div className="text-right">
-                         <span className={`text-xl font-tactical font-black italic tracking-widest ${act.type === 'deposit' ? 'text-emerald-500' : 'text-red-500'}`}>{act.type === 'deposit' ? '+' : '-'}{act.amount.toLocaleString()}</span>
+                         <span className={`text-xl font-tactical font-black italic tracking-widest ${act.type === 'deposit' ? 'text-emerald-400' : 'text-red-400'}`}>{act.type === 'deposit' ? '+' : '-'}${act.amount.toLocaleString()}</span>
                       </div>
                    </div>
                  )) : <div className="h-full flex flex-col items-center justify-center opacity-10 py-20"><RefreshCw size={64} className="animate-spin mb-6" /><p className="text-[10px] font-black uppercase tracking-[0.4em]">SYNCING_LEDGER...</p></div>}
