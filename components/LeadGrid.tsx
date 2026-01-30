@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, memo, useEffect } from 'react';
 import { Lead, UserRole } from '../types';
 import { 
@@ -353,5 +352,10 @@ const LeadGridBase: React.FC<LeadGridProps> = ({ leads, onBid, onEdit, userRole,
   );
 };
 
-const LeadGrid = Object.assign(LeadGridBase, { TacticalLeadCard });
+// Explicit typing for the component with attached sub-components to support App.tsx property access
+type LeadGridComponent = React.FC<LeadGridProps> & {
+  TacticalLeadCard: typeof TacticalLeadCard;
+};
+
+const LeadGrid: LeadGridComponent = Object.assign(LeadGridBase, { TacticalLeadCard });
 export default LeadGrid;

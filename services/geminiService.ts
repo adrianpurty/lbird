@@ -1,6 +1,5 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
-import { Lead } from "../types.ts";
+import { Lead } from "../types";
 
 /**
  * Lead Quality Analysis and Admin Overrides using Google Gemini API.
