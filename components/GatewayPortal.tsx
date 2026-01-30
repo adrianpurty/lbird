@@ -28,18 +28,24 @@ const GatewayPortal: React.FC<GatewayPortalProps> = ({ gateway, amount, userId, 
   useEffect(() => {
     const initIntent = async () => {
       setStatus('HANDSHAKE');
+      setError(null);
       try {
         const data = await paymentService.createIntent(userId, gateway.id, amount);
-        if (data.error) throw new Error(data.error);
+        if (data && data.error) {
+          // Handle object or string error from backend
+          const msg = typeof data.error === 'string' ? data.error : (data.error.message || JSON.stringify(data.error));
+          throw new Error(msg);
+        }
         setIntentData(data);
         setStatus('READY');
       } catch (e: any) {
-        setError(e.message);
+        const finalMsg = e instanceof Error ? e.message : (typeof e === 'string' ? e : "INTENT_SYNC_FAILURE");
+        setError(finalMsg);
         setStatus('ERROR');
       }
     };
     initIntent();
-  }, []);
+  }, [userId, gateway.id, amount]);
 
   // Mount Stripe Elements if provider is Stripe
   useEffect(() => {
@@ -60,19 +66,24 @@ const GatewayPortal: React.FC<GatewayPortalProps> = ({ gateway, amount, userId, 
         });
         card.mount(cardElementRef.current);
         stripeElementsRef.current = card;
+      }).catch(e => {
+        setError(e instanceof Error ? e.message : "STRIPE_LOAD_ERROR");
+        setStatus('ERROR');
       });
     }
-  }, [status]);
+  }, [status, gateway.publicKey, gateway.provider]);
 
   const handleExecute = async () => {
     if (status === 'PROCESSING') return;
     setStatus('PROCESSING');
+    setError(null);
     soundService.playClick(true);
 
     try {
       let finalTxnId = '';
       
       if (gateway.provider === 'stripe') {
+        if (!stripeElementsRef.current) throw new Error("CARD_ELEMENT_NOT_READY");
         finalTxnId = await paymentService.confirmStripePayment(
           gateway.publicKey, 
           intentData.clientSecret, 
@@ -91,9 +102,13 @@ const GatewayPortal: React.FC<GatewayPortalProps> = ({ gateway, amount, userId, 
       setTimeout(() => onSuccess(`${gateway.provider.toUpperCase()}_SETTLE_${finalTxnId}`), 2000);
       
     } catch (e: any) {
-      setError(e.message || "TRANSACTION_REJECTED");
+      const finalMsg = e instanceof Error ? e.message : (typeof e === 'string' ? e : "TRANSACTION_REJECTED");
+      setError(finalMsg);
       setStatus('ERROR');
-      setTimeout(() => setStatus('READY'), 4000);
+      // Revert to ready state after some time so user can try again
+      setTimeout(() => {
+        if (status !== 'SUCCESS') setStatus('READY');
+      }, 4000);
     }
   };
 
@@ -190,7 +205,7 @@ const GatewayPortal: React.FC<GatewayPortalProps> = ({ gateway, amount, userId, 
                     <div className="bg-black/40 border border-neutral-800 rounded-[2rem] p-10 flex flex-col items-center gap-6">
                        <div className="text-accent/40">{getProviderIcon()}</div>
                        <div className="text-center space-y-3">
-                          <span className="text-[10px] font-mono text-neutral-600 bg-neutral-900 px-4 py-1.5 rounded-lg border border-neutral-800">{gateway.publicKey.slice(0, 16)}...</span>
+                          <span className="text-[10px] font-mono text-neutral-600 bg-neutral-900 px-4 py-1.5 rounded-lg border border-neutral-800">{gateway.publicKey?.slice(0, 16) || 'ADDR_HIDDEN'}...</span>
                           <p className="text-[10px] text-neutral-500 font-black uppercase tracking-widest max-w-xs leading-relaxed">
                             Verify settlement signature against the master address hash above.
                           </p>
@@ -202,13 +217,13 @@ const GatewayPortal: React.FC<GatewayPortalProps> = ({ gateway, amount, userId, 
                {error && (
                  <div className="bg-red-500/10 border border-red-500/30 p-5 rounded-2xl flex items-center gap-4 text-red-500 animate-in shake duration-300">
                     <AlertTriangle size={20} className="shrink-0" />
-                    <span className="text-[10px] font-black uppercase tracking-widest leading-tight">{error}</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest leading-tight">{String(error)}</span>
                  </div>
                )}
 
                <button 
                  onClick={handleExecute}
-                 disabled={status === 'PROCESSING'}
+                 disabled={status === 'PROCESSING' || status === 'HANDSHAKE'}
                  className={`w-full py-6 rounded-[2rem] font-black text-xl italic uppercase tracking-[0.2em] transition-all border-b-[8px] flex items-center justify-center gap-6 shadow-2xl active:translate-y-1 active:border-b-0 ${
                    status === 'PROCESSING' ? 'bg-neutral-900 text-neutral-700 border-neutral-950' : 'bg-white text-black border-neutral-300 hover:bg-accent hover:text-white hover:border-violet-900'
                  }`}

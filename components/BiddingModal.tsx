@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { X, Globe, Target, Phone, Zap, ChevronRight, Calculator, AlertTriangle, Wallet, Info, ArrowRight, CreditCard, RefreshCw, Calendar, Clock, Scan, Globe as GlobeIcon, Bitcoin, Smartphone, Landmark, Database, CheckCircle2, Loader2, ArrowUpRight, ShieldCheck, Briefcase, ShieldAlert, ArrowLeft, Terminal } from 'lucide-react';
 import { Lead, User, GatewayAPI } from '../types.ts';
@@ -105,14 +104,15 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClo
     try {
       await onSubmit({ ...formData, totalDailyCost });
       setIsSuccess(true);
-    } catch (error) {
+    } catch (error: any) {
+      const msg = error instanceof Error ? error.message : "ACQUISITION_EXECUTION_FAILED";
+      setError(msg);
       console.error("Acquisition execution failed", error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // NEW: Process direct gateway settlement if user wants to pay directly
   const handleDirectSettlement = async (gateway: GatewayAPI) => {
     setIsGatewaySyncing(true);
     setError(null);
@@ -126,7 +126,6 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClo
       const { txnId } = await paymentService.processTransaction(gateway, totalDailyCost);
       
       setGatewayStep("SETTLEMENT_VERIFIED: SYNCING_VAULT_BALANCE...");
-      // Credit user first, then submit bid
       await apiService.deposit(user.id, totalDailyCost, gateway.name, txnId);
       
       setGatewayStep("HANDSHAKE_COMPLETE: BROADCASTING_BID...");
@@ -134,7 +133,8 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClo
       
       setIsSuccess(true);
     } catch (e: any) {
-      setError(e.message || "GATEWAY_PROTOCOL_REJECTION");
+      const msg = e instanceof Error ? e.message : (typeof e === 'string' ? e : "GATEWAY_PROTOCOL_REJECTION");
+      setError(msg);
     } finally {
       setIsGatewaySyncing(false);
       setGatewayStep('');
@@ -157,7 +157,6 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClo
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl overflow-hidden">
       <div className="w-full max-w-2xl max-h-[95vh] bg-surface border border-bright rounded-[3rem] shadow-[0_0_100px_rgba(0,0,0,1)] flex flex-col animate-in zoom-in-95 duration-300 overflow-hidden relative">
         
-        {/* GATEWAY SYNC OVERLAY */}
         {isGatewaySyncing && (
           <div className="absolute inset-0 z-[110] bg-black/90 backdrop-blur-2xl flex flex-col items-center justify-center text-center p-12 space-y-8 animate-in fade-in duration-500">
              <div className="relative">
@@ -170,9 +169,6 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClo
                 <h3 className="text-2xl font-futuristic text-white italic uppercase tracking-tighter">GATEWAY_HANDSHAKE</h3>
                 <p className="text-[10px] text-accent font-black uppercase tracking-[0.4em] animate-pulse">{gatewayStep}</p>
              </div>
-             <p className="text-[9px] text-neutral-600 font-bold uppercase tracking-widest leading-relaxed max-w-xs">
-               Securing real-time liquidity via provisioned financial node. Do not terminate terminal connection.
-             </p>
           </div>
         )}
 
@@ -214,21 +210,6 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClo
                   </p>
                </div>
 
-               <div className="bg-black/60 border border-bright rounded-[2rem] p-6 w-full max-w-sm flex items-center justify-between">
-                  <div className="text-left">
-                     <span className="text-[8px] font-black text-neutral-500 uppercase tracking-widest block mb-1">UNIT_ACQUISITION</span>
-                     <span className="text-2xl font-tactical text-amber-500 italic tracking-widest">${formData.bidAmount.toLocaleString()} / Unit</span>
-                  </div>
-                  <div className="text-right">
-                     <span className="text-[8px] font-black text-neutral-500 uppercase tracking-widest block mb-1">SETTLEMENT</span>
-                     <span className="text-[10px] font-black text-neutral-400 uppercase">HELD IN ESCROW</span>
-                  </div>
-               </div>
-
-               <p className="text-[10px] text-neutral-600 font-bold uppercase tracking-widest leading-relaxed max-w-md">
-                 Your funds have been moved to the treasury vault. An administrator will verify your delivery endpoints before authorizing traffic flow.
-               </p>
-
                <button 
                 onClick={onRedirectToActionCenter}
                 className="group relative w-full py-6 bg-white text-black rounded-[2.5rem] font-black text-xl uppercase italic tracking-widest border-b-[8px] border-neutral-300 active:translate-y-1 active:border-b-0 transition-all flex items-center justify-center gap-6"
@@ -243,41 +224,8 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClo
                   <div className="space-y-2">
                      <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Authorize Escrow Lock</h3>
                      <p className="text-[10px] text-dim leading-relaxed font-bold uppercase tracking-widest">
-                       Funds will be immediately deducted from your vault and held in the admin escrow node. Acquisition is subject to manual verification of your terminal endpoints.
+                       Funds will be immediately deducted from your vault and held in the admin escrow node.
                      </p>
-                  </div>
-               </div>
-
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="bg-black/60 border border-bright rounded-[2rem] p-6 space-y-4">
-                     <span className="text-[8px] font-black text-neutral-500 uppercase tracking-[0.3em]">UNIT_ACQUISITION_COST</span>
-                     <div className="flex items-baseline gap-2">
-                        <span className="text-3xl font-tactical text-white italic font-black">${formData.bidAmount.toLocaleString()}</span>
-                        <span className="text-[9px] text-neutral-600 font-bold uppercase tracking-widest">/ UNIT</span>
-                     </div>
-                  </div>
-                  <div className="bg-black/60 border border-bright rounded-[2rem] p-6 space-y-4">
-                     <span className="text-[8px] font-black text-neutral-500 uppercase tracking-[0.3em]">DAILY_ESCROW_SETTLEMENT</span>
-                     <div className="flex items-baseline gap-2">
-                        <span className="text-3xl font-tactical text-amber-500 italic font-black">${totalDailyCost.toLocaleString()}</span>
-                        <span className="text-[9px] text-neutral-600 font-bold uppercase tracking-widest">/ 24H</span>
-                     </div>
-                  </div>
-               </div>
-
-               <div className="bg-black border border-bright rounded-2xl p-6 space-y-4 font-mono">
-                  <div className="flex justify-between items-center opacity-60">
-                     <span className="text-[8px] uppercase tracking-widest text-neutral-500">Target Asset</span>
-                     <span className="text-[8px] text-white truncate max-w-[150px]">{lead.title}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                     <span className="text-[8px] uppercase tracking-widest text-neutral-500">Delivery Vector</span>
-                     <span className="text-[8px] text-accent truncate max-w-[200px] font-bold">{formData.buyerTargetLeadUrl.replace(/^https?:\/\//, '')}</span>
-                  </div>
-                  <div className="h-[1px] bg-neutral-800 w-full" />
-                  <div className="flex justify-between items-center">
-                     <span className="text-[8px] uppercase tracking-widest text-neutral-500">Available Balance</span>
-                     <span className="text-sm font-black text-white italic tracking-widest">${user.balance.toLocaleString()}</span>
                   </div>
                </div>
 
@@ -301,13 +249,6 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClo
           ) : !isBridgeMode ? (
             <form onSubmit={handleExecute} className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
               
-              <div className="bg-accent/5 p-4 rounded-2xl border border-accent/20 flex items-start gap-4">
-                <ShieldCheck className="text-accent shrink-0 mt-0.5" size={16} />
-                <p className="text-[9px] text-dim uppercase leading-relaxed font-bold tracking-widest">
-                  Escrow Protocol: Placing a bid locks funds in the marketplace treasury until an admin authorizes the handshake.
-                </p>
-              </div>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-[9px] font-black text-neutral-500 uppercase tracking-widest flex items-center gap-2 px-2 italic">
@@ -324,7 +265,7 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClo
                 </div>
                 <div className="space-y-2">
                   <label className="text-[9px] font-black text-neutral-500 uppercase tracking-widest flex items-center gap-2 px-2 italic">
-                    <Phone size={12} className="text-accent" /> Contact Phone / Toll Free
+                    <Phone size={12} className="text-accent" /> Contact Phone
                   </label>
                   <input 
                     required
@@ -339,7 +280,7 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClo
 
               <div className="space-y-2">
                 <label className="text-[9px] font-black text-neutral-500 uppercase tracking-widest flex items-center gap-2 px-2 italic">
-                  <Target size={12} className="text-accent" /> Delivery Endpoint (Webhook)
+                  <Target size={12} className="text-accent" /> Delivery Endpoint
                 </label>
                 <input 
                   required
@@ -351,94 +292,12 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClo
                 />
               </div>
 
-              <div className="bg-black/60 border border-bright rounded-[2rem] p-6 space-y-6 shadow-sm">
-                <div className="flex items-center justify-between">
-                   <div className="flex items-center gap-3">
-                      <Calendar size={14} className="text-accent" />
-                      <h3 className="text-[10px] font-black text-white uppercase tracking-[0.3em]">Acquisition_Window</h3>
-                   </div>
-                   <div className="text-[8px] font-black text-neutral-700 uppercase tracking-widest">REALTIME_DELIVERY_SYNC</div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-                  <div className="flex gap-1.5 justify-center md:justify-start">
-                    {DAYS_OF_WEEK.map(day => (
-                      <button
-                        key={day.id}
-                        type="button"
-                        onClick={() => toggleDay(day.id)}
-                        className={`w-8 h-8 rounded-lg border flex items-center justify-center font-black text-[9px] transition-all ${
-                          formData.operationalDays.includes(day.id)
-                            ? 'bg-accent text-white border-accent shadow-lg'
-                            : 'bg-black text-neutral-600 border-neutral-800 hover:border-accent/40'
-                        }`}
-                      >
-                        {day.label}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="flex items-center gap-3 bg-black border border-neutral-800 p-2 rounded-xl">
-                    <div className="flex-1 relative">
-                       <Clock size={10} className="absolute left-3 top-1/2 -translate-y-1/2 text-accent/60" />
-                       <input 
-                         type="time"
-                         className="w-full bg-transparent border-none pl-8 pr-2 py-1 text-white font-mono text-[10px] outline-none cursor-pointer"
-                         value={formData.officeHoursStart}
-                         onChange={e => setFormData({...formData, officeHoursStart: e.target.value})}
-                       />
-                    </div>
-                    <span className="text-neutral-700 text-xs">—</span>
-                    <div className="flex-1 relative">
-                       <Clock size={10} className="absolute left-3 top-1/2 -translate-y-1/2 text-accent/60" />
-                       <input 
-                         type="time"
-                         className="w-full bg-transparent border-none pl-8 pr-2 py-1 text-white font-mono text-[10px] outline-none cursor-pointer"
-                         value={formData.officeHoursEnd}
-                         onChange={e => setFormData({...formData, officeHoursEnd: e.target.value})}
-                       />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                <div className="bg-black/60 border border-bright p-4 rounded-2xl space-y-4">
-                  <div className="flex justify-between items-center">
-                      <span className="text-[8px] font-black text-neutral-500 uppercase tracking-widest">Leads Per Day</span>
-                      <input 
-                        type="number"
-                        className="w-16 bg-black border border-neutral-800 rounded-lg px-2 py-1 text-white font-tactical text-lg text-center outline-none focus:border-accent"
-                        value={formData.leadsPerDay}
-                        onChange={e => setFormData({...formData, leadsPerDay: parseInt(e.target.value) || 0})}
-                      />
-                  </div>
-                  <div className="flex justify-between items-center">
-                      <span className="text-[8px] font-black text-neutral-500 uppercase tracking-widest">Unit Bid ($)</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-neutral-600 font-tactical text-lg">$</span>
-                        <input 
-                          type="number"
-                          readOnly={!!initialBid}
-                          className={`w-16 bg-black border border-neutral-800 rounded-lg px-2 py-1 text-white font-tactical text-lg text-center outline-none focus:border-accent ${initialBid ? 'opacity-50 cursor-not-allowed' : ''}`}
-                          value={formData.bidAmount}
-                          onChange={e => setFormData({...formData, bidAmount: parseFloat(e.target.value) || 0})}
-                        />
-                      </div>
-                  </div>
-                </div>
-
-                <div className="bg-black border border-bright p-4 rounded-2xl flex flex-col justify-center items-center text-center relative group overflow-hidden shadow-sm">
-                  <div className="absolute top-0 right-0 p-2 opacity-5 pointer-events-none scale-150 text-white"><Calculator size={40} /></div>
-                  <span className="text-[7px] font-black text-neutral-600 uppercase tracking-[0.2em] mb-1">ESTIMATED_ESCROW_LOCK</span>
-                  <div className={`text-3xl font-black italic font-tactical tracking-tighter transition-colors ${hasInsufficientFunds ? 'text-red-500' : 'text-white'}`}>
-                    ${totalDailyCost.toLocaleString()}
-                  </div>
-                  {hasInsufficientFunds && (
-                    <span className="text-[6px] text-red-500 font-black uppercase tracking-widest mt-1 animate-pulse">VAULT_LIMIT_EXCEEDED</span>
-                  )}
-                </div>
-              </div>
+              {error && (
+                 <div className="bg-red-500/10 border border-red-500/30 p-4 rounded-2xl flex items-center gap-3 text-red-500 animate-in shake duration-300">
+                    <AlertTriangle size={16} className="shrink-0" />
+                    <span className="text-[10px] font-black uppercase tracking-widest leading-tight">{String(error)}</span>
+                 </div>
+              )}
 
               <button 
                 type="submit"
@@ -460,7 +319,7 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClo
                {error && (
                  <div className="bg-red-500/10 border border-red-500/30 p-5 rounded-2xl flex items-center gap-4 text-red-500 animate-in shake duration-300">
                     <ShieldAlert size={20} className="shrink-0" />
-                    <span className="text-[10px] font-black uppercase tracking-widest leading-none">{error}</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest leading-none">{String(error)}</span>
                  </div>
                )}
 
@@ -469,7 +328,7 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClo
                   <div className="space-y-2">
                      <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Instant Settlement Required</h3>
                      <p className="text-[10px] text-dim leading-relaxed font-bold uppercase tracking-widest">
-                       Vault Balance [${user.balance?.toLocaleString() || '0'}] is below required settlement. Use a live financial node to process acquisition handshake instantly.
+                       Vault Balance is below required settlement. Use a live financial node to process acquisition instantly.
                      </p>
                   </div>
                </div>
@@ -485,27 +344,19 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClo
                           disabled={isGatewaySyncing}
                           className="bg-black/40 border border-bright rounded-3xl p-6 text-left hover:border-accent transition-all flex flex-col gap-4 group shadow-sm relative overflow-hidden"
                         >
-                           <div className="flex items-center justify-between relative z-10">
-                              <span className="text-[9px] font-black text-neutral-500 uppercase tracking-widest">GATE_ID: {g.provider?.toUpperCase()}</span>
-                              <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]" />
-                           </div>
                            <div className="flex items-center gap-4 relative z-10">
                               <div className="w-10 h-10 rounded-xl bg-black border border-neutral-800 flex items-center justify-center text-neutral-500 group-hover:text-accent transition-colors">
                                  <NodeIcon size={20} />
                               </div>
                               <h4 className="text-lg font-black text-white italic truncate uppercase flex-1">{g.name}</h4>
                            </div>
-                           <div className="text-[8px] text-dim font-bold uppercase flex items-center gap-1 relative z-10">
-                              <RefreshCw size={10} className="animate-spin-slow" /> INSTANT_UPLINK_READY
-                           </div>
-                           <div className="absolute inset-0 bg-accent/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
                         </button>
                       );
                     })
                   ) : (
                     <div className="col-span-full py-12 text-center bg-black/60 border border-dashed border-bright rounded-[2.5rem]">
                        <AlertTriangle className="mx-auto text-neutral-700 mb-4" size={40} />
-                       <p className="text-[10px] text-neutral-500 font-black uppercase tracking-widest">NO_SYNC_NODES_FOUND // CONFIGURE_IN_VAULT</p>
+                       <p className="text-[10px] text-neutral-500 font-black uppercase tracking-widest">NO_SYNC_NODES_FOUND</p>
                     </div>
                   )}
                </div>
