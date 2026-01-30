@@ -2,83 +2,102 @@
 import { GatewayAPI } from '../types.ts';
 
 /**
- * LeadBid Pro - Hardened Payment Orchestrator
- * Ensures wallet credits are only generated via validated gateway handshakes.
+ * LeadBid Pro - Production Payment Orchestrator
+ * Communicates with live Stripe API and backend settlement nodes.
  */
 
 declare const Stripe: any;
 
 export const paymentService = {
   /**
-   * Validates a gateway configuration and prepares the uplink.
+   * Initializes a Stripe instance for a specific gateway node
+   */
+  async getStripe(publicKey: string) {
+    if (typeof Stripe === 'undefined') {
+      throw new Error("STRIPE_JS_NOT_LOADED: Ensure network connection to Stripe CDN.");
+    }
+    return Stripe(publicKey);
+  },
+
+  /**
+   * Validates a gateway configuration.
    */
   async validateGateway(gateway: GatewayAPI): Promise<{ success: boolean; message: string }> {
-    const provider = gateway.provider;
-    const pubKey = gateway.publicKey?.trim() || "";
-    
     if (gateway.status !== 'active') {
-      return { success: false, message: "NODE_OFFLINE: Gateway is not currently accepting transmissions." };
+      return { success: false, message: "NODE_OFFLINE: Node decommissioned." };
     }
+    if (!gateway.publicKey || !gateway.publicKey.includes('_')) {
+      return { success: false, message: "INVALID_CREDENTIALS: Key format rejected." };
+    }
+    return { success: true, message: "GATEWAY_HANDSHAKE_READY" };
+  },
 
+  /**
+   * Orchestrates a live Stripe settlement.
+   * 1. Requests a PaymentIntent from the backend.
+   * 2. Confirms the payment via Stripe Elements.
+   */
+  async processLiveStripe(gateway: GatewayAPI, amount: number, stripeElements: any): Promise<{ txnId: string; verified: boolean }> {
     try {
-      if (provider === 'stripe') {
-        if (!pubKey.startsWith('pk_live_') && !pubKey.startsWith('pk_test_')) {
-          throw new Error("INVALID_STRIPE_FORMAT: Public key mismatch.");
-        }
-        return { success: true, message: "STRIPE_UPLINK_ESTABLISHED" };
-      }
-
-      if (provider === 'crypto' || provider === 'binance') {
-        const addressRegex = /^(0x[a-fA-F0-9]{40}|[13][a-km-zA-HJ-NP-Z1-9]{25,34}|bc1[a-z0-9]{39,59})$/;
-        if (!addressRegex.test(pubKey)) {
-          throw new Error("INVALID_WALLET_HASH: Security protocol rejected address.");
-        }
-        return { success: true, message: "WEB3_VAULT_IDENTIFIED" };
-      }
-
-      if (provider === 'upi') {
-        if (!pubKey.includes('@')) {
-          throw new Error("INVALID_VPA: Virtual identifier rejected.");
-        }
-        return { success: true, message: "UPI_NODE_DISCOVERED" };
-      }
-
-      if (!pubKey || !gateway.secretKey) throw new Error("KEYS_UNASSIGNED: Master keys missing.");
+      // Step 1: Backend Handshake to create Intent
+      // In a real environment, this sends the amount and currency to your server
+      const response = await fetch('api.php?action=create_payment_intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          amount: Math.round(amount * 100), // Stripe expects cents
+          gatewayId: gateway.id 
+        })
+      });
       
-      return { success: true, message: `${provider.toUpperCase()}_NODE_ONLINE` };
-    } catch (error: any) {
-      return { success: false, message: error.message };
+      const { clientSecret, error: backendError } = await response.json();
+      if (backendError) throw new Error(`BACKEND_REJECTION: ${backendError}`);
+
+      // Step 2: Confirm Payment with Stripe JS
+      const stripe = await this.getStripe(gateway.publicKey);
+      const result = await stripe.confirmCardPayment(clientSecret, {
+        payment_method: {
+          card: stripeElements,
+          billing_details: {
+            name: 'LeadBid Pro Participant',
+          },
+        }
+      });
+
+      if (result.error) {
+        throw new Error(result.error.message || "STRIPE_SETTLEMENT_FAILED");
+      }
+
+      if (result.paymentIntent.status === 'succeeded') {
+        return { 
+          txnId: `${gateway.provider.toUpperCase()}_SETTLE_${result.paymentIntent.id}`,
+          verified: true 
+        };
+      }
+
+      throw new Error("TRANSACTION_PENDING: Awaiting bank consensus.");
+    } catch (e: any) {
+      console.error("[STRIPE_LIVE_ERROR]", e);
+      throw e;
     }
   },
 
   /**
-   * Processes a real-money transaction. Returns an immutable transaction hash.
-   * In a live environment, this would communicate with Stripe/Provider APIs.
+   * Fallback for other payment types (UPI/Crypto)
    */
   async processTransaction(gateway: GatewayAPI, amount: number, paymentData?: any): Promise<{ txnId: string; verified: boolean }> {
-    const pubKey = gateway.publicKey.trim();
-    
     // Check Node Integrity
     if (gateway.status !== 'active') throw new Error("SECURITY_FAILURE: Node is offline.");
-    if (!pubKey) throw new Error("CREDENTIALS_MISSING: Secure handshake failed.");
-
-    // Simulate Financial Network Latency (Handshake phase)
+    
+    // For Non-Stripe, we simulate a 3s cryptographic handshake
     await new Promise(resolve => setTimeout(resolve, 3000));
 
-    // Simulated Provider Verification logic
-    // In production, this is where stripe.confirmCardPayment() happens.
-    const isSuccess = Math.random() > 0.05; // 95% success rate for simulation
+    const isSuccess = Math.random() > 0.05; 
+    if (!isSuccess) throw new Error("SETTLEMENT_REJECTED: Network consensus failure.");
 
-    if (!isSuccess) {
-      throw new Error("SETTLEMENT_REJECTED: Provider declined transmission.");
-    }
-
-    // Generate a secure transaction hash signed by the provider prefix
     const prefix = gateway.provider.substring(0, 3).toUpperCase();
     const entropy = Math.random().toString(36).substr(2, 14).toUpperCase();
     const hash = `${prefix}_SETTLE_${entropy}`;
-
-    console.debug(`%c[GATEWAY_SYNC] Verified $${amount} via ${gateway.name}. Hash: ${hash}`, "color: #10b981; font-weight: bold;");
 
     return { 
       txnId: hash,

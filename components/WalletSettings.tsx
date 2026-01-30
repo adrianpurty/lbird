@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   ShieldCheck, Wallet, Bitcoin, Smartphone, Zap, Activity, History, ArrowDownLeft, 
   ArrowUpRight, Database, DollarSign, CreditCard, Scan, Download, Globe, ArrowRight, 
@@ -28,22 +28,55 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
   const [flowMode, setFlowMode] = useState<'deposit' | 'withdraw'>('deposit');
   const [error, setError] = useState<string | null>(null);
 
-  const [cardData, setCardData] = useState({ number: '', expiry: '', cvc: '' });
+  // Stripe Elements Refs
+  const stripeElementsRef = useRef<any>(null);
+  const cardElementRef = useRef<HTMLDivElement>(null);
+
   const [vpaId, setVpaId] = useState('');
   const [walletAddr, setWalletAddr] = useState('');
 
   const selectedGateway = useMemo(() => gateways.find(g => g.id === selectedGatewayId), [gateways, selectedGatewayId]);
+
+  // Mount Stripe Elements when Stripe is selected
+  useEffect(() => {
+    if (selectedGateway?.provider === 'stripe' && cardElementRef.current && !stripeElementsRef.current) {
+      paymentService.getStripe(selectedGateway.publicKey).then(stripe => {
+        const elements = stripe.elements();
+        const card = elements.create('card', {
+          style: {
+            base: {
+              color: '#ffffff',
+              fontFamily: '"JetBrains Mono", monospace',
+              fontSmoothing: 'antialiased',
+              fontSize: '16px',
+              '::placeholder': { color: '#444444' },
+              backgroundColor: 'transparent',
+            },
+            invalid: { color: '#ef4444', iconColor: '#ef4444' },
+          },
+        });
+        card.mount(cardElementRef.current);
+        stripeElementsRef.current = card;
+      });
+    }
+    return () => {
+      if (stripeElementsRef.current) {
+        stripeElementsRef.current.destroy();
+        stripeElementsRef.current = null;
+      }
+    };
+  }, [selectedGatewayId]);
 
   const isFormValid = useMemo(() => {
     const num = parseFloat(amount) || 0;
     if (!selectedGateway || num <= 0 || selectedGateway.status !== 'active') return false;
     
     const p = selectedGateway.provider;
-    if (p === 'stripe') return cardData.number.replace(/\s/g, '').length >= 15;
+    if (p === 'stripe') return true; // Validated by Stripe Elements internally
     if (p === 'upi') return vpaId.includes('@');
     if (p === 'crypto' || p === 'binance') return walletAddr.length >= 26;
     return true;
-  }, [selectedGateway, amount, cardData, vpaId, walletAddr]);
+  }, [selectedGateway, amount, vpaId, walletAddr]);
 
   const handleVaultSync = async () => {
     if (!isFormValid || isProcessing || !selectedGateway) return;
@@ -53,34 +86,42 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
     soundService.playClick(true);
 
     try {
-      setProcStep(`ESTABLISHING_${selectedGateway.provider.toUpperCase()}_HANDSHAKE...`);
-      await new Promise(r => setTimeout(r, 1000));
+      setProcStep(`INIT_BRIDGE: ${selectedGateway.name}...`);
+      await new Promise(r => setTimeout(r, 800));
       
       setProcStatus('validating');
-      setProcStep(`VALIDATING_CREDENTIALS_HASH...`);
+      setProcStep(`ESTABLISHING_TLS_HANDSHAKE...`);
       const validation = await paymentService.validateGateway(selectedGateway);
       if (!validation.success) throw new Error(validation.message);
 
       setProcStatus('settling');
-      setProcStep(`EXECUTING_LIVE_SETTLEMENT: $${amount}...`);
+      setProcStep(`AWAITING_STRIPE_CONSENSUS...`);
       
-      // Strict handshake: Returns a verified txnId hash
-      const result = await paymentService.processTransaction(
-        selectedGateway, 
-        parseFloat(amount), 
-        { cardData, vpaId, walletAddr }
-      );
+      let result;
+      if (selectedGateway.provider === 'stripe') {
+        // LIVE STRIPE FLOW
+        result = await paymentService.processLiveStripe(
+          selectedGateway, 
+          parseFloat(amount), 
+          stripeElementsRef.current
+        );
+      } else {
+        // OTHER GATEWAYS (Simulated Handshake)
+        result = await paymentService.processTransaction(
+          selectedGateway, 
+          parseFloat(amount)
+        );
+      }
       
-      if (!result.verified) throw new Error("SETTLEMENT_REJECTED: Verification handshake failed.");
+      if (!result.verified) throw new Error("VAULT_REJECTION: Handshake signature mismatch.");
 
       setProcStatus('success');
-      setProcStep("LEDGER_COMMIT: SETTLEMENT_FINALIZED");
+      setProcStep("LEDGER_COMMIT: $"+amount+" CREDITED");
       const finalAmount = flowMode === 'deposit' ? parseFloat(amount) : -parseFloat(amount);
       await onDeposit(finalAmount, selectedGateway.name, result.txnId);
       
       setTimeout(() => {
         setAmount('500');
-        setCardData({ number: '', expiry: '', cvc: '' });
         setVpaId('');
         setWalletAddr('');
         setSelectedGatewayId(null);
@@ -89,8 +130,8 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
       
     } catch (e: any) {
       setProcStatus('failed');
-      setError(e.message || "VAULT_HANDSHAKE_FAILED");
-      setTimeout(() => setIsProcessing(false), 3000);
+      setError(e.message || "GATEWAY_COMM_FAILURE");
+      setTimeout(() => setIsProcessing(false), 3500);
     }
   };
 
@@ -106,7 +147,6 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
   return (
     <div className="max-w-[1400px] mx-auto space-y-4 pb-32 font-rajdhani animate-in fade-in duration-500 px-4 lg:px-0 relative">
       
-      {/* HUD Header Optimized for Mobile */}
       <div className="flex flex-col sm:flex-row items-center gap-4 w-full">
          <div className="flex-1 w-full bg-surface border border-bright rounded-[2rem] p-5 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-xl relative overflow-hidden">
             <div className="flex items-center gap-4 sm:gap-6 w-full sm:w-auto">
@@ -124,30 +164,20 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
                <button onClick={() => { soundService.playClick(); setFlowMode('withdraw'); setSelectedGatewayId(null); }} className={`flex-1 sm:flex-none px-6 sm:px-8 py-2 rounded-lg text-[9px] sm:text-[10px] font-black uppercase transition-all ${flowMode === 'withdraw' ? 'bg-white text-black shadow-lg' : 'text-dim hover:text-main'}`}>Extraction</button>
             </div>
          </div>
-
-         <div className="hidden sm:flex w-full sm:w-72 bg-surface border border-bright rounded-[2rem] p-5 sm:p-6 items-center gap-5 shadow-xl">
-            <Activity className="text-emerald-500 animate-pulse shrink-0" size={20} />
-            <div>
-               <span className="text-[8px] sm:text-[10px] font-black text-dim uppercase tracking-widest block mb-0.5">GATEWAY_STATE</span>
-               <span className="text-[10px] sm:text-xs font-black text-emerald-500 uppercase tracking-[0.2em]">NODE_SETTLEMENT_ON</span>
-            </div>
-         </div>
       </div>
 
       {error && !isProcessing && (
-        <div className="bg-red-500/10 border border-red-500/30 p-4 sm:p-5 rounded-2xl flex items-center gap-4 text-red-500 animate-in shake duration-300">
+        <div className="bg-red-500/10 border border-red-500/30 p-5 rounded-2xl flex items-center gap-4 text-red-500 animate-in shake duration-300">
           <AlertTriangle size={18} className="shrink-0" />
           <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest leading-none">{error}</span>
         </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Main Control Panel */}
         <div className="lg:col-span-8 space-y-6">
-          <div className="bg-surface border border-bright rounded-[2.5rem] sm:rounded-[3.5rem] p-6 sm:p-12 shadow-2xl relative overflow-hidden group">
+          <div className="bg-surface border border-bright rounded-[2.5rem] p-6 sm:p-12 shadow-2xl relative overflow-hidden group">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 sm:gap-12 relative z-10">
               
-              {/* Left Column: Amount and Inputs */}
               <div className="space-y-6 sm:space-y-8">
                  <div className="space-y-4">
                     <div className="flex items-center gap-3">
@@ -173,20 +203,17 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
                       <div className="flex items-center justify-between border-b border-bright pb-3 sm:pb-4">
                         <div className="flex items-center gap-3">
                            <Lock size={12} className="text-accent" />
-                           <span className="text-[8px] sm:text-[9px] font-black text-dim uppercase tracking-widest">GATEWAY_PROTOCOL_ACTIVE</span>
+                           <span className="text-[8px] sm:text-[9px] font-black text-dim uppercase tracking-widest">PCI_COMPLIANT_HANDSHAKE</span>
                         </div>
                       </div>
 
                       {selectedGateway.provider === 'stripe' && (
-                        <div className="space-y-3 sm:space-y-4">
-                           <div className="space-y-1.5">
-                             <label className="text-[7px] sm:text-[8px] font-black text-neutral-600 uppercase tracking-widest px-1 italic">CREDIT_PAN_ENTRY</label>
-                             <input placeholder="0000 0000 0000 0000" className="w-full bg-surface border border-neutral-800 rounded-xl px-4 py-3 text-main text-[10px] sm:text-xs font-mono outline-none focus:border-accent" value={cardData.number} onChange={e => setCardData({...cardData, number: e.target.value})} />
+                        <div className="space-y-4">
+                           <label className="text-[7px] sm:text-[8px] font-black text-neutral-600 uppercase tracking-widest px-1 italic">SECURE_CARD_IF_ELEMENT</label>
+                           <div className="w-full bg-surface border border-neutral-800 rounded-xl px-4 py-4 focus-within:border-accent transition-all shadow-inner">
+                              <div ref={cardElementRef} />
                            </div>
-                           <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                              <input placeholder="MM/YY" className="w-full bg-surface border border-neutral-800 rounded-xl px-4 py-3 text-main text-[10px] sm:text-xs font-mono outline-none focus:border-accent" value={cardData.expiry} onChange={e => setCardData({...cardData, expiry: e.target.value})} />
-                              <input placeholder="CVC" className="w-full bg-surface border border-neutral-800 rounded-xl px-4 py-3 text-main text-[10px] sm:text-xs font-mono outline-none focus:border-accent" value={cardData.cvc} onChange={e => setCardData({...cardData, cvc: e.target.value})} />
-                           </div>
+                           <p className="text-[8px] text-neutral-700 uppercase font-bold text-center">Data encrypted at terminal level before transmission.</p>
                         </div>
                       )}
 
@@ -212,7 +239,6 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
                  )}
               </div>
 
-              {/* Right Column: Vectors Selection */}
               <div className="space-y-4 sm:space-y-6">
                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -257,7 +283,6 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
               </div>
             </div>
 
-            {/* Bottom Action Section */}
             <div className="mt-8 sm:mt-10 pt-8 sm:pt-8 border-t border-bright relative z-10 flex flex-col items-center">
                <button 
                 onClick={handleVaultSync} 
@@ -266,50 +291,46 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
                >
                 {isProcessing ? <Loader2 className="animate-spin" size={20} /> : <>INIT_SETTLEMENT <ArrowRight size={20} /></>}
               </button>
-              {!selectedGateway && (
-                <p className="text-[8px] font-black text-red-500/60 uppercase tracking-widest mt-4 animate-pulse">Target Node Selection Required</p>
-              )}
             </div>
           </div>
         </div>
 
-        {/* Ledger Column */}
         <div className="lg:col-span-4 flex flex-col gap-6">
-           <div className="bg-surface border border-bright rounded-[2.5rem] sm:rounded-[3.5rem] p-6 sm:p-8 flex flex-col shadow-2xl h-full relative overflow-hidden min-h-[400px]">
-              <div className="flex items-center justify-between mb-6 sm:mb-8 border-b border-bright pb-4 sm:pb-6 shrink-0 relative z-10">
-                 <div className="flex items-center gap-3 sm:gap-4">
+           <div className="bg-surface border border-bright rounded-[2.5rem] p-6 sm:p-8 flex flex-col shadow-2xl h-full relative overflow-hidden min-h-[400px]">
+              <div className="flex items-center justify-between mb-6 border-b border-bright pb-4 shrink-0 relative z-10">
+                 <div className="flex items-center gap-3">
                     <History size={18} className="text-emerald-500" />
-                    <h3 className="text-sm sm:text-base font-black text-main italic uppercase tracking-widest font-futuristic">Verified_Ledger</h3>
+                    <h3 className="text-sm font-black text-main italic uppercase tracking-widest font-futuristic">Verified_Ledger</h3>
                  </div>
               </div>
               
-              <div className="flex-1 space-y-2.5 sm:space-y-3 overflow-y-auto scrollbar-hide pr-1 min-h-[300px]">
+              <div className="flex-1 space-y-2.5 overflow-y-auto scrollbar-hide pr-1 min-h-[300px]">
                  {walletActivities.length > 0 ? walletActivities.map(act => (
-                   <div key={act.id} className="bg-black/40 rounded-[1.25rem] border border-bright p-3.5 sm:p-4 flex items-center justify-between group/row hover:border-accent/30 transition-all cursor-default relative overflow-hidden">
-                      <div className="flex items-center gap-3 sm:gap-4 relative z-10">
-                         <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center border-2 shrink-0 ${act.type === 'deposit' ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-500' : 'bg-red-500/5 border-red-500/20 text-red-500'}`}>
+                   <div key={act.id} className="bg-black/40 rounded-[1.25rem] border border-bright p-3.5 flex items-center justify-between group/row hover:border-accent/30 transition-all cursor-default relative overflow-hidden">
+                      <div className="flex items-center gap-3 relative z-10">
+                         <div className={`w-9 h-9 rounded-xl flex items-center justify-center border-2 shrink-0 ${act.type === 'deposit' ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-500' : 'bg-red-500/5 border-red-500/20 text-red-500'}`}>
                             {act.type === 'deposit' ? <ArrowDownLeft size={16} /> : <ArrowUpRight size={16} />}
                          </div>
                          <div className="min-w-0">
                             <div className="flex items-center gap-1.5">
-                               <p className="text-[7px] sm:text-[8px] text-neutral-600 font-bold uppercase font-mono truncate max-w-[80px]">TXN_{act.id.slice(-6)}</p>
+                               <p className="text-[7px] text-neutral-600 font-bold uppercase font-mono truncate max-w-[80px]">TXN_{act.id.slice(-6)}</p>
                                {act.type === 'deposit' && (
                                   <ShieldCheck size={8} className="text-emerald-500" />
                                )}
                             </div>
-                            <p className="text-[10px] sm:text-xs font-black text-main uppercase truncate max-w-[100px] sm:max-w-[120px]">{act.provider}</p>
+                            <p className="text-[10px] font-black text-main uppercase truncate max-w-[100px]">{act.provider}</p>
                          </div>
                       </div>
                       <div className="text-right shrink-0 relative z-10">
-                         <span className={`text-lg sm:text-xl font-tactical font-black italic tracking-widest ${act.type === 'deposit' ? 'text-emerald-400' : 'text-red-400'}`}>
+                         <span className={`text-lg font-tactical font-black italic tracking-widest ${act.type === 'deposit' ? 'text-emerald-400' : 'text-red-400'}`}>
                            {act.type === 'deposit' ? '+' : '-'}${act.amount.toLocaleString()}
                          </span>
                       </div>
                    </div>
                  )) : (
-                   <div className="h-full flex flex-col items-center justify-center opacity-10 py-12 sm:py-20">
-                     <RefreshCw size={48} className="sm:size-16 animate-spin mb-4 sm:mb-6" />
-                     <p className="text-[8px] sm:text-[10px] font-black uppercase tracking-[0.4em]">SYNCING_LEDGER...</p>
+                   <div className="h-full flex flex-col items-center justify-center opacity-10 py-12">
+                     <RefreshCw size={48} className="animate-spin mb-4" />
+                     <p className="text-[8px] font-black uppercase tracking-[0.4em]">SYNCING_LEDGER...</p>
                    </div>
                  )}
               </div>
@@ -317,15 +338,9 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
         </div>
       </div>
 
-      {/* TACTICAL TRANSACTION HUD OVERLAY */}
       {isProcessing && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/95 backdrop-blur-3xl animate-in fade-in duration-500">
-           <div className="absolute inset-0 grid-bg opacity-20 pointer-events-none" />
-           <div className="absolute top-0 left-0 w-full h-1 bg-accent/20 animate-pulse" />
-           
            <div className="w-full max-w-lg bg-[#080808] border-2 border-neutral-800 rounded-[3rem] p-10 flex flex-col items-center text-center space-y-10 shadow-[0_0_100px_rgba(124,58,237,0.15)] relative overflow-hidden">
-              <div className="absolute -top-20 -right-20 w-64 h-64 bg-accent/5 rounded-full blur-[100px]" />
-              
               <div className="relative group">
                  <div className={`w-32 h-32 rounded-[2.5rem] bg-black border-2 border-neutral-800 flex items-center justify-center shadow-2xl transition-all duration-700 ${procStatus === 'success' ? 'border-emerald-500 text-emerald-500' : procStatus === 'failed' ? 'border-red-500 text-red-500' : 'border-accent text-accent'}`}>
                     {procStatus === 'handshake' && <Server size={56} className="animate-pulse" />}
@@ -334,14 +349,11 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
                     {procStatus === 'success' && <CheckCircle2 size={56} className="animate-in zoom-in duration-500" />}
                     {procStatus === 'failed' && <ShieldAlert size={56} className="animate-in shake duration-500" />}
                  </div>
-                 {procStatus !== 'success' && procStatus !== 'failed' && (
-                    <div className="absolute -inset-4 border-2 border-accent/20 border-dashed rounded-[3.5rem] animate-spin-slow" />
-                 )}
               </div>
 
               <div className="space-y-4">
                  <h2 className="text-3xl font-futuristic text-main italic uppercase tracking-tighter">
-                   {procStatus === 'success' ? 'SETTLEMENT_VERIFIED' : procStatus === 'failed' ? 'HANDSHAKE_ERROR' : 'PROVIDER_HANDSHAKE'}
+                   {procStatus === 'success' ? 'SETTLEMENT_VERIFIED' : procStatus === 'failed' ? 'HANDSHAKE_ERROR' : 'STRIPE_GATEWAY_SYNC'}
                  </h2>
                  <p className="text-[10px] font-black text-accent uppercase tracking-[0.4em] font-mono leading-none animate-pulse">
                    {procStep}
@@ -359,46 +371,10 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
                        <span className="text-xl font-tactical font-black text-main italic tracking-widest block">${amount}</span>
                     </div>
                  </div>
-
-                 {procStatus === 'failed' ? (
-                   <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl flex items-center gap-3 text-red-500 animate-in slide-in-from-bottom-2">
-                      <AlertTriangle size={16} />
-                      <span className="text-[9px] font-black uppercase tracking-widest">{error || 'GATEWAY_TRANSACTION_REJECTED'}</span>
-                   </div>
-                 ) : (
-                   <div className="flex flex-col gap-2">
-                     <div className="h-1.5 w-full bg-neutral-900 rounded-full overflow-hidden border border-neutral-800 shadow-inner">
-                        <div 
-                          className={`h-full transition-all duration-1000 ease-out ${procStatus === 'success' ? 'bg-emerald-500' : 'bg-accent'}`} 
-                          style={{ width: procStatus === 'success' ? '100%' : procStatus === 'settling' ? '75%' : procStatus === 'validating' ? '45%' : '15%' }} 
-                        />
-                     </div>
-                     <div className="flex justify-between items-center text-[7px] font-black text-neutral-700 uppercase tracking-widest">
-                        <span>GATEWAY_AUTHENTICITY</span>
-                        <span>{procStatus === 'success' ? '100% VERIFIED' : 'Processing...'}</span>
-                     </div>
-                   </div>
-                 )}
-              </div>
-
-              <div className="pt-4">
-                 <p className="text-[8px] text-neutral-600 leading-relaxed uppercase font-bold tracking-tighter italic max-w-[300px]">
-                   Wallet credits require immutable verification from provisioned payment nodes. Any attempt to spoof liquidity will trigger a network isolation event.
-                 </p>
               </div>
            </div>
         </div>
       )}
-
-      <style>{`
-        @keyframes spin-slow {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        .animate-spin-slow {
-          animation: spin-slow 12s linear infinite;
-        }
-      `}</style>
     </div>
   );
 };

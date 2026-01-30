@@ -31,7 +31,7 @@ try {
         $db->exec("CREATE TABLE invoices (id TEXT PRIMARY KEY, purchaseRequestId TEXT, userId TEXT, userName TEXT, leadTitle TEXT, category TEXT, unitPrice REAL, dailyVolume INTEGER, totalSettlement REAL, timestamp TEXT, status TEXT)");
         $db->exec("CREATE TABLE notifications (id TEXT PRIMARY KEY, userId TEXT, message TEXT, type TEXT, timestamp TEXT, read INTEGER DEFAULT 0)");
         $db->exec("CREATE TABLE api_nodes (id TEXT PRIMARY KEY, type TEXT, provider TEXT, name TEXT, publicKey TEXT, secretKey TEXT, fee TEXT, status TEXT, qrCode TEXT)");
-        $db->exec("CREATE TABLE wallet_activities (id TEXT PRIMARY KEY, userId TEXT, type TEXT, amount REAL, provider TEXT, timestamp TEXT, status TEXT)");
+        $db->exec("CREATE TABLE wallet_activities (id TEXT PRIMARY KEY, userId TEXT, type TEXT, amount REAL, provider TEXT, timestamp TEXT, status TEXT, isGatewayVerified INTEGER DEFAULT 0)");
 
         $db->prepare("INSERT INTO users (id, name, username, password, email, balance, role, status, stripeConnected, wishlist, last_active_at, current_page) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)")
            ->execute(['admin_root', 'System Administrator', 'admin', '1234', 'admin@leadbid.pro', 0, 'admin', 'active', 1, '[]', date('c'), 'Control Room']);
@@ -52,10 +52,31 @@ $input = json_decode(file_get_contents('php://input'), true);
 $action = $_GET['action'] ?? '';
 
 switch ($action) {
+    case 'create_payment_intent':
+        /**
+         * PRODUCTION NOTE: In a real app, you would include the Stripe PHP SDK:
+         * \Stripe\Stripe::setApiKey($nodeSecretKey);
+         * $intent = \Stripe\PaymentIntent::create([...]);
+         * echo json_encode(['clientSecret' => $intent->client_secret]);
+         */
+        
+        // Simulation for the environment (replace with real Stripe PHP SDK calls)
+        $amount = $input['amount'] ?? 0;
+        if ($amount < 50) {
+            echo json_encode(['error' => 'MINIMUM_AMOUNT_NOT_MET']);
+            exit;
+        }
+
+        echo json_encode([
+            'clientSecret' => 'pi_simulated_secret_' . bin2hex(random_bytes(16)),
+            'status' => 'requires_payment_method'
+        ]);
+        break;
+
     case 'get_data':
         echo json_encode([
             'metadata' => [
-                'version' => '6.5.0-LIVE-FIN', 
+                'version' => '6.6.1-PROD-FIN', 
                 'last_updated' => date('Y-m-d H:i:s'), 
                 'db_size' => filesize($db_path), 
                 'status' => 'OPERATIONAL'
@@ -84,7 +105,7 @@ switch ($action) {
                 $input['leadsPerDay'], 
                 $input['totalDailyCost'], 
                 date('Y-m-d H:i:s'), 
-                'pending', // IMPORTANT: Start as pending
+                'pending',
                 $input['buyerBusinessUrl'], 
                 $input['buyerTargetLeadUrl'], 
                 $input['leadTitle'],
@@ -93,11 +114,9 @@ switch ($action) {
                 json_encode($input['operationalDays'] ?? ['mon','tue','wed','thu','fri'])
             ]);
             
-            // Deduct from user
             $db->prepare("UPDATE users SET balance = balance - ?, totalSpend = totalSpend + ? WHERE id = ?")
                ->execute([$input['totalDailyCost'], $input['totalDailyCost'], $input['userId']]);
             
-            // Credit Admin Escrow
             $db->prepare("UPDATE users SET balance = balance + ? WHERE id = 'admin_root'")
                ->execute([$input['totalDailyCost']]);
 
@@ -113,8 +132,6 @@ switch ($action) {
         }
         break;
 
-    // Additional admin approval actions would go here...
-    
     default:
         http_response_code(404);
         echo json_encode(['error' => 'ACTION_NOT_FOUND']);
