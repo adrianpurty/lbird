@@ -143,19 +143,21 @@ const App: React.FC = () => {
     if (!user) return;
     soundService.playClick(true);
 
-    if (!user.defaultBusinessUrl || !user.defaultTargetUrl) {
-      showToast("SET_DEFAULTS_IN_PROFILE_FOR_QUICK_BID", "info");
-      setSelectedLeadForBid({ lead });
-      return;
-    }
-
-    const bidAmount = lead.currentBid + 1;
+    const bidAmount = lead.currentBid;
     const leadsPerDay = 50;
     const totalDailyCost = bidAmount * leadsPerDay;
 
+    // Check if user has defaults configured for a truly instant purchase
+    if (!user.defaultBusinessUrl || !user.defaultTargetUrl) {
+      showToast("REFINERY_REQUIRED: SET PROFILE DEFAULTS", "info");
+      setSelectedLeadForBid({ lead, initialBid: bidAmount });
+      return;
+    }
+
+    // Check if user has enough balance
     if (user.balance < totalDailyCost) {
-      showToast("INSUFFICIENT_FUNDS_FOR_QUICK_BID", "error");
-      setSelectedLeadForBid({ lead });
+      showToast("LOW_VAULT_LIQUIDITY: OPENING BRIDGE", "error");
+      setSelectedLeadForBid({ lead, initialBid: bidAmount });
       return;
     }
 
@@ -179,9 +181,9 @@ const App: React.FC = () => {
       setLastBidLeadId(lead.id);
       setTimeout(() => setLastBidLeadId(null), 6000);
       fetchAppData();
-      showToast("QUICK_BID_DEPLOYED", "success");
+      showToast("INSTANT_ACQUISITION_LOCKED", "success");
     } catch (error) {
-      showToast("QUICK_BID_FAILED", "error");
+      showToast("ACQUISITION_HANDSHAKE_FAILED", "error");
     }
   }, [user, showToast, fetchAppData]);
 
@@ -318,6 +320,7 @@ const App: React.FC = () => {
                              lead={lead}
                              userRole={user!.role}
                              currentUserId={user!.id}
+                             user={user}
                              onBid={(id, initialBid) => setSelectedLeadForBid({ lead: marketData.leads.find(l => l.id === id)!, initialBid })}
                              onQuickBid={handleQuickBid}
                              onEdit={setSelectedLeadForDetail}
@@ -341,6 +344,7 @@ const App: React.FC = () => {
                   <div className="bg-surface rounded-[2rem] sm:rounded-[3rem] border border-bright p-4 sm:p-10 shadow-2xl relative">
                     <MemoizedLeadGrid 
                       leads={marketData.leads} 
+                      user={user}
                       onBid={(id, initialBid) => setSelectedLeadForBid({ lead: marketData.leads.find(l => l.id === id)!, initialBid })} 
                       onQuickBid={handleQuickBid}
                       onEdit={setSelectedLeadForDetail} 

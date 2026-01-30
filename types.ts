@@ -37,6 +37,9 @@ export interface PurchaseRequest {
   officeHoursStart?: string;
   officeHoursEnd?: string;
   operationalDays?: string[];
+  deliveryStartDate?: string;
+  deliveryStatus?: 'active' | 'paused';
+  gatewayId?: string;
 }
 
 export interface Invoice {

@@ -172,10 +172,6 @@ class ApiService {
     return { id: docRef.id };
   }
 
-  /**
-   * Places a bid and moves funds to Escrow (Admin Balance)
-   * Status defaults to 'pending' awaiting admin approval.
-   */
   async placeBid(bidData: any): Promise<any> {
     return runTransaction(db, async (transaction) => {
       const userRef = doc(db, "users", bidData.userId);
@@ -195,13 +191,11 @@ class ApiService {
       
       if (user.balance < bidData.totalDailyCost) throw "LOW_FUNDS";
 
-      // Deduct from user
       transaction.update(userRef, {
         balance: user.balance - bidData.totalDailyCost,
         totalSpend: (user.totalSpend || 0) + bidData.totalDailyCost
       });
 
-      // Credit to Admin Escrow
       transaction.update(adminRef, {
         balance: adminData.balance + bidData.totalDailyCost
       });
@@ -210,7 +204,7 @@ class ApiService {
       transaction.set(doc(collection(db, "bids")), {
         ...bidData,
         txnId: bidTxnId,
-        status: 'pending', // IMPORTANT: All bids start as pending
+        status: 'pending',
         timestamp: new Date().toISOString()
       });
 
@@ -224,7 +218,6 @@ class ApiService {
         status: 'pending'
       });
 
-      // Notify Admin
       transaction.set(doc(collection(db, "notifications")), {
         userId: ADMIN_ROOT_ID,
         message: `PENDING_AUTHORIZATION: ${user.name} placed a $${bidData.bidAmount} bid on ${bidData.leadTitle}. Funds held in Escrow.`,
@@ -235,9 +228,6 @@ class ApiService {
     });
   }
 
-  /**
-   * Admin Authorization: Finalizes a pending bid.
-   */
   async authorizeBid(bidId: string): Promise<void> {
     const bidRef = doc(db, "bids", bidId);
     const bidSnap = await getDoc(bidRef);
@@ -257,14 +247,12 @@ class ApiService {
         });
       }
 
-      // Update wallet activity status
       const walletQuery = query(collection(db, "wallet_activities"), where("id", "==", bid.txnId || ''));
       const walletSnaps = await getDocs(walletQuery);
       walletSnaps.forEach(wDoc => {
         transaction.update(wDoc.ref, { status: 'completed' });
       });
 
-      // Notify User
       transaction.set(doc(collection(db, "notifications")), {
         userId: bid.userId,
         message: `ACQUISITION_AUTHORIZED: Your bid for ${bid.leadTitle} has been authorized. Traffic node sync starting.`,
@@ -275,9 +263,6 @@ class ApiService {
     });
   }
 
-  /**
-   * Admin Rejection: Revokes a bid and performs a fund rollback.
-   */
   async rejectBid(bidId: string): Promise<void> {
     const bidRef = doc(db, "bids", bidId);
     const bidSnap = await getDoc(bidRef);
@@ -297,7 +282,6 @@ class ApiService {
       const userData = userSnap.data() as User;
       const adminData = adminSnap.data() as User;
 
-      // Rollback Funds
       transaction.update(userRef, {
         balance: userData.balance + bid.totalDailyCost,
         totalSpend: Math.max(0, (userData.totalSpend || 0) - bid.totalDailyCost)
@@ -309,7 +293,6 @@ class ApiService {
 
       transaction.update(bidRef, { status: 'rejected' });
 
-      // Create refund activity
       const refundId = `REF-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
       transaction.set(doc(collection(db, "wallet_activities")), {
         id: refundId,
@@ -321,14 +304,12 @@ class ApiService {
         status: 'completed'
       });
 
-      // Update original pending activity
       const walletQuery = query(collection(db, "wallet_activities"), where("id", "==", bid.txnId || ''));
       const walletSnaps = await getDocs(walletQuery);
       walletSnaps.forEach(wDoc => {
         transaction.update(wDoc.ref, { status: 'rejected' });
       });
 
-      // Notify User
       transaction.set(doc(collection(db, "notifications")), {
         userId: bid.userId,
         message: `ACQUISITION_REVOKED: Your bid for ${bid.leadTitle} was declined. Funds have been returned to your vault.`,
@@ -336,6 +317,19 @@ class ApiService {
         timestamp: new Date().toISOString(),
         read: false
       });
+    });
+  }
+
+  async updateBidDelivery(bidId: string, deliveryData: { 
+    officeHoursStart: string, 
+    officeHoursEnd: string, 
+    operationalDays: string[],
+    deliveryStartDate?: string 
+  }): Promise<void> {
+    const bidRef = doc(db, "bids", bidId);
+    await updateDoc(bidRef, {
+      ...deliveryData,
+      lastModified: new Date().toISOString()
     });
   }
 

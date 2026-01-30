@@ -1,13 +1,13 @@
 
 import React, { useState, useMemo, memo, useEffect } from 'react';
-import { Lead, UserRole } from '../types';
+import { Lead, UserRole, User } from '../types';
 import { 
   PlaneTakeoff, Coins, Building2, Cpu, HeartPulse, Scale, Wrench, GraduationCap, 
   Megaphone, ShoppingBag, Car, Factory, Truck, Users, Zap, Radio, Utensils, 
   ShieldCheck, HeartHandshake, ShieldAlert, BriefcaseBusiness, ListFilter, 
   Activity, Edit3, Target, Heart, ShoppingCart, Gavel, TrendingUp, Search,
   ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Filter, Info,
-  Calendar, Hash
+  Calendar, Hash, Wallet
 } from 'lucide-react';
 import { soundService } from '../services/soundService';
 
@@ -18,6 +18,7 @@ interface LeadGridProps {
   onEdit: (lead: Lead) => void;
   userRole: UserRole;
   currentUserId: string;
+  user?: User | null;
   activeBids?: string[];
   wishlist: string[];
   onToggleWishlist: (id: string) => void;
@@ -64,15 +65,22 @@ const formatDeliveryLabel = (deliveryStr?: string) => {
   }
 };
 
-export const TacticalLeadCard = memo(({ lead, userRole, currentUserId, onBid, onEdit, isWishlisted, onToggleWishlist, isRecentlyBid }: any) => {
+export const TacticalLeadCard = memo(({ lead, userRole, currentUserId, user, onBid, onQuickBid, onEdit, isWishlisted, onToggleWishlist, isRecentlyBid }: any) => {
   const isOwner = lead.ownerId === currentUserId;
   const theme = getIndustryTheme(lead.category);
   const integrityColor = lead.qualityScore > 80 ? 'text-emerald-400' : lead.qualityScore > 50 ? 'text-amber-400' : 'text-red-400';
+  
+  // Logic to determine if user can afford instant purchase (Buy Floor)
+  // Standard buy volume is usually 50 units (matching App.tsx quick bid logic)
+  const buyUnits = 50;
+  const totalCost = lead.currentBid * buyUnits;
+  const canAfford = user?.balance >= totalCost;
+  const hasDefaultsSet = !!user?.defaultBusinessUrl && !!user?.defaultTargetUrl;
 
   return (
     <div 
       className={`group relative bg-surface/80 backdrop-blur-md border rounded-[2rem] overflow-hidden hover:bg-card transition-all duration-500 flex flex-col min-h-[250px] shadow-2xl cursor-pointer font-clean ${
-        isRecentlyBid ? 'ring-2 ring-emerald-500/40' : ''
+        isRecentlyBid ? 'ring-2 ring-emerald-500/40 scale-[1.02]' : ''
       }`}
       style={{ 
         borderColor: isRecentlyBid ? '#10b981' : isWishlisted ? 'var(--accent-primary)' : `${theme.hex}66`,
@@ -85,6 +93,12 @@ export const TacticalLeadCard = memo(({ lead, userRole, currentUserId, onBid, on
       <div className={`flex justify-between items-center px-6 py-4 border-b border-bright shrink-0 relative z-10 ${isRecentlyBid ? 'mt-6' : ''}`}>
         <div className="flex items-center gap-3">
           <span className="text-[10px] font-bold text-main/20 uppercase tracking-[0.2em] font-mono">LB_{lead.id.slice(-4).toUpperCase()}</span>
+          {canAfford && !isRecentlyBid && (
+            <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full animate-pulse">
+               <div className="w-1 h-1 bg-emerald-500 rounded-full" />
+               <span className="text-[7px] font-black text-emerald-500 uppercase tracking-widest">Vault_Match</span>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-4">
            <div className="flex items-center gap-2 px-2.5 py-1 bg-main/[0.03] border border-bright rounded-lg">
@@ -142,28 +156,56 @@ export const TacticalLeadCard = memo(({ lead, userRole, currentUserId, onBid, on
         <div className="flex items-center gap-1">
           {!isOwner ? (
             <>
-              <button onClick={(e) => { e.stopPropagation(); onBid(lead.id, lead.currentBid); }} className="flex-1 bg-main text-surface py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-accent transition-all flex items-center justify-center gap-2 shadow-xl active:scale-95">
-                <ShoppingCart size={14} /> Buy_Floor
+              <button 
+                onClick={(e) => { e.stopPropagation(); onQuickBid(lead); }} 
+                className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-xl active:scale-95 border-b-4 ${
+                  canAfford 
+                    ? 'bg-emerald-600 text-white border-emerald-800 hover:bg-emerald-500' 
+                    : 'bg-main text-surface border-neutral-700 hover:bg-accent'
+                }`}
+              >
+                <ShoppingCart size={14} /> 
+                {canAfford && hasDefaultsSet ? 'Instant_Buy' : 'Buy_Floor'}
               </button>
-              <button onClick={(e) => { e.stopPropagation(); onBid(lead.id); }} className="flex-1 bg-card text-main py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-surface transition-all flex items-center justify-center gap-2 active:scale-95">
+              <button 
+                onClick={(e) => { e.stopPropagation(); onBid(lead.id); }} 
+                className="flex-1 bg-card text-main py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-surface transition-all flex items-center justify-center gap-2 border-b-4 border-black active:scale-95"
+              >
                 <Gavel size={14} className="text-accent" /> Set_Bid
               </button>
             </>
           ) : (
-             <button onClick={(e) => { e.stopPropagation(); onEdit(lead); }} className="w-full bg-card text-main py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-surface transition-all flex items-center justify-center gap-2">
+             <button onClick={(e) => { e.stopPropagation(); onEdit(lead); }} className="w-full bg-card text-main py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-surface transition-all flex items-center justify-center gap-2 border-b-4 border-black">
                <Edit3 size={14} /> Asset_Refinery
              </button>
           )}
         </div>
       </div>
-      <div className="h-1 w-full bg-main/[0.03] relative">
-        <div className="absolute h-full transition-all duration-1000 ease-out" style={{ width: `${lead.qualityScore}%`, backgroundColor: isRecentlyBid ? '#10b981' : theme.hex }} />
+      
+      {/* Visual Liquidity Bar */}
+      <div className="h-1 w-full bg-main/[0.03] relative overflow-hidden">
+        <div 
+          className={`absolute h-full transition-all duration-1000 ease-out ${isRecentlyBid ? 'bg-emerald-500' : ''}`} 
+          style={{ 
+            width: `${lead.qualityScore}%`, 
+            backgroundColor: !isRecentlyBid ? theme.hex : undefined 
+          }} 
+        />
+        {canAfford && (
+          <div className="absolute inset-0 bg-emerald-400/20 animate-pulse" />
+        )}
       </div>
+
+      {isRecentlyBid && (
+        <div className="absolute top-0 left-0 w-full bg-emerald-500 text-black py-1 text-center text-[8px] font-black uppercase tracking-[0.5em] animate-in slide-in-from-top-4 duration-500">
+          ACQUISITION_SECURED // SYNCING_NODE
+        </div>
+      )}
     </div>
   );
 });
 
-const LeadGridBase: React.FC<LeadGridProps> = ({ leads, onBid, onEdit, userRole, currentUserId, wishlist, onToggleWishlist, lastBidLeadId }) => {
+const LeadGridBase: React.FC<LeadGridProps> = ({ leads, onBid, onQuickBid, onEdit, userRole, currentUserId, user, wishlist, onToggleWishlist, lastBidLeadId }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -250,7 +292,9 @@ const LeadGridBase: React.FC<LeadGridProps> = ({ leads, onBid, onEdit, userRole,
               lead={lead}
               userRole={userRole}
               currentUserId={currentUserId}
+              user={user}
               onBid={onBid}
+              onQuickBid={onQuickBid}
               onEdit={onEdit}
               isWishlisted={wishlist.includes(lead.id)}
               onToggleWishlist={onToggleWishlist}
