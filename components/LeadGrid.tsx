@@ -266,51 +266,54 @@ const LeadGrid: React.FC<LeadGridProps> = ({ leads, onBid, onEdit, userRole, cur
         </div>
       )}
 
-      {/* Tactical Pagination HUD - Mobile Optimized & Orange Theme */}
+      {/* Tactical Pagination HUD - Mobile Optimized & Yellow Theme */}
       {totalPages > 1 && (
         <div className="flex flex-col items-center justify-center gap-6 pt-10 border-t border-bright w-full max-w-full overflow-hidden">
-           <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-[0.4em] text-orange-500/80">
-              <span className="text-orange-500">CYCLE {currentPage}</span>
+           <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-[0.4em] text-[#facc15]/80">
+              <span className="text-[#facc15]">CYCLE {currentPage}</span>
               <span className="opacity-20 text-white">/</span>
               <span className="text-dim">{totalPages} NODES</span>
            </div>
 
-           <div className="flex items-center justify-center gap-1.5 w-full flex-wrap">
-              <button 
-                onClick={() => handlePageChange(1)} 
-                disabled={currentPage === 1}
-                className="p-2.5 bg-card border border-bright rounded-lg text-neutral-600 hover:text-orange-500 disabled:opacity-10 transition-all active:scale-90"
-                title="First Cycle"
-              >
-                <ChevronsLeft size={14} />
-              </button>
-              <button 
-                onClick={() => handlePageChange(currentPage - 1)} 
-                disabled={currentPage === 1}
-                className="p-2.5 bg-card border border-bright rounded-lg text-neutral-600 hover:text-orange-500 disabled:opacity-10 transition-all active:scale-90"
-                title="Previous Cycle"
-              >
-                <ChevronLeft size={14} />
-              </button>
+           <div className="flex items-center justify-center gap-2 w-full flex-wrap max-w-full px-2">
+              <div className="flex items-center gap-1.5">
+                <button 
+                  onClick={() => handlePageChange(1)} 
+                  disabled={currentPage === 1}
+                  className="p-2.5 bg-card border border-bright rounded-lg text-neutral-600 hover:text-[#facc15] disabled:opacity-10 transition-all active:scale-90"
+                  title="First Cycle"
+                >
+                  <ChevronsLeft size={14} />
+                </button>
+                <button 
+                  onClick={() => handlePageChange(currentPage - 1)} 
+                  disabled={currentPage === 1}
+                  className="p-2.5 bg-card border border-bright rounded-lg text-neutral-600 hover:text-[#facc15] disabled:opacity-10 transition-all active:scale-90"
+                  title="Previous Cycle"
+                >
+                  <ChevronLeft size={14} />
+                </button>
+              </div>
               
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5 justify-center">
                 {Array.from({ length: totalPages }, (_, i) => i + 1)
                   .filter(p => {
-                    // Show first, last, and window around current for mobile fit
-                    const windowSize = window.innerWidth < 640 ? 1 : 2;
+                    // Optimized for various mobile widths: 1 window on mobile, 2 on tablet
+                    const isMobile = typeof window !== 'undefined' && window.innerWidth < 480;
+                    const windowSize = isMobile ? 0 : 1;
                     return p === 1 || p === totalPages || Math.abs(p - currentPage) <= windowSize;
                   })
                   .map((p, i, arr) => {
                     const showEllipsis = i > 0 && p - arr[i-1] > 1;
                     return (
                       <React.Fragment key={p}>
-                        {showEllipsis && <span className="text-neutral-800 text-[8px] font-black px-0.5">...</span>}
+                        {showEllipsis && <span className="text-neutral-800 text-[10px] font-black px-0.5">..</span>}
                         <button 
                           onClick={() => handlePageChange(p)}
-                          className={`w-9 h-9 rounded-lg font-black text-[10px] transition-all border ${
+                          className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg font-black text-[11px] transition-all border ${
                             currentPage === p 
-                              ? 'bg-orange-500 border-orange-600 text-black shadow-[0_0_15px_rgba(249,115,22,0.3)] scale-110 z-10' 
-                              : 'bg-black/40 text-neutral-500 hover:text-orange-500 border-bright hover:border-orange-500/30'
+                              ? 'bg-[#facc15] border-[#eab308] text-black shadow-[0_0_20px_rgba(250,204,21,0.3)] scale-110 z-10' 
+                              : 'bg-black/40 text-neutral-500 hover:text-[#facc15] border-bright hover:border-[#facc15]/30'
                           }`}
                         >
                           {p.toString().padStart(2, '0')}
@@ -321,27 +324,29 @@ const LeadGrid: React.FC<LeadGridProps> = ({ leads, onBid, onEdit, userRole, cur
                 }
               </div>
 
-              <button 
-                onClick={() => handlePageChange(currentPage + 1)} 
-                disabled={currentPage === totalPages}
-                className="p-2.5 bg-card border border-bright rounded-lg text-neutral-600 hover:text-orange-500 disabled:opacity-10 transition-all active:scale-90"
-                title="Next Cycle"
-              >
-                <ChevronRight size={14} />
-              </button>
-              <button 
-                onClick={() => handlePageChange(totalPages)} 
-                disabled={currentPage === totalPages}
-                className="p-2.5 bg-card border border-bright rounded-lg text-neutral-600 hover:text-orange-500 disabled:opacity-10 transition-all active:scale-90"
-                title="Last Cycle"
-              >
-                <ChevronsRight size={14} />
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button 
+                  onClick={() => handlePageChange(currentPage + 1)} 
+                  disabled={currentPage === totalPages}
+                  className="p-2.5 bg-card border border-bright rounded-lg text-neutral-600 hover:text-[#facc15] disabled:opacity-10 transition-all active:scale-90"
+                  title="Next Cycle"
+                >
+                  <ChevronRight size={14} />
+                </button>
+                <button 
+                  onClick={() => handlePageChange(totalPages)} 
+                  disabled={currentPage === totalPages}
+                  className="p-2.5 bg-card border border-bright rounded-lg text-neutral-600 hover:text-[#facc15] disabled:opacity-10 transition-all active:scale-90"
+                  title="Last Cycle"
+                >
+                  <ChevronsRight size={14} />
+                </button>
+              </div>
            </div>
 
-           <div className="bg-orange-500/5 border border-orange-500/20 px-6 py-2.5 rounded-2xl flex items-center gap-3 w-fit mx-auto">
-              <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
-              <span className="text-[8px] font-black text-orange-500 uppercase tracking-widest leading-none">Market Stream Verified // Node Sync Active</span>
+           <div className="bg-[#facc15]/5 border border-[#facc15]/20 px-6 py-2.5 rounded-2xl flex items-center gap-3 w-fit mx-auto">
+              <div className="w-1.5 h-1.5 rounded-full bg-[#facc15] animate-pulse shadow-[0_0_8px_#facc15]" />
+              <span className="text-[8px] font-black text-[#facc15] uppercase tracking-widest leading-none">Market Stream Verified // Node Sync Active</span>
            </div>
         </div>
       )}
