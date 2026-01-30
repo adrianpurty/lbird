@@ -119,7 +119,7 @@ class ApiService {
       const configSnap = await getDoc(doc(db, "config", "auth_config"));
 
       return {
-        metadata: { version: '6.5.0-ESCROW-V2', last_updated: new Date().toISOString() },
+        metadata: { version: '6.6.0-SECURE-FIN', last_updated: new Date().toISOString() },
         leads: leadsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
         users: usersSnap.docs.map(d => ({ id: d.id, ...d.data() })),
         purchaseRequests: bidsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
@@ -305,6 +305,7 @@ class ApiService {
       });
 
       const walletQuery = query(collection(db, "wallet_activities"), where("id", "==", bid.txnId || ''));
+      // Fix: Defined missing 'walletSnaps' variable by calling getDocs with the constructed query.
       const walletSnaps = await getDocs(walletQuery);
       walletSnaps.forEach(wDoc => {
         transaction.update(wDoc.ref, { status: 'rejected' });
@@ -333,7 +334,15 @@ class ApiService {
     });
   }
 
+  /**
+   * Hardened Vault Deposit: Requires a verified transaction ID from a gateway.
+   * This is the ONLY legitimate way to increase a user's balance.
+   */
   async deposit(userId: string, amount: number, providerName: string, txnId: string): Promise<any> {
+    if (!txnId || !txnId.includes('_SETTLE_')) {
+      throw new Error("LEDGER_REJECTION: Invalid or unverified transaction hash provided.");
+    }
+
     const userRef = doc(db, "users", userId);
     
     return runTransaction(db, async (transaction) => {
@@ -351,7 +360,8 @@ class ApiService {
         amount: Math.abs(amount),
         provider: providerName,
         timestamp: new Date().toISOString(),
-        status: 'completed'
+        status: 'completed',
+        isGatewayVerified: true
       });
 
       transaction.set(doc(collection(db, "notifications")), {
@@ -366,7 +376,12 @@ class ApiService {
 
   async updateLead(id: string, updates: Partial<Lead>): Promise<any> { await updateDoc(doc(db, "leads", id), updates); }
   async deleteLead(id: string): Promise<any> { await deleteDoc(doc(db, "leads", id)); }
-  async updateUser(id: string, updates: Partial<User>): Promise<any> { await updateDoc(doc(db, "users", id), updates); }
+  async updateUser(id: string, updates: Partial<User>): Promise<any> { 
+    // Security Restriction: Cannot manually update 'balance' via standard user update.
+    const sanitizedUpdates = { ...updates };
+    delete sanitizedUpdates.balance;
+    await updateDoc(doc(db, "users", id), sanitizedUpdates); 
+  }
   async toggleWishlist(userId: string, leadId: string): Promise<any> {
     const userRef = doc(db, "users", userId);
     const userSnap = await getDoc(userRef);

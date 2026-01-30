@@ -62,18 +62,21 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
       if (!validation.success) throw new Error(validation.message);
 
       setProcStatus('settling');
-      setProcStep(`SETTLING_UNITS: $${amount} via ${selectedGateway.name}...`);
+      setProcStep(`EXECUTING_LIVE_SETTLEMENT: $${amount}...`);
       
-      const { txnId } = await paymentService.processTransaction(
+      // Strict handshake: Returns a verified txnId hash
+      const result = await paymentService.processTransaction(
         selectedGateway, 
         parseFloat(amount), 
         { cardData, vpaId, walletAddr }
       );
       
+      if (!result.verified) throw new Error("SETTLEMENT_REJECTED: Verification handshake failed.");
+
       setProcStatus('success');
-      setProcStep("SETTLEMENT_FINALIZED_IMMUTABLE");
+      setProcStep("LEDGER_COMMIT: SETTLEMENT_FINALIZED");
       const finalAmount = flowMode === 'deposit' ? parseFloat(amount) : -parseFloat(amount);
-      await onDeposit(finalAmount, selectedGateway.name, txnId);
+      await onDeposit(finalAmount, selectedGateway.name, result.txnId);
       
       setTimeout(() => {
         setAmount('500');
@@ -117,7 +120,7 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
             </div>
             
             <div className="flex bg-black p-1 rounded-xl border border-bright w-full sm:w-auto">
-               <button onClick={() => { soundService.playClick(); setFlowMode('deposit'); setSelectedGatewayId(null); }} className={`flex-1 sm:flex-none px-6 sm:px-8 py-2 rounded-lg text-[9px] sm:text-[10px] font-black uppercase transition-all ${flowMode === 'deposit' ? 'bg-white text-black shadow-lg' : 'text-dim hover:text-main'}`}>Vault Sync</button>
+               <button onClick={() => { soundService.playClick(); setFlowMode('deposit'); setSelectedGatewayId(null); }} className={`flex-1 sm:flex-none px-6 sm:px-8 py-2 rounded-lg text-[9px] sm:text-[10px] font-black uppercase transition-all ${flowMode === 'deposit' ? 'bg-white text-black shadow-lg' : 'text-dim hover:text-main'}`}>Gateway Sync</button>
                <button onClick={() => { soundService.playClick(); setFlowMode('withdraw'); setSelectedGatewayId(null); }} className={`flex-1 sm:flex-none px-6 sm:px-8 py-2 rounded-lg text-[9px] sm:text-[10px] font-black uppercase transition-all ${flowMode === 'withdraw' ? 'bg-white text-black shadow-lg' : 'text-dim hover:text-main'}`}>Extraction</button>
             </div>
          </div>
@@ -125,8 +128,8 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
          <div className="hidden sm:flex w-full sm:w-72 bg-surface border border-bright rounded-[2rem] p-5 sm:p-6 items-center gap-5 shadow-xl">
             <Activity className="text-emerald-500 animate-pulse shrink-0" size={20} />
             <div>
-               <span className="text-[8px] sm:text-[10px] font-black text-dim uppercase tracking-widest block mb-0.5">LEDGER_STATE</span>
-               <span className="text-[10px] sm:text-xs font-black text-emerald-500 uppercase tracking-[0.2em]">LIVE_NODE_SYNC</span>
+               <span className="text-[8px] sm:text-[10px] font-black text-dim uppercase tracking-widest block mb-0.5">GATEWAY_STATE</span>
+               <span className="text-[10px] sm:text-xs font-black text-emerald-500 uppercase tracking-[0.2em]">NODE_SETTLEMENT_ON</span>
             </div>
          </div>
       </div>
@@ -165,12 +168,12 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
                     </div>
                  </div>
 
-                 {selectedGateway && (
+                 {selectedGateway ? (
                    <div className="p-5 sm:p-6 bg-black border border-bright rounded-[1.5rem] sm:rounded-[2rem] space-y-5 sm:space-y-6 animate-in slide-in-from-top-4">
                       <div className="flex items-center justify-between border-b border-bright pb-3 sm:pb-4">
                         <div className="flex items-center gap-3">
                            <Lock size={12} className="text-accent" />
-                           <span className="text-[8px] sm:text-[9px] font-black text-dim uppercase tracking-widest">SDK_HANDSHAKE_READY</span>
+                           <span className="text-[8px] sm:text-[9px] font-black text-dim uppercase tracking-widest">GATEWAY_PROTOCOL_ACTIVE</span>
                         </div>
                       </div>
 
@@ -201,6 +204,11 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
                         </div>
                       )}
                    </div>
+                 ) : (
+                   <div className="p-8 border-2 border-dashed border-bright rounded-[2rem] text-center space-y-4">
+                      <ShieldAlert className="mx-auto text-dim opacity-40" size={32} />
+                      <p className="text-[9px] font-black text-dim uppercase tracking-widest">Select an active financial node to begin sync</p>
+                   </div>
                  )}
               </div>
 
@@ -214,7 +222,7 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
                  </div>
                  
                  <div className="grid grid-cols-1 gap-2.5 sm:gap-3 max-h-[300px] sm:max-h-[450px] overflow-y-auto pr-1 sm:pr-2 scrollbar-hide">
-                    {gateways.map(g => {
+                    {gateways.length > 0 ? gateways.map(g => {
                        const Icon = getProviderIcon(g.provider);
                        const isSelected = selectedGatewayId === g.id;
                        const isActiveNode = g.status === 'active';
@@ -233,13 +241,18 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
                                   <p className="text-[10px] sm:text-xs font-black uppercase tracking-widest leading-none truncate">{g.name}</p>
                                   <div className="flex items-center gap-1.5 mt-1.5 sm:mt-2">
                                      <div className={`w-1 h-1 rounded-full shrink-0 ${isActiveNode ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : 'bg-red-500'}`} />
-                                     <p className={`text-[7px] sm:text-[8px] font-bold uppercase tracking-widest truncate ${isSelected ? 'text-white/70' : 'text-neutral-600'}`}>{isActiveNode ? 'LIVE_UPLINK' : 'NODE_OFFLINE'}</p>
+                                     <p className={`text-[7px] sm:text-[8px] font-bold uppercase tracking-widest truncate ${isSelected ? 'text-white/70' : 'text-neutral-600'}`}>{isActiveNode ? 'GATEWAY_ONLINE' : 'NODE_OFFLINE'}</p>
                                   </div>
                                </div>
                             </div>
                          </button>
                        );
-                    })}
+                    }) : (
+                      <div className="py-12 text-center bg-black/40 border border-dashed border-bright rounded-2xl">
+                        <AlertTriangle className="mx-auto text-dim opacity-40 mb-3" />
+                        <p className="text-[9px] font-black text-dim uppercase tracking-widest">No active nodes provisioned by admin</p>
+                      </div>
+                    )}
                  </div>
               </div>
             </div>
@@ -249,10 +262,13 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
                <button 
                 onClick={handleVaultSync} 
                 disabled={!isFormValid || isProcessing} 
-                className={`w-full sm:w-auto sm:px-12 py-4 rounded-xl font-black text-lg uppercase italic tracking-[0.2em] transition-all border-b-4 flex items-center justify-center gap-4 shadow-xl active:translate-y-1 active:border-b-0 ${isFormValid ? 'bg-white text-black border-neutral-300 hover:bg-accent hover:text-white hover:border-violet-900' : 'bg-neutral-900 text-neutral-700 border-neutral-950 cursor-not-allowed'}`}
+                className={`w-full sm:w-auto sm:px-12 py-4 rounded-xl font-black text-lg uppercase italic tracking-[0.2em] transition-all border-b-4 flex items-center justify-center gap-4 shadow-xl active:translate-y-1 active:border-b-0 ${isFormValid ? 'bg-white text-black border-neutral-300 hover:bg-emerald-500 hover:text-white hover:border-emerald-800' : 'bg-neutral-900 text-neutral-700 border-neutral-950 cursor-not-allowed'}`}
                >
                 {isProcessing ? <Loader2 className="animate-spin" size={20} /> : <>INIT_SETTLEMENT <ArrowRight size={20} /></>}
               </button>
+              {!selectedGateway && (
+                <p className="text-[8px] font-black text-red-500/60 uppercase tracking-widest mt-4 animate-pulse">Target Node Selection Required</p>
+              )}
             </div>
           </div>
         </div>
@@ -263,7 +279,7 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
               <div className="flex items-center justify-between mb-6 sm:mb-8 border-b border-bright pb-4 sm:pb-6 shrink-0 relative z-10">
                  <div className="flex items-center gap-3 sm:gap-4">
                     <History size={18} className="text-emerald-500" />
-                    <h3 className="text-sm sm:text-base font-black text-main italic uppercase tracking-widest font-futuristic">Market_Ledger</h3>
+                    <h3 className="text-sm sm:text-base font-black text-main italic uppercase tracking-widest font-futuristic">Verified_Ledger</h3>
                  </div>
               </div>
               
@@ -275,7 +291,12 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
                             {act.type === 'deposit' ? <ArrowDownLeft size={16} /> : <ArrowUpRight size={16} />}
                          </div>
                          <div className="min-w-0">
-                            <p className="text-[7px] sm:text-[8px] text-neutral-600 font-bold uppercase mb-0.5 font-mono truncate max-w-[80px] sm:max-w-[100px]">TXN_{act.id.slice(-6)}</p>
+                            <div className="flex items-center gap-1.5">
+                               <p className="text-[7px] sm:text-[8px] text-neutral-600 font-bold uppercase font-mono truncate max-w-[80px]">TXN_{act.id.slice(-6)}</p>
+                               {act.type === 'deposit' && (
+                                  <ShieldCheck size={8} className="text-emerald-500" />
+                               )}
+                            </div>
                             <p className="text-[10px] sm:text-xs font-black text-main uppercase truncate max-w-[100px] sm:max-w-[120px]">{act.provider}</p>
                          </div>
                       </div>
@@ -320,7 +341,7 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
 
               <div className="space-y-4">
                  <h2 className="text-3xl font-futuristic text-main italic uppercase tracking-tighter">
-                   {procStatus === 'success' ? 'SYNC_COMPLETE' : procStatus === 'failed' ? 'HANDSHAKE_ERROR' : 'VAULT_TRANSMISSION'}
+                   {procStatus === 'success' ? 'SETTLEMENT_VERIFIED' : procStatus === 'failed' ? 'HANDSHAKE_ERROR' : 'PROVIDER_HANDSHAKE'}
                  </h2>
                  <p className="text-[10px] font-black text-accent uppercase tracking-[0.4em] font-mono leading-none animate-pulse">
                    {procStep}
@@ -334,7 +355,7 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
                        <span className="text-sm font-bold text-main uppercase truncate block">{selectedGateway?.name}</span>
                     </div>
                     <div className="text-right">
-                       <span className="text-[8px] font-black text-neutral-600 uppercase block mb-1">Total_Load</span>
+                       <span className="text-[8px] font-black text-neutral-600 uppercase block mb-1">Vault_Credit</span>
                        <span className="text-xl font-tactical font-black text-main italic tracking-widest block">${amount}</span>
                     </div>
                  </div>
@@ -342,7 +363,7 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
                  {procStatus === 'failed' ? (
                    <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl flex items-center gap-3 text-red-500 animate-in slide-in-from-bottom-2">
                       <AlertTriangle size={16} />
-                      <span className="text-[9px] font-black uppercase tracking-widest">{error || 'SECURITY_PROTOCOL_REJECTION'}</span>
+                      <span className="text-[9px] font-black uppercase tracking-widest">{error || 'GATEWAY_TRANSACTION_REJECTED'}</span>
                    </div>
                  ) : (
                    <div className="flex flex-col gap-2">
@@ -353,8 +374,8 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
                         />
                      </div>
                      <div className="flex justify-between items-center text-[7px] font-black text-neutral-700 uppercase tracking-widest">
-                        <span>P-V4.2 Channel</span>
-                        <span>{procStatus === 'success' ? '100%' : 'Streaming Data...'}</span>
+                        <span>GATEWAY_AUTHENTICITY</span>
+                        <span>{procStatus === 'success' ? '100% VERIFIED' : 'Processing...'}</span>
                      </div>
                    </div>
                  )}
@@ -362,7 +383,7 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
 
               <div className="pt-4">
                  <p className="text-[8px] text-neutral-600 leading-relaxed uppercase font-bold tracking-tighter italic max-w-[300px]">
-                   Live settlement requires multi-signature validation from the gateway node. Do not terminate connection during handshake.
+                   Wallet credits require immutable verification from provisioned payment nodes. Any attempt to spoof liquidity will trigger a network isolation event.
                  </p>
               </div>
            </div>
