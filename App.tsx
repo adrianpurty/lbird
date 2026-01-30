@@ -77,7 +77,6 @@ const App: React.FC = () => {
       if (appUser) {
         setAuthView('app');
       } else {
-        // If unauthenticated, allow legal views or default to login
         setAuthView(prev => ['privacy', 'terms', 'refund', 'contact'].includes(prev) ? prev : 'login');
       }
       setIsLoading(false);
@@ -229,7 +228,6 @@ const App: React.FC = () => {
     return marketData.leads.filter(l => user?.wishlist?.includes(l.id));
   }, [marketData.leads, user?.wishlist]);
 
-  // Specific user activities for the wallet ledger
   const userWalletActivities = useMemo(() => {
     return marketData.walletActivities
       .filter(wa => wa.userId === user?.id)
@@ -265,10 +263,8 @@ const App: React.FC = () => {
   if (!user && authView !== 'app') return (
     <div className="flex flex-col min-h-screen">
       <div className="flex-1">{renderPublicView()}</div>
-      {/* Footer is strictly displayed only on Sign In and Sign Up views as requested */}
-      {(authView === 'login' || authView === 'signup') && (
-        <Footer onNav={(tab) => setAuthView(tab as any)} />
-      )}
+      {/* Footer is visible for all unauthenticated users (login, signup, and related legal pages) */}
+      <Footer onNav={(tab) => setAuthView(tab as any)} />
     </div>
   );
 
@@ -409,7 +405,7 @@ const App: React.FC = () => {
             {activeTab === 'settings' && (
               <WalletSettings 
                 balance={user!.balance} 
-                onDeposit={(amt, provider) => apiService.deposit(user!.id, amt, provider).then(() => { fetchAppData(); showToast(amt > 0 ? "LIQUIDITY_SYNCED" : "VAULT_WITHDRAWAL_INITIATED"); })} 
+                onDeposit={(amt, provider, txnId) => apiService.deposit(user!.id, amt, provider, txnId).then(() => { fetchAppData(); showToast(amt > 0 ? "VAULT_SETTLEMENT_VERIFIED" : "VAULT_WITHDRAWAL_INITIATED"); })} 
                 gateways={marketData.gateways} 
                 stripeConnected={user!.stripeConnected} 
                 onConnect={() => {}} 

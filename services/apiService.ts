@@ -228,40 +228,33 @@ class ApiService {
     });
   }
 
-  async deposit(userId: string, amount: number, provider?: string): Promise<any> {
-    // Rule 3: STRICT KEY VALIDATION
-    const gatewaySnap = await getDocs(collection(db, "api_nodes"));
-    const activeGateways = gatewaySnap.docs
-      .map(d => d.data() as GatewayAPI)
-      .filter(g => g.status === 'active' && (g.publicKey?.length || 0) > 5 && (g.secretKey?.length || 0) > 5);
-
-    const targetNode = activeGateways.find(g => g.name === provider);
-    if (!targetNode) {
-      throw new Error("GATEWAY_NODE_ERROR: Targeted node is offline or lacks administrative authorization (Missing Keys).");
-    }
-
+  /**
+   * Finalizes a verified transaction in the vault
+   */
+  async deposit(userId: string, amount: number, providerName: string, txnId: string): Promise<any> {
     const userRef = doc(db, "users", userId);
+    
     return runTransaction(db, async (transaction) => {
       const userSnap = await transaction.get(userRef);
-      if (!userSnap.exists()) return;
+      if (!userSnap.exists()) throw new Error("USER_NODE_NOT_FOUND");
+      
       const currentBalance = userSnap.data().balance || 0;
       
-      const txnId = `SYNC-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
-      
       transaction.update(userRef, { balance: currentBalance + amount });
+      
       transaction.set(doc(collection(db, "wallet_activities")), {
         id: txnId,
         userId,
         type: amount > 0 ? 'deposit' : 'withdrawal',
         amount: Math.abs(amount),
-        provider: provider || 'VAULT_SYNC',
+        provider: providerName,
         timestamp: new Date().toISOString(),
         status: 'completed'
       });
 
       transaction.set(doc(collection(db, "notifications")), {
         userId,
-        message: `VAULT_SYNC_SUCCESS: [${txnId}] Authorized $${amount.toLocaleString()} settlement via ${provider}`,
+        message: `SETTLEMENT_VERIFIED: [${txnId}] Authorized $${amount.toLocaleString()} through ${providerName} mesh.`,
         type: 'system',
         timestamp: new Date().toISOString(),
         read: false

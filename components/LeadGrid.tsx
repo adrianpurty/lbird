@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, memo, useEffect } from 'react';
 import { Lead, UserRole } from '../types.ts';
 import { 
@@ -56,7 +57,6 @@ const formatDeliveryLabel = (deliveryStr?: string) => {
     const parts = deliveryStr.split('-');
     return `WK ${parts[1]} // ${parts[2]}`;
   }
-  // Fallback for legacy date strings
   try {
     return new Date(deliveryStr).toLocaleDateString();
   } catch {
@@ -110,7 +110,6 @@ export const TacticalLeadCard = memo(({ lead, userRole, currentUserId, onBid, on
            </div>
         </div>
 
-        {/* Updated Logistics Info Bar with Week Label */}
         <div className="flex gap-4 items-center">
            <div className="flex items-center gap-2 bg-main/[0.03] border border-bright px-3 py-1.5 rounded-xl">
               <Calendar size={10} className="text-dim" />
@@ -267,43 +266,51 @@ const LeadGrid: React.FC<LeadGridProps> = ({ leads, onBid, onEdit, userRole, cur
         </div>
       )}
 
-      {/* Tactical Pagination HUD */}
+      {/* Tactical Pagination HUD - Mobile Optimized & Orange Theme */}
       {totalPages > 1 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-10 border-t border-bright">
-           <div className="flex items-center gap-4 text-[10px] font-black text-dim uppercase tracking-widest">
-              <span className="text-main">Page {currentPage}</span>
-              <span className="opacity-30">/</span>
-              <span>{totalPages} Cycles</span>
+        <div className="flex flex-col items-center justify-center gap-6 pt-10 border-t border-bright w-full max-w-full overflow-hidden">
+           <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-[0.4em] text-orange-500/80">
+              <span className="text-orange-500">CYCLE {currentPage}</span>
+              <span className="opacity-20 text-white">/</span>
+              <span className="text-dim">{totalPages} NODES</span>
            </div>
 
-           <div className="flex items-center gap-2">
+           <div className="flex items-center justify-center gap-1.5 w-full flex-wrap">
               <button 
                 onClick={() => handlePageChange(1)} 
                 disabled={currentPage === 1}
-                className="p-3 bg-card border border-bright rounded-xl text-dim hover:text-white disabled:opacity-20 transition-all active:scale-90"
+                className="p-2.5 bg-card border border-bright rounded-lg text-neutral-600 hover:text-orange-500 disabled:opacity-10 transition-all active:scale-90"
+                title="First Cycle"
               >
-                <ChevronsLeft size={16} />
+                <ChevronsLeft size={14} />
               </button>
               <button 
                 onClick={() => handlePageChange(currentPage - 1)} 
                 disabled={currentPage === 1}
-                className="p-3 bg-card border border-bright rounded-xl text-dim hover:text-white disabled:opacity-20 transition-all active:scale-90"
+                className="p-2.5 bg-card border border-bright rounded-lg text-neutral-600 hover:text-orange-500 disabled:opacity-10 transition-all active:scale-90"
+                title="Previous Cycle"
               >
-                <ChevronLeft size={16} />
+                <ChevronLeft size={14} />
               </button>
               
-              <div className="flex items-center gap-1.5 mx-4">
+              <div className="flex items-center gap-1">
                 {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                  .filter(p => {
+                    // Show first, last, and window around current for mobile fit
+                    const windowSize = window.innerWidth < 640 ? 1 : 2;
+                    return p === 1 || p === totalPages || Math.abs(p - currentPage) <= windowSize;
+                  })
                   .map((p, i, arr) => {
                     const showEllipsis = i > 0 && p - arr[i-1] > 1;
                     return (
                       <React.Fragment key={p}>
-                        {showEllipsis && <span className="text-dim px-2">...</span>}
+                        {showEllipsis && <span className="text-neutral-800 text-[8px] font-black px-0.5">...</span>}
                         <button 
                           onClick={() => handlePageChange(p)}
-                          className={`w-10 h-10 rounded-xl font-black text-[10px] transition-all ${
-                            currentPage === p ? 'bg-accent text-white shadow-lg' : 'bg-card text-dim hover:text-main border border-bright'
+                          className={`w-9 h-9 rounded-lg font-black text-[10px] transition-all border ${
+                            currentPage === p 
+                              ? 'bg-orange-500 border-orange-600 text-black shadow-[0_0_15px_rgba(249,115,22,0.3)] scale-110 z-10' 
+                              : 'bg-black/40 text-neutral-500 hover:text-orange-500 border-bright hover:border-orange-500/30'
                           }`}
                         >
                           {p.toString().padStart(2, '0')}
@@ -317,22 +324,24 @@ const LeadGrid: React.FC<LeadGridProps> = ({ leads, onBid, onEdit, userRole, cur
               <button 
                 onClick={() => handlePageChange(currentPage + 1)} 
                 disabled={currentPage === totalPages}
-                className="p-3 bg-card border border-bright rounded-xl text-dim hover:text-white disabled:opacity-20 transition-all active:scale-90"
+                className="p-2.5 bg-card border border-bright rounded-lg text-neutral-600 hover:text-orange-500 disabled:opacity-10 transition-all active:scale-90"
+                title="Next Cycle"
               >
-                <ChevronRight size={16} />
+                <ChevronRight size={14} />
               </button>
               <button 
                 onClick={() => handlePageChange(totalPages)} 
                 disabled={currentPage === totalPages}
-                className="p-3 bg-card border border-bright rounded-xl text-dim hover:text-white disabled:opacity-20 transition-all active:scale-90"
+                className="p-2.5 bg-card border border-bright rounded-lg text-neutral-600 hover:text-orange-500 disabled:opacity-10 transition-all active:scale-90"
+                title="Last Cycle"
               >
-                <ChevronsRight size={16} />
+                <ChevronsRight size={14} />
               </button>
            </div>
 
-           <div className="bg-emerald-500/5 border border-emerald-500/20 px-6 py-3 rounded-2xl flex items-center gap-4">
-              <Info size={14} className="text-emerald-500" />
-              <span className="text-[8px] font-black text-emerald-500/80 uppercase tracking-widest">Global Marketplace Sync Active</span>
+           <div className="bg-orange-500/5 border border-orange-500/20 px-6 py-2.5 rounded-2xl flex items-center gap-3 w-fit mx-auto">
+              <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
+              <span className="text-[8px] font-black text-orange-500 uppercase tracking-widest leading-none">Market Stream Verified // Node Sync Active</span>
            </div>
         </div>
       )}
