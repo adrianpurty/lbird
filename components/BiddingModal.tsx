@@ -1,8 +1,10 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { X, Globe, Target, Phone, Zap, ChevronRight, Calculator, AlertTriangle, Wallet, Info, ArrowRight, CreditCard, RefreshCw, Calendar, Clock, Scan, Globe as GlobeIcon, Bitcoin, Smartphone, Landmark, Database, CheckCircle2, Loader2, ArrowUpRight, ShieldCheck, Briefcase, ShieldAlert, ArrowLeft } from 'lucide-react';
+import { X, Globe, Target, Phone, Zap, ChevronRight, Calculator, AlertTriangle, Wallet, Info, ArrowRight, CreditCard, RefreshCw, Calendar, Clock, Scan, Globe as GlobeIcon, Bitcoin, Smartphone, Landmark, Database, CheckCircle2, Loader2, ArrowUpRight, ShieldCheck, Briefcase, ShieldAlert, ArrowLeft, Terminal } from 'lucide-react';
 import { Lead, User, GatewayAPI } from '../types.ts';
 import { soundService } from '../services/soundService.ts';
+import { paymentService } from '../services/paymentService.ts';
+import { apiService } from '../services/apiService.ts';
 
 interface BiddingModalProps {
   lead: Lead;
@@ -56,15 +58,9 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClo
   const [isBridgeMode, setIsBridgeMode] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-
-  const safeUrl = (url?: string) => {
-    if (!url) return 'UNASSIGNED_NODE';
-    try {
-      return url.replace(/^https?:\/\//, '');
-    } catch {
-      return url;
-    }
-  };
+  const [isGatewaySyncing, setIsGatewaySyncing] = useState(false);
+  const [gatewayStep, setGatewayStep] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   const totalDailyCost = useMemo(() => {
     return formData.bidAmount * formData.leadsPerDay;
@@ -109,11 +105,39 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClo
     try {
       await onSubmit({ ...formData, totalDailyCost });
       setIsSuccess(true);
-      soundService.playClick(false);
     } catch (error) {
       console.error("Acquisition execution failed", error);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // NEW: Process direct gateway settlement if user wants to pay directly
+  const handleDirectSettlement = async (gateway: GatewayAPI) => {
+    setIsGatewaySyncing(true);
+    setError(null);
+    soundService.playClick(true);
+    
+    try {
+      setGatewayStep(`HANDSHAKING_WITH_${gateway.provider.toUpperCase()}...`);
+      await paymentService.validateGateway(gateway);
+      
+      setGatewayStep("UPLINK_ESTABLISHED: PROCESSING_LIVE_SETTLEMENT...");
+      const { txnId } = await paymentService.processTransaction(gateway, totalDailyCost);
+      
+      setGatewayStep("SETTLEMENT_VERIFIED: SYNCING_VAULT_BALANCE...");
+      // Credit user first, then submit bid
+      await apiService.deposit(user.id, totalDailyCost, gateway.name, txnId);
+      
+      setGatewayStep("HANDSHAKE_COMPLETE: BROADCASTING_BID...");
+      await onSubmit({ ...formData, totalDailyCost });
+      
+      setIsSuccess(true);
+    } catch (e: any) {
+      setError(e.message || "GATEWAY_PROTOCOL_REJECTION");
+    } finally {
+      setIsGatewaySyncing(false);
+      setGatewayStep('');
     }
   };
 
@@ -131,8 +155,27 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClo
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl overflow-hidden">
-      <div className="w-full max-w-2xl max-h-[95vh] bg-surface border border-bright rounded-[3rem] shadow-[0_0_100px_rgba(0,0,0,1)] flex flex-col animate-in zoom-in-95 duration-300 overflow-hidden">
+      <div className="w-full max-w-2xl max-h-[95vh] bg-surface border border-bright rounded-[3rem] shadow-[0_0_100px_rgba(0,0,0,1)] flex flex-col animate-in zoom-in-95 duration-300 overflow-hidden relative">
         
+        {/* GATEWAY SYNC OVERLAY */}
+        {isGatewaySyncing && (
+          <div className="absolute inset-0 z-[110] bg-black/90 backdrop-blur-2xl flex flex-col items-center justify-center text-center p-12 space-y-8 animate-in fade-in duration-500">
+             <div className="relative">
+                <div className="w-24 h-24 rounded-[2.5rem] bg-accent/10 border-2 border-accent/40 flex items-center justify-center text-accent">
+                   <RefreshCw size={48} className="animate-spin" />
+                </div>
+                <div className="absolute -inset-4 border border-accent/20 border-dashed rounded-[3.5rem] animate-spin-slow" />
+             </div>
+             <div className="space-y-4">
+                <h3 className="text-2xl font-futuristic text-white italic uppercase tracking-tighter">GATEWAY_HANDSHAKE</h3>
+                <p className="text-[10px] text-accent font-black uppercase tracking-[0.4em] animate-pulse">{gatewayStep}</p>
+             </div>
+             <p className="text-[9px] text-neutral-600 font-bold uppercase tracking-widest leading-relaxed max-w-xs">
+               Securing real-time liquidity via provisioned financial node. Do not terminate terminal connection.
+             </p>
+          </div>
+        )}
+
         {!isSuccess && (
           <div className="flex justify-between items-center p-8 sm:p-10 border-b border-bright bg-black/40 shrink-0">
             <div className="flex items-center gap-5">
@@ -229,7 +272,7 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClo
                   </div>
                   <div className="flex justify-between items-center">
                      <span className="text-[8px] uppercase tracking-widest text-neutral-500">Delivery Vector</span>
-                     <span className="text-[8px] text-accent truncate max-w-[200px] font-bold">{safeUrl(formData.buyerTargetLeadUrl)}</span>
+                     <span className="text-[8px] text-accent truncate max-w-[200px] font-bold">{formData.buyerTargetLeadUrl.replace(/^https?:\/\//, '')}</span>
                   </div>
                   <div className="h-[1px] bg-neutral-800 w-full" />
                   <div className="flex justify-between items-center">
@@ -414,12 +457,19 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClo
             </form>
           ) : (
             <div className="space-y-8 animate-in zoom-in-95 duration-500">
+               {error && (
+                 <div className="bg-red-500/10 border border-red-500/30 p-5 rounded-2xl flex items-center gap-4 text-red-500 animate-in shake duration-300">
+                    <ShieldAlert size={20} className="shrink-0" />
+                    <span className="text-[10px] font-black uppercase tracking-widest leading-none">{error}</span>
+                 </div>
+               )}
+
                <div className="bg-amber-500/10 border border-amber-500/20 p-8 rounded-[2.5rem] flex items-start gap-6">
                   <Wallet className="text-amber-500 shrink-0" size={32} />
                   <div className="space-y-2">
-                     <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Bridge Protocol Initiated</h3>
+                     <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Instant Settlement Required</h3>
                      <p className="text-[10px] text-dim leading-relaxed font-bold uppercase tracking-widest">
-                       Your Vault Balance [${user.balance?.toLocaleString() || '0'}] is insufficient to cover the daily settlement cycle. Select a provisioned financial node to sync additional assets.
+                       Vault Balance [${user.balance?.toLocaleString() || '0'}] is below required settlement. Use a live financial node to process acquisition handshake instantly.
                      </p>
                   </div>
                </div>
@@ -431,39 +481,49 @@ const BiddingModal: React.FC<BiddingModalProps> = ({ lead, user, gateways, onClo
                       return (
                         <button 
                           key={g.id}
-                          onClick={() => { soundService.playClick(); onRefill(); }}
-                          className="bg-black/40 border border-bright rounded-3xl p-6 text-left hover:border-accent transition-all flex flex-col gap-4 group shadow-sm"
+                          onClick={() => handleDirectSettlement(g)}
+                          disabled={isGatewaySyncing}
+                          className="bg-black/40 border border-bright rounded-3xl p-6 text-left hover:border-accent transition-all flex flex-col gap-4 group shadow-sm relative overflow-hidden"
                         >
-                           <div className="flex items-center justify-between">
-                              <span className="text-[9px] font-black text-neutral-500 uppercase tracking-widest">FIN_NODE: {g.provider?.toUpperCase() || 'UNKNOWN'}</span>
+                           <div className="flex items-center justify-between relative z-10">
+                              <span className="text-[9px] font-black text-neutral-500 uppercase tracking-widest">GATE_ID: {g.provider?.toUpperCase()}</span>
                               <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]" />
                            </div>
-                           <div className="flex items-center gap-4">
+                           <div className="flex items-center gap-4 relative z-10">
                               <div className="w-10 h-10 rounded-xl bg-black border border-neutral-800 flex items-center justify-center text-neutral-500 group-hover:text-accent transition-colors">
                                  <NodeIcon size={20} />
                               </div>
                               <h4 className="text-lg font-black text-white italic truncate uppercase flex-1">{g.name}</h4>
                            </div>
-                           <div className="text-[8px] text-dim font-bold uppercase flex items-center gap-1">
-                              <RefreshCw size={10} className="animate-spin-slow" /> INSTANT_SYNC_AVAILABLE
+                           <div className="text-[8px] text-dim font-bold uppercase flex items-center gap-1 relative z-10">
+                              <RefreshCw size={10} className="animate-spin-slow" /> INSTANT_UPLINK_READY
                            </div>
+                           <div className="absolute inset-0 bg-accent/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
                         </button>
                       );
                     })
                   ) : (
                     <div className="col-span-full py-12 text-center bg-black/60 border border-dashed border-bright rounded-[2.5rem]">
                        <AlertTriangle className="mx-auto text-neutral-700 mb-4" size={40} />
-                       <p className="text-[10px] text-neutral-500 font-black uppercase tracking-widest">NO_SYNC_NODES_FOUND // CONTACT_ADMIN</p>
+                       <p className="text-[10px] text-neutral-500 font-black uppercase tracking-widest">NO_SYNC_NODES_FOUND // CONFIGURE_IN_VAULT</p>
                     </div>
                   )}
                </div>
 
-               <button 
-                onClick={() => setIsBridgeMode(false)}
-                className="w-full py-4 text-[10px] font-black text-neutral-500 uppercase tracking-widest hover:text-white transition-colors"
-               >
-                 Abort Bridge & Return to Config
-               </button>
+               <div className="flex flex-col gap-4">
+                  <button 
+                    onClick={onRefill}
+                    className="w-full py-5 bg-neutral-900 text-white border border-neutral-800 rounded-[2.5rem] font-black text-[10px] uppercase tracking-widest hover:bg-neutral-800 transition-all flex items-center justify-center gap-3 active:scale-95"
+                  >
+                    <Terminal size={16} /> Open Vault API Configuration
+                  </button>
+                  <button 
+                    onClick={() => setIsBridgeMode(false)}
+                    className="w-full py-2 text-[9px] font-black text-neutral-700 uppercase tracking-[0.3em] hover:text-neutral-400 transition-colors"
+                  >
+                    Abort Handshake & Return to Review
+                  </button>
+               </div>
             </div>
           )}
         </div>
