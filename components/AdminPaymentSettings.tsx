@@ -260,24 +260,29 @@ const AdminPaymentSettings: React.FC<AdminPaymentSettingsProps> = ({ gateways, o
   return (
     <div className="max-w-[1400px] mx-auto space-y-6 pb-32 animate-in fade-in duration-500 font-rajdhani px-4">
       
-      {/* CONTROL HUD */}
-      <div className="flex flex-col xl:flex-row items-center justify-between gap-6 border-b border-neutral-900 pb-6">
-        <div className="flex items-center gap-6 w-full xl:w-auto">
-          <div className="w-12 h-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-500 border border-emerald-500/20 shadow-glow-sm">
-            <Landmark size={24} />
+      {/* CONTROL HUD - Optimized for all screen sizes */}
+      <div className="flex flex-col lg:flex-row items-center justify-between gap-6 border-b border-neutral-900 pb-6">
+        <div className="flex items-center gap-4 sm:gap-6 w-full lg:w-auto">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-500/10 rounded-xl sm:rounded-2xl flex items-center justify-center text-emerald-500 border border-emerald-500/20 shadow-glow-sm shrink-0">
+            <Landmark size={20} className="sm:w-6 sm:h-6" />
           </div>
-          <div>
-            <h2 className="text-2xl font-futuristic text-white italic uppercase leading-none tracking-tight">FINANCIAL <span className="text-neutral-500">INFRASTRUCTURE</span></h2>
-            <p className="text-[10px] text-neutral-600 font-black uppercase tracking-[0.3em] mt-2">MERCHANT_NODE_ORCHESTRATION_v6.1</p>
+          <div className="min-w-0">
+            <h2 className="text-xl sm:text-2xl font-futuristic text-white italic uppercase leading-tight tracking-tight truncate">
+              FINANCIAL <span className="text-neutral-500">INFRA</span>
+            </h2>
+            <p className="text-[8px] sm:text-[10px] text-neutral-600 font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] mt-1 sm:mt-2 truncate">
+              MERCHANT_NODE_v6.1
+            </p>
           </div>
         </div>
         
-        <div className="flex flex-wrap items-center gap-4 w-full xl:w-auto justify-end">
-          <div className="flex bg-black border border-neutral-800 rounded-xl p-1.5 items-center gap-2">
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4 w-full lg:w-auto justify-start sm:justify-end">
+          {/* PROVISIONING BLOCK */}
+          <div className="flex flex-1 sm:flex-none bg-black border border-neutral-800 rounded-xl p-1 sm:p-1.5 items-center gap-1 sm:gap-2 w-full sm:w-auto">
             <select 
               value={selectedNewProvider}
               onChange={(e) => setSelectedNewProvider(e.target.value)}
-              className="bg-transparent text-[10px] font-black text-white uppercase tracking-widest outline-none px-4 py-1.5 cursor-pointer appearance-none border-r border-neutral-800 pr-8"
+              className="bg-transparent text-[9px] sm:text-[10px] font-black text-white uppercase tracking-widest outline-none px-2 sm:px-4 py-1.5 cursor-pointer appearance-none border-r border-neutral-800 pr-6 sm:pr-8 flex-1"
             >
               {Object.entries(PROVIDER_METADATA).map(([key, meta]) => (
                 <option key={key} value={key} className="bg-[#0c0c0c]">{meta.label}</option>
@@ -285,42 +290,44 @@ const AdminPaymentSettings: React.FC<AdminPaymentSettingsProps> = ({ gateways, o
             </select>
             <button 
               onClick={handleAddNode}
-              className="flex items-center gap-2 px-4 py-1.5 bg-accent text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-accent/80 transition-all"
+              className="flex items-center justify-center gap-2 px-3 sm:px-4 py-1.5 bg-accent text-white rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-widest hover:bg-accent/80 transition-all shrink-0"
             >
-              <Plus size={14} /> Provision_Node
+              <Plus size={14} /> <span className="hidden xs:inline">Provision_Node</span>
             </button>
           </div>
 
           <div className="h-10 w-px bg-neutral-900 hidden md:block" />
 
-          <button 
-            onClick={() => setShowKeys(!showKeys)} 
-            className="p-2.5 bg-neutral-900 border border-neutral-800 rounded-xl text-neutral-500 hover:text-white transition-all shadow-xl"
-            title="Toggle Key Visibility"
-          >
-            {showKeys ? <EyeOff size={18} /> : <Eye size={18} />}
-          </button>
+          <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
+            <button 
+              onClick={() => setShowKeys(!showKeys)} 
+              className="flex-1 sm:flex-none p-2.5 bg-neutral-900 border border-neutral-800 rounded-xl text-neutral-500 hover:text-white transition-all shadow-xl flex items-center justify-center"
+              title="Toggle Key Visibility"
+            >
+              {showKeys ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
 
-          <button 
-            onClick={handleCommit} 
-            disabled={isSaving} 
-            className={`flex items-center gap-4 px-8 py-2.5 rounded-xl font-black text-xs uppercase italic tracking-widest transition-all border-b-4 active:translate-y-1 active:border-b-0 ${
-              saveSuccess ? 'bg-emerald-600 text-white border-emerald-900' : 'bg-white text-black border-neutral-300'
-            }`}
-          >
-            {isSaving ? <RefreshCw className="animate-spin" size={18} /> : saveSuccess ? <CheckCircle size={18} /> : <Save size={18} />}
-            {isSaving ? 'SYNCING...' : saveSuccess ? 'COMMIT_SUCCESS' : 'COMMIT_GLOBAL_SYNC'}
-          </button>
+            <button 
+              onClick={handleCommit} 
+              disabled={isSaving} 
+              className={`flex-[3] sm:flex-none flex items-center justify-center gap-2 sm:gap-4 px-4 sm:px-8 py-2.5 rounded-xl font-black text-[10px] sm:text-xs uppercase italic tracking-widest transition-all border-b-4 active:translate-y-1 active:border-b-0 ${
+                saveSuccess ? 'bg-emerald-600 text-white border-emerald-900' : 'bg-white text-black border-neutral-300'
+              }`}
+            >
+              {isSaving ? <RefreshCw className="animate-spin" size={16} /> : saveSuccess ? <CheckCircle size={16} /> : <Save size={16} />}
+              <span className="truncate">{isSaving ? 'SYNCING...' : saveSuccess ? 'SUCCESS' : 'COMMIT_SYNC'}</span>
+            </button>
+          </div>
         </div>
       </div>
 
       {/* NODE GRID */}
       {localGateways.length === 0 ? (
-        <div className="py-32 text-center bg-black/40 border-2 border-dashed border-neutral-900 rounded-[3rem] flex flex-col items-center gap-6">
-           <Database size={64} className="text-neutral-800 animate-pulse" />
+        <div className="py-20 sm:py-32 text-center bg-black/40 border-2 border-dashed border-neutral-900 rounded-[2.5rem] sm:rounded-[3rem] flex flex-col items-center gap-6 px-6">
+           <Database size={48} className="sm:w-16 sm:h-16 text-neutral-800 animate-pulse" />
            <div className="space-y-2">
-              <h3 className="text-xl font-futuristic text-neutral-600 uppercase tracking-[0.4em]">Infrastructure_Offline</h3>
-              <p className="text-[10px] text-neutral-800 font-black uppercase tracking-widest">PROVISION A MERCHANT NODE TO ESTABLISH LIQUIDITY HANDSHAKE</p>
+              <h3 className="text-lg sm:text-xl font-futuristic text-neutral-600 uppercase tracking-[0.4em]">Infrastructure_Offline</h3>
+              <p className="text-[9px] sm:text-[10px] text-neutral-800 font-black uppercase tracking-widest leading-relaxed">PROVISION A MERCHANT NODE TO ESTABLISH LIQUIDITY HANDSHAKE</p>
            </div>
         </div>
       ) : (
@@ -340,12 +347,12 @@ const AdminPaymentSettings: React.FC<AdminPaymentSettingsProps> = ({ gateways, o
       )}
 
       {/* DISCLOSURE */}
-      <div className="bg-[#0f0f0f] border border-neutral-900 p-8 rounded-[3rem] flex items-start gap-8 shadow-2xl relative overflow-hidden group">
+      <div className="bg-[#0f0f0f] border border-neutral-900 p-6 sm:p-8 rounded-[2rem] sm:rounded-[3rem] flex flex-col sm:flex-row items-start gap-4 sm:gap-8 shadow-2xl relative overflow-hidden group">
         <div className="absolute inset-0 bg-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
         <ShieldCheck size={32} className="text-neutral-700 shrink-0 relative z-10" />
         <div className="space-y-3 relative z-10">
-          <h4 className="text-[11px] font-black text-neutral-400 uppercase tracking-[0.4em] italic">Consensus Layer Handshake Disclosure</h4>
-          <p className="text-[10px] text-neutral-600 font-medium leading-relaxed uppercase italic tracking-tighter">
+          <h4 className="text-[10px] sm:text-[11px] font-black text-neutral-400 uppercase tracking-[0.4em] italic">Consensus Layer Handshake Disclosure</h4>
+          <p className="text-[9px] sm:text-[10px] text-neutral-600 font-medium leading-relaxed uppercase italic tracking-tighter">
             Changes to the financial infrastructure require absolute root authorization. Provisioning modern gateway nodes establishes a dedicated handshake protocol with the global vault ledger. All keys are encrypted via hardware-accelerated AES-256 before being committed to the persistent data node. Decommissioned nodes will immediately suspend all pending settlement cycles.
           </p>
         </div>
@@ -356,6 +363,9 @@ const AdminPaymentSettings: React.FC<AdminPaymentSettingsProps> = ({ gateways, o
           box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
         }
         .font-tactical { font-family: 'Teko', sans-serif; }
+        @media (max-width: 400px) {
+          .xs\\:inline { display: none; }
+        }
       `}</style>
 
     </div>
