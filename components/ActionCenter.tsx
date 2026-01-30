@@ -1,14 +1,14 @@
 
 import React, { useState, useMemo } from 'react';
-import { PurchaseRequest, User, Lead, Notification, WalletActivity } from '../types.ts';
+import { PurchaseRequest, User, Lead, Notification, WalletActivity } from '../types';
 import { 
   Zap, Activity, ShieldCheck, Clock, CheckCircle2, XCircle, Globe, Target, Database,
   RefreshCw, Cpu, FileText, Terminal, X, User as UserIcon, Search, Layers, Edit3,
   TrendingUp, Wallet, Loader2, ArrowDownLeft, ArrowUpRight, History, Hash, ChevronRight,
   Monitor, Ban, Check
 } from 'lucide-react';
-import { soundService } from '../services/soundService.ts';
-import { apiService } from '../services/apiService.ts';
+import { soundService } from '../services/soundService';
+import { apiService } from '../services/apiService';
 
 interface ActionCenterProps {
   requests: PurchaseRequest[];
@@ -57,7 +57,7 @@ const ActionCenter: React.FC<ActionCenterProps> = ({
         category: w.type,
         message: `${w.type.toUpperCase()} of $${w.amount.toLocaleString()} via ${w.provider}`,
         userId: w.userId,
-        txnId: w.id // Rule 4: Use Transaction ID
+        txnId: w.id 
       }))
     ];
 
@@ -92,7 +92,7 @@ const ActionCenter: React.FC<ActionCenterProps> = ({
                    <Terminal size={14} className="text-accent" />
                    <h3 className="text-[10px] font-black text-white uppercase tracking-widest">Global_Ledger_History</h3>
                 </div>
-                <span className="text-[7px] font-mono text-neutral-600 uppercase">RULE_4_COMPLIANT_LOGS</span>
+                <span className="text-[7px] font-mono text-neutral-600 uppercase">SYSTEM_COMPLIANT_LOGS</span>
              </div>
 
              <div className="space-y-1 max-h-[700px] overflow-y-auto scrollbar-hide font-mono">
@@ -116,7 +116,6 @@ const ActionCenter: React.FC<ActionCenterProps> = ({
              </div>
           </div>
         )}
-        {/* Acquisitions and Wallets views follow similar patterns... */}
       </div>
     </div>
   );

@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
   ShieldAlert, Cpu, Activity, Database, Users, TrendingUp, 
@@ -5,10 +6,10 @@ import {
   CheckCircle2, XCircle, DollarSign, History, Zap, 
   Layers, Lock, Unlock, Globe, RefreshCw, AlertTriangle, Eye, User as UserIcon, Calendar, Clock, Fingerprint, X,
   Target, ShieldCheck, Radar, BarChart3, Gauge, ArrowUpRight, ChevronLeft, ChevronRight, MapPin, ChevronUp, ChevronDown, Settings,
-  Crosshair, Radio, HardDrive, Terminal, Orbit, CircleDashed, Atom, Box, Monitor, Share2, Power, Scan, ListTree, ActivitySquare, LayoutGrid, Server
+  Crosshair, Radio, HardDrive, Terminal, Orbit, CircleDashed, Atom, Box, Monitor, Share2, Power, Scan, ListTree, LayoutGrid, Server
 } from 'lucide-react';
-import { Lead, User, PurchaseRequest, WalletActivity } from '../types.ts';
-import { soundService } from '../services/soundService.ts';
+import { Lead, User, PurchaseRequest, WalletActivity } from '../types';
+import { soundService } from '../services/soundService';
 
 interface AdminControlCenterProps {
   leads: Lead[];

@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, memo, useEffect } from 'react';
-import { Lead, UserRole } from '../types.ts';
+import { Lead, UserRole } from '../types';
 import { 
   PlaneTakeoff, Coins, Building2, Cpu, HeartPulse, Scale, Wrench, GraduationCap, 
   Megaphone, ShoppingBag, Car, Factory, Truck, Users, Zap, Radio, Utensils, 
@@ -9,7 +9,7 @@ import {
   ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Filter, Info,
   Calendar, Hash
 } from 'lucide-react';
-import { soundService } from '../services/soundService.ts';
+import { soundService } from '../services/soundService';
 
 interface LeadGridProps {
   leads: Lead[];
@@ -163,7 +163,7 @@ export const TacticalLeadCard = memo(({ lead, userRole, currentUserId, onBid, on
   );
 });
 
-const LeadGrid: React.FC<LeadGridProps> & { TacticalLeadCard: typeof TacticalLeadCard } = ({ leads, onBid, onEdit, userRole, currentUserId, wishlist, onToggleWishlist, lastBidLeadId }) => {
+const LeadGridBase: React.FC<LeadGridProps> = ({ leads, onBid, onEdit, userRole, currentUserId, wishlist, onToggleWishlist, lastBidLeadId }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -353,5 +353,5 @@ const LeadGrid: React.FC<LeadGridProps> & { TacticalLeadCard: typeof TacticalLea
   );
 };
 
-LeadGrid.TacticalLeadCard = TacticalLeadCard;
+const LeadGrid = Object.assign(LeadGridBase, { TacticalLeadCard });
 export default LeadGrid;

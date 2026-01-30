@@ -1,32 +1,32 @@
 
 import React, { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react';
 import { 
-  Server, Database, Clock, Zap, Activity, Heart, Globe, Layers
+  Server, Zap, Activity, Heart, Layers
 } from 'lucide-react';
-import Header from './components/Header.tsx';
-import LeadGrid from './components/LeadGrid.tsx';
-import LeadSubmissionForm from './components/LeadSubmissionForm.tsx';
-import WalletSettings from './components/WalletSettings.tsx';
-import ProfileSettings from './components/ProfileSettings.tsx';
-import DashboardStats from './components/DashboardStats.tsx';
-import MobileNav from './components/MobileNav.tsx';
-import Login from './components/Login.tsx';
-import Signup from './components/Signup.tsx';
-import BiddingModal from './components/BiddingModal.tsx';
-import ActionCenter from './components/ActionCenter.tsx';
-import AdminLeadActionsModal from './components/AdminLeadActionsModal.tsx';
-import AdminPaymentSettings from './components/AdminPaymentSettings.tsx';
-import AdminOAuthSettings from './components/AdminOAuthSettings.tsx';
-import AdminControlCenter from './components/AdminControlCenter.tsx';
-import SavedAssets from './components/SavedAssets.tsx';
-import BiometricPrompt from './components/BiometricPrompt.tsx';
-import Footer from './components/Footer.tsx';
-import { PrivacyPolicy, TermsConditions, RefundPolicy } from './components/LegalPages.tsx';
-import ContactUs from './components/ContactUs.tsx';
-import { Lead, User, PurchaseRequest, Notification, PlatformAnalytics, OAuthConfig, Invoice, GatewayAPI, WalletActivity } from './types.ts';
-import { apiService } from './services/apiService.ts';
-import { authService } from './services/authService.ts';
-import { soundService } from './services/soundService.ts';
+import Header from './components/Header';
+import LeadGrid from './components/LeadGrid';
+import LeadSubmissionForm from './components/LeadSubmissionForm';
+import WalletSettings from './components/WalletSettings';
+import ProfileSettings from './components/ProfileSettings';
+import DashboardStats from './components/DashboardStats';
+import MobileNav from './components/MobileNav';
+import Login from './components/Login';
+import Signup from './components/Signup';
+import BiddingModal from './components/BiddingModal';
+import ActionCenter from './components/ActionCenter';
+import AdminLeadActionsModal from './components/AdminLeadActionsModal';
+import AdminPaymentSettings from './components/AdminPaymentSettings';
+import AdminOAuthSettings from './components/AdminOAuthSettings';
+import AdminControlCenter from './components/AdminControlCenter';
+import SavedAssets from './components/SavedAssets';
+import BiometricPrompt from './components/BiometricPrompt';
+import Footer from './components/Footer';
+import { PrivacyPolicy, TermsConditions, RefundPolicy } from './components/LegalPages';
+import ContactUs from './components/ContactUs';
+import { Lead, User, PurchaseRequest, Notification, PlatformAnalytics, OAuthConfig, Invoice, GatewayAPI, WalletActivity } from './types';
+import { apiService } from './services/apiService';
+import { authService } from './services/authService';
+import { soundService } from './services/soundService';
 
 const MemoizedHeader = memo(Header);
 const MemoizedLeadGrid = memo(LeadGrid);
@@ -263,7 +263,6 @@ const App: React.FC = () => {
   if (!user && authView !== 'app') return (
     <div className="flex flex-col min-h-screen">
       <div className="flex-1">{renderPublicView()}</div>
-      {/* Footer is visible for all unauthenticated users (login, signup, and related legal pages) */}
       <Footer onNav={(tab) => setAuthView(tab as any)} />
     </div>
   );
