@@ -5,12 +5,12 @@ import {
   Cpu, AlertTriangle, CheckCircle2, RefreshCw, Lock, Terminal, Hash, 
   ShieldAlert, Radio, Server, Link2, Box, Landmark, Loader2
 } from 'lucide-react';
-import { GatewayAPI, WalletActivity } from '../types.ts';
+import { GatewayAPI, WalletActivity, User } from '../types.ts';
 import { soundService } from '../services/soundService.ts';
 import GatewayPortal from './GatewayPortal.tsx';
 
 interface WalletSettingsProps {
-  stripeConnected: boolean;
+  user: User;
   onConnect: () => void;
   balance: number;
   onDeposit: (amount: number, provider: string, txnId: string) => Promise<void>;
@@ -18,7 +18,7 @@ interface WalletSettingsProps {
   walletActivities?: WalletActivity[];
 }
 
-const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gateways, walletActivities = [] }) => {
+const WalletSettings: React.FC<WalletSettingsProps> = ({ user, balance, onDeposit, gateways, walletActivities = [] }) => {
   const [amount, setAmount] = useState<string>('500');
   const [selectedGatewayId, setSelectedGatewayId] = useState<string | null>(null);
   const [flowMode, setFlowMode] = useState<'deposit' | 'withdraw'>('deposit');
@@ -81,7 +81,7 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
                  <div className="space-y-4">
                     <div className="flex items-center gap-3">
                        <DollarSign size={14} className="text-accent" />
-                       <h3 className="text-[9px] sm:text-[10px] font-black text-main uppercase tracking-[0.4em] italic">Settlement_Units</h3>
+                       <h3 className="text-[9px] font-black text-main uppercase tracking-[0.4em] italic">Settlement_Units</h3>
                     </div>
                     <div className="relative bg-black rounded-[2rem] border-2 border-bright p-6 sm:p-8 flex flex-col items-center justify-center focus-within:border-accent/40 transition-all shadow-inner">
                        <div className="flex items-center gap-2 sm:gap-4 w-full justify-center">
@@ -119,7 +119,7 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                        <Zap size={14} className="text-amber-500" />
-                       <h3 className="text-[9px] sm:text-[10px] font-black text-main uppercase tracking-[0.4em] italic">Settlement_Vectors</h3>
+                       <h3 className="text-[9px] font-black text-main uppercase tracking-[0.4em] italic">Settlement_Vectors</h3>
                     </div>
                  </div>
                  
@@ -219,7 +219,7 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
         <GatewayPortal 
           gateway={selectedGateway}
           amount={parseFloat(amount)}
-          userId="prod_user" // In real App use user.id
+          userId={user.id}
           onSuccess={handlePortalSuccess}
           onCancel={() => setShowPortal(false)}
         />

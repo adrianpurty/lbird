@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react';
 import { 
   Server, Zap, Activity, Heart, Layers
@@ -415,10 +414,10 @@ const App: React.FC = () => {
 
             {activeTab === 'settings' && (
               <WalletSettings 
+                user={user!}
                 balance={user!.balance} 
                 onDeposit={(amt, provider, txnId) => apiService.deposit(user!.id, amt, provider, txnId).then(() => { fetchAppData(); showToast(amt > 0 ? "VAULT_SETTLEMENT_VERIFIED" : "VAULT_WITHDRAWAL_INITIATED"); })} 
                 gateways={marketData.gateways} 
-                stripeConnected={user!.stripeConnected} 
                 onConnect={() => {}} 
                 walletActivities={userWalletActivities}
               />

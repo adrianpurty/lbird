@@ -9,7 +9,7 @@ declare const Stripe: any;
 
 export const paymentService = {
   async getStripe(publicKey: string) {
-    if (typeof Stripe === 'undefined') throw new Error("STRIPE_JS_MISSING");
+    if (typeof Stripe === 'undefined') throw new Error("STRIPE_JS_MISSING: Secure terminal failed to load.");
     return Stripe(publicKey);
   },
 
@@ -25,9 +25,22 @@ export const paymentService = {
   async createIntent(userId: string, gatewayId: string, amount: number) {
     const response = await fetch('api.php?action=create_payment_intent', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      },
       body: JSON.stringify({ userId, gatewayId, amount: Math.round(amount * 100) })
     });
+
+    if (response.status === 403) {
+      throw new Error("FORBIDDEN: The server rejected the handshake. Ensure your identity node is active.");
+    }
+
+    if (!response.ok) {
+      throw new Error(`GATEWAY_SYNC_ERROR: Received status ${response.status}`);
+    }
+
     return await response.json();
   },
 
@@ -41,14 +54,23 @@ export const paymentService = {
     const result = await stripe.confirmCardPayment(clientSecret, {
       payment_method: {
         card: cardElement,
-        billing_details: { name: 'LeadBid Pro Participant' },
+        billing_details: { 
+          name: 'LeadBid Pro Participant',
+          email: 'user@node.internal'
+        },
       },
     });
 
-    if (result.error) throw new Error(result.error.message);
-    if (result.paymentIntent.status === 'succeeded') return result.paymentIntent.id;
+    if (result.error) {
+      // Robust extraction of bank-level errors
+      throw new Error(result.error.message || "STRIPE_SETTLEMENT_REJECTED");
+    }
     
-    throw new Error("SETTLEMENT_INCOMPLETE_AWAITING_BANK");
+    if (result.paymentIntent.status === 'succeeded') {
+      return result.paymentIntent.id;
+    }
+    
+    throw new Error(`SETTLEMENT_INCOMPLETE: Current status is ${result.paymentIntent.status}`);
   },
 
   /**
@@ -57,7 +79,10 @@ export const paymentService = {
   async verifyManualSettlement(intentId: string, txnHash: string): Promise<boolean> {
     const response = await fetch('api.php?action=verify_settlement', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
       body: JSON.stringify({ intentId, txnHash })
     });
     const data = await response.json();
@@ -66,7 +91,6 @@ export const paymentService = {
 
   /**
    * Processes a live transaction for immediate settlement.
-   * Fixed: Added this method to satisfy BiddingModal.tsx requirements and comply with apiService.deposit validation.
    */
   async processTransaction(gateway: GatewayAPI, amount: number): Promise<{ txnId: string }> {
     // Simulate transaction latency for tactile UI feedback
