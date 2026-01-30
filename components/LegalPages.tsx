@@ -1,7 +1,6 @@
-
 import React from 'react';
 import { ShieldCheck, FileText, Scale, ArrowLeft, Lock, Database, Globe } from 'lucide-react';
-import { soundService } from '../services/soundService.ts';
+import { soundService } from '../services/soundService';
 
 interface LegalPageProps {
   onBack?: () => void;
@@ -119,7 +118,7 @@ export const RefundPolicy: React.FC<LegalPageProps> = ({ onBack }) => (
         <h3 className="text-lg font-black text-main uppercase tracking-widest italic flex items-center gap-3">
           <ShieldCheck size={18} className="text-accent" /> 02. EXCEPTION_PROTOCOLS
         </h3>
-        <p>Fiscal reconciliation is only permitted if a Lead Node remains offline for >48 hours post-acquisition or if delivery telemetry shows a >50% transmission failure rate. Admin audit is required for all claims.</p>
+        <p>Fiscal reconciliation is only permitted if a Lead Node remains offline for &gt;48 hours post-acquisition or if delivery telemetry shows a &gt;50% transmission failure rate. Admin audit is required for all claims.</p>
       </section>
     </div>
   </div>
