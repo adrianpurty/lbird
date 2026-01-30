@@ -265,7 +265,10 @@ const App: React.FC = () => {
   if (!user && authView !== 'app') return (
     <div className="flex flex-col min-h-screen">
       <div className="flex-1">{renderPublicView()}</div>
-      <Footer onNav={(tab) => setAuthView(tab as any)} />
+      {/* Footer is strictly displayed only on Sign In and Sign Up views as requested */}
+      {(authView === 'login' || authView === 'signup') && (
+        <Footer onNav={(tab) => setAuthView(tab as any)} />
+      )}
     </div>
   );
 
