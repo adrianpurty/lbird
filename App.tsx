@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react';
 import { 
   Server, Database, Clock, Zap, Activity, Heart, Globe, Layers
@@ -19,6 +20,9 @@ import AdminOAuthSettings from './components/AdminOAuthSettings.tsx';
 import AdminControlCenter from './components/AdminControlCenter.tsx';
 import SavedAssets from './components/SavedAssets.tsx';
 import BiometricPrompt from './components/BiometricPrompt.tsx';
+import Footer from './components/Footer.tsx';
+import { PrivacyPolicy, TermsConditions, RefundPolicy } from './components/LegalPages.tsx';
+import ContactUs from './components/ContactUs.tsx';
 import { Lead, User, PurchaseRequest, Notification, PlatformAnalytics, OAuthConfig, Invoice, GatewayAPI, WalletActivity } from './types.ts';
 import { apiService } from './services/apiService.ts';
 import { authService } from './services/authService.ts';
@@ -28,8 +32,8 @@ const MemoizedHeader = memo(Header);
 const MemoizedLeadGrid = memo(LeadGrid);
 
 const App: React.FC = () => {
-  const [authView, setAuthView] = useState<'login' | 'signup' | 'app'>('login');
-  const [activeTab, setActiveTab] = useState<'market' | 'profile' | 'create' | 'settings' | 'admin' | 'inbox' | 'auth-config' | 'payment-config' | 'wishlist' | 'action-center'>('market');
+  const [authView, setAuthView] = useState<'login' | 'signup' | 'privacy' | 'terms' | 'refund' | 'contact' | 'app'>('login');
+  const [activeTab, setActiveTab] = useState<'market' | 'profile' | 'create' | 'settings' | 'admin' | 'inbox' | 'auth-config' | 'payment-config' | 'wishlist' | 'action-center' | 'privacy' | 'terms' | 'refund' | 'contact'>('market');
   
   const [marketData, setMarketData] = useState<{
     leads: Lead[];
@@ -73,7 +77,8 @@ const App: React.FC = () => {
       if (appUser) {
         setAuthView('app');
       } else {
-        setAuthView(prev => prev === 'app' ? 'login' : prev);
+        // If unauthenticated, allow legal views or default to login
+        setAuthView(prev => ['privacy', 'terms', 'refund', 'contact'].includes(prev) ? prev : 'login');
       }
       setIsLoading(false);
     });
@@ -240,8 +245,29 @@ const App: React.FC = () => {
     </div>
   );
 
-  if (!user && authView === 'login') return <Login onLogin={handleLogin} onSwitchToSignup={() => setAuthView('signup')} authConfig={marketData.authConfig} />;
-  if (!user && authView === 'signup') return <Signup onSignup={handleLogin} onSwitchToLogin={() => setAuthView('login')} authConfig={marketData.authConfig} />;
+  const renderPublicView = () => {
+    switch (authView) {
+      case 'signup': 
+        return <Signup onSignup={handleLogin} onSwitchToLogin={() => setAuthView('login')} authConfig={marketData.authConfig} />;
+      case 'privacy':
+        return <PrivacyPolicy onBack={() => setAuthView('login')} />;
+      case 'terms':
+        return <TermsConditions onBack={() => setAuthView('login')} />;
+      case 'refund':
+        return <RefundPolicy onBack={() => setAuthView('login')} />;
+      case 'contact':
+        return <ContactUs onBack={() => setAuthView('login')} onMessageSent={() => setAuthView('login')} />;
+      default:
+        return <Login onLogin={handleLogin} onSwitchToSignup={() => setAuthView('signup')} authConfig={marketData.authConfig} />;
+    }
+  };
+
+  if (!user && authView !== 'app') return (
+    <div className="flex flex-col min-h-screen">
+      <div className="flex-1">{renderPublicView()}</div>
+      <Footer onNav={(tab) => setAuthView(tab as any)} />
+    </div>
+  );
 
   return (
     <div className="flex flex-col h-screen bg-platform text-main overflow-hidden font-rajdhani transition-colors duration-500">
@@ -255,8 +281,8 @@ const App: React.FC = () => {
         onTabChange={setActiveTab}
       />
 
-      <div className="flex-1 min-w-0 h-full relative overflow-hidden">
-        <main className="h-full overflow-y-auto p-6 lg:p-12 scroll-smooth scrollbar-hide bg-platform">
+      <div className="flex-1 min-w-0 h-full relative overflow-hidden flex flex-col">
+        <main className="flex-1 overflow-y-auto p-6 lg:p-12 scroll-smooth scrollbar-hide bg-platform">
           <div className="max-w-[1600px] mx-auto w-full pb-32 md:pb-20">
             {activeTab === 'market' && (
               <div className="space-y-12 animate-in fade-in duration-700">
@@ -401,6 +427,11 @@ const App: React.FC = () => {
                 onConfigChange={(c) => apiService.updateAuthConfig(c).then(() => fetchAppData())} 
               />
             )}
+
+            {activeTab === 'privacy' && <PrivacyPolicy />}
+            {activeTab === 'terms' && <TermsConditions />}
+            {activeTab === 'refund' && <RefundPolicy />}
+            {activeTab === 'contact' && <ContactUs onMessageSent={() => setActiveTab('market')} />}
           </div>
         </main>
       </div>

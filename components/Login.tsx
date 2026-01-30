@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   Zap, 
@@ -89,7 +90,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToSignup, authConfig }) 
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden grid-bg bg-platform">
-      <div className="w-full max-w-[440px] mx-auto z-10 animate-in fade-in zoom-in-95 duration-700">
+      <div className="w-full max-w-[440px] mx-auto z-10 animate-in fade-in zoom-in-95 duration-700 py-20">
         
         {/* BRANDING HUB */}
         <div className="text-center mb-8">

@@ -47,13 +47,12 @@ export const NICHE_PROTOCOLS = {
 class ApiService {
   async seedInitialData(): Promise<void> {
     const adminId = "admin_root";
-    // Provision specific Master Admin Identity
     await setDoc(doc(db, "users", adminId), {
       id: adminId,
       name: "MASTER_TREASURY",
       email: ADMIN_EMAIL,
       username: "admin_treasury",
-      balance: 0.0, // Rule 1: Start at 0
+      balance: 0.0,
       role: 'admin',
       status: 'active',
       stripeConnected: true,
@@ -98,9 +97,11 @@ class ApiService {
       facebookEnabled: false, facebookAppId: "", facebookAppSecret: ""
     });
 
-    // Default Gateways - Seeded as inactive/no keys to enforce Rule 3 initially
     const defaultGateways: Partial<GatewayAPI>[] = [
-      { id: 'gw_stripe', provider: 'stripe', name: 'STRIPE_MASTER_NODE', publicKey: '', secretKey: '', fee: '2.5', status: 'inactive' }
+      { id: 'gw_stripe', provider: 'stripe', name: 'STRIPE_MASTER_NODE', publicKey: '', secretKey: '', fee: '2.5', status: 'inactive' },
+      { id: 'gw_binance', provider: 'binance', name: 'BINANCE_SMART_NODE', publicKey: '', secretKey: '', fee: '1.0', status: 'inactive' },
+      { id: 'gw_upi', provider: 'upi', name: 'UPI_REALTIME_NODE', publicKey: '', secretKey: '', fee: '0.0', status: 'inactive' },
+      { id: 'gw_crypto', provider: 'crypto', name: 'DECENTRALIZED_VAULT', publicKey: '', secretKey: '', fee: '0.5', status: 'inactive' }
     ];
     for (const g of defaultGateways) { await setDoc(doc(db, "api_nodes", g.id!), g); }
   }
@@ -117,7 +118,7 @@ class ApiService {
       const configSnap = await getDoc(doc(db, "config", "auth_config"));
 
       return {
-        metadata: { version: '6.0.0-TREASURY-LOCKED', last_updated: new Date().toISOString() },
+        metadata: { version: '6.2.0-GATEWAY-SYNCED', last_updated: new Date().toISOString() },
         leads: leadsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
         users: usersSnap.docs.map(d => ({ id: d.id, ...d.data() })),
         purchaseRequests: bidsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
@@ -144,7 +145,7 @@ class ApiService {
       name: data.name || '',
       email: data.email || '',
       username: data.username || (data.email?.split('@')[0] || 'user') + Math.floor(Math.random() * 1000),
-      balance: 0.0, // Rule 1: New signups start with 0
+      balance: 0.0,
       role: isMasterAdmin ? 'admin' : 'user',
       status: 'active',
       stripeConnected: false,
@@ -174,8 +175,6 @@ class ApiService {
     return runTransaction(db, async (transaction) => {
       const userRef = doc(db, "users", bidData.userId);
       const leadRef = doc(db, "leads", bidData.leadId);
-      
-      // Find treasury admin (enjodanzo@gmail.com)
       const adminQuery = query(collection(db, "users"), where("email", "==", ADMIN_EMAIL));
       const adminSnaps = await getDocs(adminQuery);
       if (adminSnaps.empty) throw "TREASURY_NODE_OFFLINE";
@@ -192,13 +191,11 @@ class ApiService {
 
       if (user.balance < bidData.totalDailyCost) throw "LOW_FUNDS";
 
-      // Update lead
       transaction.update(leadRef, {
         currentBid: bidData.bidAmount,
         bidCount: (leadSnap.data().bidCount || 0) + 1
       });
 
-      // Rule 2: Debit user, credit admin (if user is not the admin)
       transaction.update(userRef, {
         balance: user.balance - bidData.totalDailyCost,
         totalSpend: (user.totalSpend || 0) + bidData.totalDailyCost
@@ -211,7 +208,6 @@ class ApiService {
         });
       }
 
-      // Rule 4: Unique Transaction ID for Bidding
       const bidTxnId = `BID-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
       transaction.set(doc(collection(db, "bids")), {
         ...bidData,
@@ -220,7 +216,6 @@ class ApiService {
         timestamp: new Date().toISOString()
       });
 
-      // Rule 4: Action Center Record
       transaction.set(doc(collection(db, "wallet_activities")), {
         id: bidTxnId,
         userId: bidData.userId,
@@ -234,14 +229,15 @@ class ApiService {
   }
 
   async deposit(userId: string, amount: number, provider?: string): Promise<any> {
-    // Rule 3: Crediting only when payment gateway is active with API keys
+    // Rule 3: STRICT KEY VALIDATION
     const gatewaySnap = await getDocs(collection(db, "api_nodes"));
     const activeGateways = gatewaySnap.docs
       .map(d => d.data() as GatewayAPI)
-      .filter(g => g.status === 'active' && g.publicKey?.length > 5 && g.secretKey?.length > 5);
+      .filter(g => g.status === 'active' && (g.publicKey?.length || 0) > 5 && (g.secretKey?.length || 0) > 5);
 
-    if (activeGateways.length === 0) {
-      throw new Error("GATEWAY_PROTOCOL_OFFLINE: Active API keys required for vault sync.");
+    const targetNode = activeGateways.find(g => g.name === provider);
+    if (!targetNode) {
+      throw new Error("GATEWAY_NODE_ERROR: Targeted node is offline or lacks administrative authorization (Missing Keys).");
     }
 
     const userRef = doc(db, "users", userId);
@@ -256,17 +252,16 @@ class ApiService {
       transaction.set(doc(collection(db, "wallet_activities")), {
         id: txnId,
         userId,
-        type: 'deposit',
+        type: amount > 0 ? 'deposit' : 'withdrawal',
         amount: Math.abs(amount),
         provider: provider || 'VAULT_SYNC',
         timestamp: new Date().toISOString(),
         status: 'completed'
       });
 
-      // Rule 4: Record Notification for Action Center
       transaction.set(doc(collection(db, "notifications")), {
         userId,
-        message: `VAULT_SYNC_SUCCESS: [${txnId}] Credited $${amount.toLocaleString()} via ${provider}`,
+        message: `VAULT_SYNC_SUCCESS: [${txnId}] Authorized $${amount.toLocaleString()} settlement via ${provider}`,
         type: 'system',
         timestamp: new Date().toISOString(),
         read: false

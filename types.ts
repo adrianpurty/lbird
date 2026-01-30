@@ -138,4 +138,5 @@ export interface GatewayAPI {
   secretKey: string;
   fee: string;
   status: 'active' | 'inactive';
+  qrCode?: string;
 }
