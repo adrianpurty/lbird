@@ -1,9 +1,10 @@
+
 import React, { useState, useMemo } from 'react';
 import { 
   X, Save, Trash2, ShieldCheck, AlertCircle, Globe, DollarSign, 
   Target, Sparkles, Terminal, Loader2, Zap, MapPin, Activity, 
   Database, TrendingUp, Cpu, Gauge, ArrowRight, CheckCircle2, XCircle, Gavel,
-  Calendar, Hash, ChevronUp, ChevronDown
+  Calendar, Hash, ChevronUp, ChevronDown, ShieldAlert, AlertTriangle, Info
 } from 'lucide-react';
 import { Lead, User } from '../types.ts';
 import { applyAiOverride } from '../services/geminiService.ts';
@@ -52,6 +53,7 @@ const AdminLeadActionsModal: React.FC<AdminLeadActionsModalProps> = ({ lead, use
   const isAdmin = user.role === 'admin';
   const isOwner = lead.ownerId === user.id;
   const canEdit = isAdmin || isOwner;
+  const isPending = lead.status === 'pending';
 
   const weekRange = useMemo(() => 
     getWeekRange(logistics.week, logistics.year), 
@@ -121,6 +123,35 @@ const AdminLeadActionsModal: React.FC<AdminLeadActionsModalProps> = ({ lead, use
 
       <div className="w-full max-w-[1100px] max-h-[95vh] bg-[#080808] border-2 border-neutral-900 rounded-[2.5rem] md:rounded-[3.5rem] shadow-[0_50px_150px_-20px_rgba(0,0,0,1)] flex flex-col relative z-10 animate-in zoom-in-95 duration-500 overflow-hidden">
         
+        {/* Admin High-Priority Review Prompt */}
+        {isAdmin && isPending && (
+          <div className="bg-amber-600/10 border-b border-amber-600/20 p-6 md:px-12 flex flex-col sm:flex-row items-center justify-between gap-6 animate-in slide-in-from-top-4 duration-500">
+             <div className="flex items-center gap-6">
+                <div className="w-14 h-14 bg-amber-600 text-black rounded-2xl flex items-center justify-center shadow-lg">
+                   <AlertTriangle size={32} />
+                </div>
+                <div className="space-y-1">
+                   <h3 className="text-xl font-black text-amber-500 italic uppercase tracking-tighter leading-none">ACTION_REQUIRED: ASSET_REVIEW</h3>
+                   <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest leading-none">Awaiting manual handshake verification and endpoint audit.</p>
+                </div>
+             </div>
+             <div className="flex items-center gap-4 w-full sm:w-auto">
+                <button 
+                  onClick={() => handleDecision('rejected')}
+                  className="flex-1 sm:flex-none px-8 py-3 bg-red-950/20 text-red-500 hover:bg-red-600 hover:text-white rounded-xl font-black text-[10px] uppercase tracking-widest border border-red-900/40 transition-all active:scale-95"
+                >
+                  Reject Node
+                </button>
+                <button 
+                  onClick={() => handleDecision('approved')}
+                  className="flex-1 sm:flex-none px-12 py-3 bg-emerald-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest border-b-4 border-emerald-800 hover:bg-emerald-500 transition-all active:translate-y-1 active:border-b-0 shadow-lg flex items-center justify-center gap-3"
+                >
+                  <CheckCircle2 size={16} /> Authorize Sync
+                </button>
+             </div>
+          </div>
+        )}
+
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 p-6 md:p-12 border-b-2 border-neutral-900 bg-black/40">
           <div className="relative">
             <div className="absolute -left-4 md:-left-12 top-1/2 -translate-y-1/2 w-4 h-12 md:h-24 bg-[#00e5ff] rounded-full blur-xl opacity-20" />
@@ -386,25 +417,6 @@ const AdminLeadActionsModal: React.FC<AdminLeadActionsModalProps> = ({ lead, use
                   >
                     INITIATE_ACQUISITION_HANDSHAKE <Gavel size={28} />
                   </button>
-                </div>
-              )}
-
-              {isAdmin && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-neutral-900/40 border-2 border-neutral-800 rounded-[2.5rem] animate-in slide-in-from-bottom-2">
-                   <button 
-                    type="button"
-                    onClick={() => handleDecision('approved')}
-                    className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-6 rounded-2xl md:rounded-[2rem] font-black text-lg md:text-xl uppercase tracking-widest flex items-center justify-center gap-4 transition-all shadow-xl shadow-emerald-900/10 border-b-4 border-emerald-800 active:translate-y-1"
-                   >
-                     <CheckCircle2 size={24} /> AUTHORIZE_NODE
-                   </button>
-                   <button 
-                    type="button"
-                    onClick={() => handleDecision('rejected')}
-                    className="w-full bg-red-700 hover:bg-red-600 text-white py-6 rounded-2xl md:rounded-[2rem] font-black text-lg md:text-xl uppercase tracking-widest flex items-center justify-center gap-4 transition-all shadow-xl shadow-red-900/10 border-b-4 border-red-900 active:translate-y-1"
-                   >
-                     <XCircle size={24} /> REJECT_NODE
-                   </button>
                 </div>
               )}
             </div>

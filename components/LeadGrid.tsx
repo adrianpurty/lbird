@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, memo, useEffect } from 'react';
 import { Lead, UserRole } from '../types';
 import { 
@@ -265,13 +266,13 @@ const LeadGridBase: React.FC<LeadGridProps> = ({ leads, onBid, onEdit, userRole,
         </div>
       )}
 
-      {/* Tactical Pagination HUD - Mobile Optimized & Yellow Theme */}
+      {/* Tactical Pagination HUD - Mobile Optimized & Muted Grey Theme */}
       {totalPages > 1 && (
         <div className="flex flex-col items-center justify-center gap-6 pt-10 border-t border-bright w-full max-w-full overflow-hidden">
-           <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-[0.4em] text-[#facc15]/80">
-              <span className="text-[#facc15]">CYCLE {currentPage}</span>
+           <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-[0.4em] text-neutral-500">
+              <span className="text-neutral-400">CYCLE {currentPage}</span>
               <span className="opacity-20 text-white">/</span>
-              <span className="text-dim">{totalPages} NODES</span>
+              <span className="text-neutral-600">{totalPages} NODES</span>
            </div>
 
            <div className="flex items-center justify-center gap-2 w-full flex-wrap max-w-full px-2">
@@ -279,7 +280,7 @@ const LeadGridBase: React.FC<LeadGridProps> = ({ leads, onBid, onEdit, userRole,
                 <button 
                   onClick={() => handlePageChange(1)} 
                   disabled={currentPage === 1}
-                  className="p-2.5 bg-card border border-bright rounded-lg text-neutral-600 hover:text-[#facc15] disabled:opacity-10 transition-all active:scale-90"
+                  className="p-2.5 bg-card border border-bright rounded-lg text-neutral-600 hover:text-neutral-300 disabled:opacity-10 transition-all active:scale-90"
                   title="First Cycle"
                 >
                   <ChevronsLeft size={14} />
@@ -287,7 +288,7 @@ const LeadGridBase: React.FC<LeadGridProps> = ({ leads, onBid, onEdit, userRole,
                 <button 
                   onClick={() => handlePageChange(currentPage - 1)} 
                   disabled={currentPage === 1}
-                  className="p-2.5 bg-card border border-bright rounded-lg text-neutral-600 hover:text-[#facc15] disabled:opacity-10 transition-all active:scale-90"
+                  className="p-2.5 bg-card border border-bright rounded-lg text-neutral-600 hover:text-neutral-300 disabled:opacity-10 transition-all active:scale-90"
                   title="Previous Cycle"
                 >
                   <ChevronLeft size={14} />
@@ -310,8 +311,8 @@ const LeadGridBase: React.FC<LeadGridProps> = ({ leads, onBid, onEdit, userRole,
                           onClick={() => handlePageChange(p)}
                           className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg font-black text-[11px] transition-all border ${
                             currentPage === p 
-                              ? 'bg-[#facc15] border-[#eab308] text-black shadow-[0_0_20px_rgba(250,204,21,0.3)] scale-110 z-10' 
-                              : 'bg-black/40 text-neutral-500 hover:text-[#facc15] border-bright hover:border-[#facc15]/30'
+                              ? 'bg-neutral-600 border-neutral-500 text-white shadow-lg scale-110 z-10' 
+                              : 'bg-black/40 text-neutral-500 hover:text-neutral-300 border-bright hover:border-neutral-700'
                           }`}
                         >
                           {p.toString().padStart(2, '0')}
@@ -326,7 +327,7 @@ const LeadGridBase: React.FC<LeadGridProps> = ({ leads, onBid, onEdit, userRole,
                 <button 
                   onClick={() => handlePageChange(currentPage + 1)} 
                   disabled={currentPage === totalPages}
-                  className="p-2.5 bg-card border border-bright rounded-lg text-neutral-600 hover:text-[#facc15] disabled:opacity-10 transition-all active:scale-90"
+                  className="p-2.5 bg-card border border-bright rounded-lg text-neutral-600 hover:text-neutral-300 disabled:opacity-10 transition-all active:scale-90"
                   title="Next Cycle"
                 >
                   <ChevronRight size={14} />
@@ -334,7 +335,7 @@ const LeadGridBase: React.FC<LeadGridProps> = ({ leads, onBid, onEdit, userRole,
                 <button 
                   onClick={() => handlePageChange(totalPages)} 
                   disabled={currentPage === totalPages}
-                  className="p-2.5 bg-card border border-bright rounded-lg text-neutral-600 hover:text-[#facc15] disabled:opacity-10 transition-all active:scale-90"
+                  className="p-2.5 bg-card border border-bright rounded-lg text-neutral-600 hover:text-neutral-300 disabled:opacity-10 transition-all active:scale-90"
                   title="Last Cycle"
                 >
                   <ChevronsRight size={14} />
@@ -342,9 +343,9 @@ const LeadGridBase: React.FC<LeadGridProps> = ({ leads, onBid, onEdit, userRole,
               </div>
            </div>
 
-           <div className="bg-[#facc15]/5 border border-[#facc15]/20 px-6 py-2.5 rounded-2xl flex items-center gap-3 w-fit mx-auto">
-              <div className="w-1.5 h-1.5 rounded-full bg-[#facc15] animate-pulse shadow-[0_0_8px_#facc15]" />
-              <span className="text-[8px] font-black text-[#facc15] uppercase tracking-widest leading-none">Market Stream Verified // Node Sync Active</span>
+           <div className="bg-neutral-900/50 border border-neutral-800 px-6 py-2.5 rounded-2xl flex items-center gap-3 w-fit mx-auto">
+              <div className="w-1.5 h-1.5 rounded-full bg-neutral-600 animate-pulse" />
+              <span className="text-[8px] font-black text-neutral-500 uppercase tracking-widest leading-none">Market Stream Verified // Node Sync Active</span>
            </div>
         </div>
       )}

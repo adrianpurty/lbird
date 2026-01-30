@@ -1,10 +1,10 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   ShieldCheck, Wallet, Bitcoin, Smartphone, Zap, Activity, History, ArrowDownLeft, 
   ArrowUpRight, Database, DollarSign, CreditCard, Scan, Download, Globe, ArrowRight, 
   Cpu, AlertTriangle, CheckCircle2, RefreshCw, Lock, Terminal, Hash, Key, User as UserIcon, Briefcase, ChevronRight, Landmark, Loader2,
-  ShieldAlert
+  ShieldAlert, X, Radio, Server, Link2, Box
 } from 'lucide-react';
 import { GatewayAPI, WalletActivity } from '../types.ts';
 import { soundService } from '../services/soundService.ts';
@@ -24,6 +24,7 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
   const [selectedGatewayId, setSelectedGatewayId] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [procStep, setProcStep] = useState('');
+  const [procStatus, setProcStatus] = useState<'handshake' | 'validating' | 'settling' | 'success' | 'failed'>('handshake');
   const [flowMode, setFlowMode] = useState<'deposit' | 'withdraw'>('deposit');
   const [error, setError] = useState<string | null>(null);
 
@@ -48,15 +49,20 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
     if (!isFormValid || isProcessing || !selectedGateway) return;
     setError(null);
     setIsProcessing(true);
+    setProcStatus('handshake');
     soundService.playClick(true);
 
     try {
-      setProcStep(`INITIALIZING_${selectedGateway.provider.toUpperCase()}_HANDSHAKE...`);
+      setProcStep(`ESTABLISHING_${selectedGateway.provider.toUpperCase()}_HANDSHAKE...`);
+      await new Promise(r => setTimeout(r, 1000));
       
+      setProcStatus('validating');
+      setProcStep(`VALIDATING_CREDENTIALS_HASH...`);
       const validation = await paymentService.validateGateway(selectedGateway);
       if (!validation.success) throw new Error(validation.message);
 
-      setProcStep(`UPLINK_ESTABLISHED: PROCESSING_SETTLEMENT...`);
+      setProcStatus('settling');
+      setProcStep(`SETTLING_UNITS: $${amount} via ${selectedGateway.name}...`);
       
       const { txnId } = await paymentService.processTransaction(
         selectedGateway, 
@@ -64,20 +70,24 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
         { cardData, vpaId, walletAddr }
       );
       
-      setProcStep("VERIFYING_SETTLEMENT_SIGNATURES...");
+      setProcStatus('success');
+      setProcStep("SETTLEMENT_FINALIZED_IMMUTABLE");
       const finalAmount = flowMode === 'deposit' ? parseFloat(amount) : -parseFloat(amount);
       await onDeposit(finalAmount, selectedGateway.name, txnId);
       
-      setAmount('500');
-      setCardData({ number: '', expiry: '', cvc: '' });
-      setVpaId('');
-      setWalletAddr('');
-      setSelectedGatewayId(null);
-      setProcStep('');
+      setTimeout(() => {
+        setAmount('500');
+        setCardData({ number: '', expiry: '', cvc: '' });
+        setVpaId('');
+        setWalletAddr('');
+        setSelectedGatewayId(null);
+        setIsProcessing(false);
+      }, 2500);
+      
     } catch (e: any) {
+      setProcStatus('failed');
       setError(e.message || "VAULT_HANDSHAKE_FAILED");
-    } finally {
-      setIsProcessing(false);
+      setTimeout(() => setIsProcessing(false), 3000);
     }
   };
 
@@ -91,7 +101,7 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
   };
 
   return (
-    <div className="max-w-[1400px] mx-auto space-y-4 pb-32 font-rajdhani animate-in fade-in duration-500 px-4 lg:px-0">
+    <div className="max-w-[1400px] mx-auto space-y-4 pb-32 font-rajdhani animate-in fade-in duration-500 px-4 lg:px-0 relative">
       
       {/* HUD Header Optimized for Mobile */}
       <div className="flex flex-col sm:flex-row items-center gap-4 w-full">
@@ -121,7 +131,7 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
          </div>
       </div>
 
-      {error && (
+      {error && !isProcessing && (
         <div className="bg-red-500/10 border border-red-500/30 p-4 sm:p-5 rounded-2xl flex items-center gap-4 text-red-500 animate-in shake duration-300">
           <AlertTriangle size={18} className="shrink-0" />
           <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest leading-none">{error}</span>
@@ -235,23 +245,14 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
             </div>
 
             {/* Bottom Action Section */}
-            <div className="mt-8 sm:mt-12 pt-8 sm:pt-10 border-t border-bright relative z-10">
+            <div className="mt-8 sm:mt-10 pt-8 sm:pt-8 border-t border-bright relative z-10 flex flex-col items-center">
                <button 
                 onClick={handleVaultSync} 
                 disabled={!isFormValid || isProcessing} 
-                className={`w-full py-5 sm:py-6 rounded-[1.5rem] sm:rounded-2xl font-black text-xl sm:text-2xl uppercase italic tracking-[0.2em] sm:tracking-[0.3em] transition-all border-b-[6px] sm:border-b-[8px] flex items-center justify-center gap-4 sm:gap-6 shadow-2xl active:translate-y-1 active:border-b-0 ${isFormValid ? 'bg-white text-black border-neutral-300 hover:bg-accent hover:text-white hover:border-violet-900' : 'bg-neutral-900 text-neutral-700 border-neutral-950 cursor-not-allowed'}`}
+                className={`w-full sm:w-auto sm:px-12 py-4 rounded-xl font-black text-lg uppercase italic tracking-[0.2em] transition-all border-b-4 flex items-center justify-center gap-4 shadow-xl active:translate-y-1 active:border-b-0 ${isFormValid ? 'bg-white text-black border-neutral-300 hover:bg-accent hover:text-white hover:border-violet-900' : 'bg-neutral-900 text-neutral-700 border-neutral-950 cursor-not-allowed'}`}
                >
-                {isProcessing ? <Loader2 className="animate-spin" size={24} /> : <>INIT_SETTLEMENT <ArrowRight className="size-5 sm:size-7" /></>}
+                {isProcessing ? <Loader2 className="animate-spin" size={20} /> : <>INIT_SETTLEMENT <ArrowRight size={20} /></>}
               </button>
-              
-              {isProcessing && procStep && (
-                <div className="flex flex-col items-center gap-2 mt-4 sm:mt-6 animate-in fade-in duration-500">
-                  <div className="w-full bg-neutral-900 h-1 rounded-full overflow-hidden max-w-[240px] sm:max-w-xs">
-                    <div className="h-full bg-accent animate-pulse" style={{width: '60%'}} />
-                  </div>
-                  <p className="text-center text-[8px] sm:text-[10px] text-accent font-black uppercase animate-pulse tracking-widest">{procStep}</p>
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -294,6 +295,89 @@ const WalletSettings: React.FC<WalletSettingsProps> = ({ balance, onDeposit, gat
            </div>
         </div>
       </div>
+
+      {/* TACTICAL TRANSACTION HUD OVERLAY */}
+      {isProcessing && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/95 backdrop-blur-3xl animate-in fade-in duration-500">
+           <div className="absolute inset-0 grid-bg opacity-20 pointer-events-none" />
+           <div className="absolute top-0 left-0 w-full h-1 bg-accent/20 animate-pulse" />
+           
+           <div className="w-full max-w-lg bg-[#080808] border-2 border-neutral-800 rounded-[3rem] p-10 flex flex-col items-center text-center space-y-10 shadow-[0_0_100px_rgba(124,58,237,0.15)] relative overflow-hidden">
+              <div className="absolute -top-20 -right-20 w-64 h-64 bg-accent/5 rounded-full blur-[100px]" />
+              
+              <div className="relative group">
+                 <div className={`w-32 h-32 rounded-[2.5rem] bg-black border-2 border-neutral-800 flex items-center justify-center shadow-2xl transition-all duration-700 ${procStatus === 'success' ? 'border-emerald-500 text-emerald-500' : procStatus === 'failed' ? 'border-red-500 text-red-500' : 'border-accent text-accent'}`}>
+                    {procStatus === 'handshake' && <Server size={56} className="animate-pulse" />}
+                    {procStatus === 'validating' && <Link2 size={56} className="animate-bounce" />}
+                    {procStatus === 'settling' && <RefreshCw size={56} className="animate-spin" />}
+                    {procStatus === 'success' && <CheckCircle2 size={56} className="animate-in zoom-in duration-500" />}
+                    {procStatus === 'failed' && <ShieldAlert size={56} className="animate-in shake duration-500" />}
+                 </div>
+                 {procStatus !== 'success' && procStatus !== 'failed' && (
+                    <div className="absolute -inset-4 border-2 border-accent/20 border-dashed rounded-[3.5rem] animate-spin-slow" />
+                 )}
+              </div>
+
+              <div className="space-y-4">
+                 <h2 className="text-3xl font-futuristic text-main italic uppercase tracking-tighter">
+                   {procStatus === 'success' ? 'SYNC_COMPLETE' : procStatus === 'failed' ? 'HANDSHAKE_ERROR' : 'VAULT_TRANSMISSION'}
+                 </h2>
+                 <p className="text-[10px] font-black text-accent uppercase tracking-[0.4em] font-mono leading-none animate-pulse">
+                   {procStep}
+                 </p>
+              </div>
+
+              <div className="w-full space-y-6">
+                 <div className="bg-black border border-neutral-800 rounded-2xl p-6 grid grid-cols-2 gap-4">
+                    <div className="text-left border-r border-neutral-800">
+                       <span className="text-[8px] font-black text-neutral-600 uppercase block mb-1">Target_Node</span>
+                       <span className="text-sm font-bold text-main uppercase truncate block">{selectedGateway?.name}</span>
+                    </div>
+                    <div className="text-right">
+                       <span className="text-[8px] font-black text-neutral-600 uppercase block mb-1">Total_Load</span>
+                       <span className="text-xl font-tactical font-black text-main italic tracking-widest block">${amount}</span>
+                    </div>
+                 </div>
+
+                 {procStatus === 'failed' ? (
+                   <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl flex items-center gap-3 text-red-500 animate-in slide-in-from-bottom-2">
+                      <AlertTriangle size={16} />
+                      <span className="text-[9px] font-black uppercase tracking-widest">{error || 'SECURITY_PROTOCOL_REJECTION'}</span>
+                   </div>
+                 ) : (
+                   <div className="flex flex-col gap-2">
+                     <div className="h-1.5 w-full bg-neutral-900 rounded-full overflow-hidden border border-neutral-800 shadow-inner">
+                        <div 
+                          className={`h-full transition-all duration-1000 ease-out ${procStatus === 'success' ? 'bg-emerald-500' : 'bg-accent'}`} 
+                          style={{ width: procStatus === 'success' ? '100%' : procStatus === 'settling' ? '75%' : procStatus === 'validating' ? '45%' : '15%' }} 
+                        />
+                     </div>
+                     <div className="flex justify-between items-center text-[7px] font-black text-neutral-700 uppercase tracking-widest">
+                        <span>P-V4.2 Channel</span>
+                        <span>{procStatus === 'success' ? '100%' : 'Streaming Data...'}</span>
+                     </div>
+                   </div>
+                 )}
+              </div>
+
+              <div className="pt-4">
+                 <p className="text-[8px] text-neutral-600 leading-relaxed uppercase font-bold tracking-tighter italic max-w-[300px]">
+                   Live settlement requires multi-signature validation from the gateway node. Do not terminate connection during handshake.
+                 </p>
+              </div>
+           </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes spin-slow {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .animate-spin-slow {
+          animation: spin-slow 12s linear infinite;
+        }
+      `}</style>
     </div>
   );
 };

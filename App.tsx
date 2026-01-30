@@ -20,6 +20,7 @@ import AdminOAuthSettings from './components/AdminOAuthSettings';
 import AdminControlCenter from './components/AdminControlCenter';
 import SavedAssets from './components/SavedAssets';
 import BiometricPrompt from './components/BiometricPrompt';
+import MyAssetsRegistry from './components/MyAssetsRegistry';
 import Footer from './components/Footer';
 import { PrivacyPolicy, TermsConditions, RefundPolicy } from './components/LegalPages';
 import ContactUs from './components/ContactUs';
@@ -228,6 +229,10 @@ const App: React.FC = () => {
     return marketData.leads.filter(l => user?.wishlist?.includes(l.id));
   }, [marketData.leads, user?.wishlist]);
 
+  const myLeads = useMemo(() => {
+    return marketData.leads.filter(l => l.ownerId === user?.id);
+  }, [marketData.leads, user?.id]);
+
   const userWalletActivities = useMemo(() => {
     return marketData.walletActivities
       .filter(wa => wa.userId === user?.id)
@@ -398,7 +403,10 @@ const App: React.FC = () => {
             )}
             
             {activeTab === 'create' && (
-              <LeadSubmissionForm onSubmit={(l) => apiService.createLead({...l, ownerId: user!.id}).then(() => { fetchAppData(); setActiveTab('market'); })} />
+              <div className="space-y-16">
+                <LeadSubmissionForm onSubmit={(l) => apiService.createLead({...l, ownerId: user!.id}).then(() => { fetchAppData(); showToast("ASSET_SUBMITTED_FOR_REVIEW"); })} />
+                <MyAssetsRegistry leads={myLeads} onEdit={setSelectedLeadForDetail} />
+              </div>
             )}
 
             {activeTab === 'settings' && (
